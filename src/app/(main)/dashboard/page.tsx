@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -10,6 +11,18 @@ export default async function DashboardPage() {
   }
 
   const user = await currentUser();
+
+  // Verifica se l'onboarding e' completato
+  const supabase = await createServerSupabaseClient();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('onboarding_completed')
+    .eq('clerk_id', userId)
+    .single();
+
+  if (profile && !profile.onboarding_completed) {
+    redirect('/onboarding');
+  }
 
   return (
     <main className="min-h-screen p-8">
