@@ -157,7 +157,7 @@ export async function PUT(
     const updateData: Partial<ProfileUpdate> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        (updateData as any)[field] = body[field];
       }
     }
 
