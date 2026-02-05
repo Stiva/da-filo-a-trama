@@ -84,12 +84,24 @@ export async function GET(
     const profileWithEnrollments: ProfileWithEnrollments = {
       ...(profile as Profile),
       enrollments_count: enrollments?.length || 0,
-      events_enrolled: enrollments?.map((e) => ({
-        id: (e.events as { id: string })?.id,
-        title: (e.events as { title: string })?.title,
-        start_time: (e.events as { start_time: string })?.start_time,
-        status: e.status,
-      })),
+      events_enrolled: enrollments?.map((e) => {
+        // Despite the many-to-one relationship, the build process infers `e.events` as an array.
+        // We'll treat it as an array and take the first element to be safe.
+        const event = (
+          e.events as unknown as {
+            id: string;
+            title: string;
+            start_time: string;
+          }[]
+        )?.[0];
+
+        return {
+          id: event?.id,
+          title: event?.title,
+          start_time: event?.start_time,
+          status: e.status,
+        };
+      }),
     };
 
     return NextResponse.json({ data: profileWithEnrollments });
