@@ -73,8 +73,22 @@ export default function AdminLayout({
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
-              Utenti
+              Partecipanti
             </Link>
+
+            <Link
+              href="/admin/content"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Contenuti
+            </Link>
+
+            <p className="text-xs uppercase text-gray-500 font-semibold mt-6 mb-4 px-3">
+              Mappa
+            </p>
 
             <Link
               href="/admin/poi"

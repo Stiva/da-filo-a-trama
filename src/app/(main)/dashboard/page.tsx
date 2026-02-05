@@ -1,7 +1,8 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { DashboardContent, UserState } from '@/types/database';
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -12,11 +13,17 @@ export default async function DashboardPage() {
 
   const user = await currentUser();
 
+  // Verifica ruolo admin via Clerk
+  const client = await clerkClient();
+  const clerkUser = await client.users.getUser(userId);
+  const role = (clerkUser.publicMetadata as { role?: string })?.role;
+  const isAdmin = role === 'admin' || role === 'staff';
+
   // Verifica se l'onboarding e' completato
   const supabase = await createServerSupabaseClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed, first_name')
+    .select('onboarding_completed, first_name, profile_setup_complete')
     .eq('clerk_id', userId)
     .single();
 
@@ -25,6 +32,37 @@ export default async function DashboardPage() {
   }
 
   const firstName = profile?.first_name || user?.firstName || 'Scout';
+
+  // Determina lo stato utente
+  let userState: UserState = 'new_user';
+  if (profile) {
+    // Conta le iscrizioni confermate
+    const { count: enrollmentCount } = await supabase
+      .from('enrollments')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'confirmed');
+
+    if ((enrollmentCount || 0) > 0) {
+      userState = 'enrolled';
+    } else if (profile.profile_setup_complete) {
+      userState = 'profile_complete';
+    } else if (profile.onboarding_completed) {
+      userState = 'onboarding_done';
+    }
+  }
+
+  // Fetch contenuti dinamici per lo stato utente
+  const { data: dynamicContent } = await supabase
+    .from('dashboard_content')
+    .select('*')
+    .eq('is_active', true)
+    .or(`target_state.eq.${userState},target_state.eq.all`)
+    .order('display_order', { ascending: true });
+
+  // Trova il contenuto "prossimi passi" per lo stato corrente
+  const prossimiPassiContent = (dynamicContent as DashboardContent[] | null)?.find(
+    (c) => c.key.startsWith('prossimi_passi') && (c.target_state === userState || c.target_state === 'all')
+  );
 
   const quickActions = [
     {
@@ -81,6 +119,56 @@ export default async function DashboardPage() {
           </div>
         </header>
 
+        {/* Admin Section - Visible only to admins/staff */}
+        {isAdmin && (
+          <section className="mb-8">
+            <div className="card bg-gradient-to-r from-agesci-blue to-agesci-blue-dark text-white">
+              <div className="card-body">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                      <ShieldIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-lg">
+                        Pannello Amministrazione
+                      </h3>
+                      <p className="text-white/70 text-sm">
+                        Gestisci eventi, utenti e contenuti
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-agesci-yellow text-agesci-blue rounded-xl font-semibold text-sm hover:bg-agesci-yellow-light transition-colors"
+                  >
+                    Vai all&apos;Admin
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+
+                {/* Quick Admin Stats */}
+                <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-white/20">
+                  <Link href="/admin/events" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                    <div className="text-2xl font-bold">Eventi</div>
+                    <div className="text-white/70 text-sm">Gestione</div>
+                  </Link>
+                  <Link href="/admin/users" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                    <div className="text-2xl font-bold">Utenti</div>
+                    <div className="text-white/70 text-sm">CRM</div>
+                  </Link>
+                  <Link href="/admin/content" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                    <div className="text-2xl font-bold">Contenuti</div>
+                    <div className="text-white/70 text-sm">Editor</div>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Quick Actions Grid */}
         <section className="mb-10">
           <h2 className="text-xl font-display font-bold text-agesci-blue mb-6">
@@ -134,7 +222,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Info Box */}
+        {/* Dynamic "Prossimi Passi" Section */}
         <section className="card bg-gradient-to-r from-agesci-yellow/20 to-lc-green/20 border-agesci-yellow">
           <div className="card-body">
             <div className="flex items-start gap-4">
@@ -143,22 +231,34 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h3 className="font-display font-bold text-agesci-blue text-lg mb-3">
-                  Prossimi passi
+                  {prossimiPassiContent?.title || 'Prossimi passi'}
                 </h3>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-agesci-blue/80">
-                    <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
-                    <span>Completa il tuo profilo con gruppo scout e avatar</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-agesci-blue/80">
-                    <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
-                    <span>Imposta le tue preferenze per ricevere suggerimenti</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-agesci-blue/80">
-                    <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
-                    <span>Esplora il programma e iscriviti agli eventi</span>
-                  </li>
-                </ul>
+                {prossimiPassiContent?.content?.steps ? (
+                  <ul className="space-y-2">
+                    {prossimiPassiContent.content.steps.map((step, index) => (
+                      <li key={index} className="flex items-center gap-2 text-agesci-blue/80">
+                        <span className="text-lg flex-shrink-0">{step.icon || <CheckCircle className="w-5 h-5 text-lc-green" />}</span>
+                        <span>{step.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  // Fallback content
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-agesci-blue/80">
+                      <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
+                      <span>Completa il tuo profilo con gruppo scout e avatar</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-agesci-blue/80">
+                      <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
+                      <span>Imposta le tue preferenze per ricevere suggerimenti</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-agesci-blue/80">
+                      <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
+                      <span>Esplora il programma e iscriviti agli eventi</span>
+                    </li>
+                  </ul>
+                )}
               </div>
             </div>
           </div>
@@ -205,6 +305,14 @@ function CheckCircle({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   );
 }

@@ -12,33 +12,67 @@ export interface Profile {
   email: string;
   name: string | null;
   surname: string | null;
+  first_name: string | null;
   scout_group: string | null;
   role: 'user' | 'staff' | 'admin';
   preferences: string[];
   avatar_config: AvatarConfig;
   onboarding_completed: boolean;
+  avatar_completed: boolean;
+  preferences_set: boolean;
+  profile_setup_complete: boolean;
   created_at: string;
   updated_at: string;
 }
 
+export interface NeckerchiefConfig {
+  enabled: boolean;
+  colorCount: 1 | 2 | 3;
+  color1: string;      // Colore principale
+  color2?: string;     // Secondo colore (bordo)
+  color3?: string;     // Terzo colore (punta/dettaglio)
+}
+
 export interface AvatarConfig {
-  skinTone?: string;
-  hairStyle?: string;
-  hairColor?: string;
-  eyeColor?: string;
+  gender: 'male' | 'female';
+  skinTone: string;
+  hairStyle: string;
+  hairColor: string;
+  eyeColor: string;
+  neckerchief: NeckerchiefConfig;
+  clothing: string;
+  background: string;
   accessories?: string[];
-  clothing?: string;
-  background?: string;
 }
 
 export interface ProfileUpdate {
   name?: string;
   surname?: string;
+  first_name?: string;
   scout_group?: string;
   preferences?: string[];
-  avatar_config?: AvatarConfig;
+  avatar_config?: Partial<AvatarConfig>;
   onboarding_completed?: boolean;
+  avatar_completed?: boolean;
+  preferences_set?: boolean;
 }
+
+// Default avatar configuration
+export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
+  gender: 'male',
+  skinTone: '#DEB887',
+  hairStyle: 'short',
+  hairColor: '#4A3728',
+  eyeColor: '#5D4E37',
+  neckerchief: {
+    enabled: true,
+    colorCount: 2,
+    color1: '#1E6091',
+    color2: '#FFDE00',
+  },
+  clothing: '#2D5016',
+  background: '#E8F4E8',
+};
 
 // ============================================
 // EVENTS
@@ -158,6 +192,35 @@ export const PREFERENCE_TAGS = [
 ] as const;
 
 export type PreferenceTag = typeof PREFERENCE_TAGS[number];
+
+// ============================================
+// DASHBOARD CONTENT
+// ============================================
+export type UserState = 'no_profile' | 'new_user' | 'onboarding_done' | 'profile_complete' | 'enrolled' | 'all';
+
+export interface DashboardContentStep {
+  icon: string;
+  text: string;
+}
+
+export interface DashboardContentData {
+  steps?: DashboardContentStep[];
+  text?: string;
+  highlight?: boolean;
+}
+
+export interface DashboardContent {
+  id: string;
+  key: string;
+  title: string | null;
+  content: DashboardContentData;
+  target_state: UserState;
+  display_order: number;
+  is_active: boolean;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 // ============================================
 // API Response types
