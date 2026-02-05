@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server';
 
 // Route pubbliche accessibili senza autenticazione
 const isPublicRoute = createRouteMatcher([
@@ -25,9 +25,16 @@ export default clerkMiddleware(async (auth, request) => {
 
   // Verifica ruolo admin per route amministrative
   if (isAdminRoute(request)) {
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
-    const role = metadata?.role;
+    const { userId } = await auth();
+
+    if (!userId) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Ottieni i metadata dell'utente direttamente da Clerk
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const role = (user.publicMetadata as { role?: string })?.role;
 
     if (role !== 'admin' && role !== 'staff') {
       return new Response('Forbidden', { status: 403 });
