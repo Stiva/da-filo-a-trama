@@ -3,45 +3,58 @@
 @tailwind utilities;
 
 :root {
-  /* Tema Scout - Colori primari */
+  /* ========================================
+     PALETTE AGESCI + BRANCA L/C
+     ======================================== */
+
+  /* Colori principali AGESCI */
+  --agesci-blue: #00417b;
+  --agesci-blue-light: #1a5a9e;
+  --agesci-blue-dark: #002d54;
+
+  --agesci-yellow: #ffde00;
+  --agesci-yellow-light: #fff066;
+  --agesci-yellow-dark: #e6c800;
+
+  /* Verde Branca L/C */
+  --lc-green: #4eaf48;
+  --lc-green-light: #6bc963;
+  --lc-green-dark: #3a8f34;
+
+  /* Sfondo "quaderno di caccia" */
+  --scout-cream: #fdfaf0;
+
+  /* Colori legacy (compatibilità) */
   --scout-green: #2D5016;
   --scout-green-light: #4A7C23;
   --scout-azure: #1E6091;
   --scout-azure-light: #2E86C1;
   --scout-wood: #8B4513;
   --scout-wood-light: #A0522D;
-  --scout-cream: #F5F5DC;
 
-  /* Sistema colori */
-  --background: 0 0% 100%;
-  --foreground: 120 20% 10%;
-  --primary: 90 53% 20%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 204 64% 34%;
-  --secondary-foreground: 0 0% 100%;
-  --accent: 25 76% 31%;
-  --accent-foreground: 0 0% 100%;
-  --muted: 60 9% 90%;
-  --muted-foreground: 120 10% 40%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 120 10% 85%;
-  --ring: 90 53% 20%;
-  --radius: 0.5rem;
+  /* ========================================
+     SISTEMA SEMANTICO
+     ======================================== */
+  --background: var(--scout-cream);
+  --foreground: var(--agesci-blue);
+  --primary: var(--agesci-yellow);
+  --primary-foreground: var(--agesci-blue);
+  --secondary: var(--agesci-blue);
+  --secondary-foreground: #ffffff;
+  --accent: var(--lc-green);
+  --accent-foreground: #ffffff;
+  --muted: #f0ebe0;
+  --muted-foreground: #6b7280;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #d4cfc0;
+  --ring: var(--agesci-blue);
+  --radius: 0.75rem;
 }
 
-.dark {
-  --background: 120 20% 8%;
-  --foreground: 60 9% 95%;
-  --primary: 90 53% 35%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 204 64% 45%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 120 10% 20%;
-  --muted-foreground: 60 9% 70%;
-  --border: 120 10% 25%;
-}
-
+/* ========================================
+   BASE STYLES
+   ======================================== */
 * {
   box-sizing: border-box;
   padding: 0;
@@ -55,6 +68,258 @@ body {
 }
 
 body {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+}
+
+/* Scrollbar personalizzata */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--agesci-blue);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--agesci-blue-light);
+}
+
+/* ========================================
+   TIPOGRAFIA
+   ======================================== */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-quicksand), system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--agesci-blue);
+  line-height: 1.2;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+
+@media (min-width: 768px) {
+  h1 { font-size: 3rem; }
+  h2 { font-size: 2.25rem; }
+  h3 { font-size: 1.75rem; }
+}
+
+/* ========================================
+   COMPONENTI - LAYER COMPONENTS
+   ======================================== */
+@layer components {
+  /* Bottoni */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           font-semibold rounded-xl transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-agesci-yellow text-agesci-blue
+           hover:shadow-playful hover:-translate-y-0.5
+           focus:ring-agesci-yellow;
+  }
+
+  .btn-secondary {
+    @apply btn bg-agesci-blue text-white
+           hover:bg-agesci-blue-light hover:-translate-y-0.5
+           focus:ring-agesci-blue;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-agesci-blue text-agesci-blue bg-transparent
+           hover:bg-agesci-blue hover:text-white
+           focus:ring-agesci-blue;
+  }
+
+  .btn-ghost {
+    @apply btn text-agesci-blue bg-transparent
+           hover:bg-agesci-blue/10
+           focus:ring-agesci-blue;
+  }
+
+  .btn-accent {
+    @apply btn bg-lc-green text-white
+           hover:bg-lc-green-dark hover:-translate-y-0.5
+           focus:ring-lc-green;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm rounded-lg;
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-lg rounded-2xl;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-scout-cream border-3 border-agesci-blue rounded-2xl
+           shadow-playful transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-playful-lg hover:-translate-y-1;
+  }
+
+  .card-body {
+    @apply p-6;
+  }
+
+  .card-header {
+    @apply px-6 py-4 border-b border-agesci-blue/20;
+  }
+
+  .card-footer {
+    @apply px-6 py-4 border-t border-agesci-blue/20;
+  }
+
+  /* Badge / Tag */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-blue {
+    @apply badge bg-agesci-blue/10 text-agesci-blue;
+  }
+
+  .badge-yellow {
+    @apply badge bg-agesci-yellow text-agesci-blue;
+  }
+
+  .badge-green {
+    @apply badge bg-lc-green/10 text-lc-green-dark;
+  }
+
+  .badge-outline {
+    @apply badge border-2 border-current bg-transparent;
+  }
+
+  /* Input */
+  .input {
+    @apply w-full px-4 py-3 rounded-lg border-2 border-agesci-blue/30
+           bg-white text-agesci-blue placeholder:text-agesci-blue/40
+           focus:outline-none focus:border-agesci-blue focus:ring-2 focus:ring-agesci-blue/20
+           transition-all duration-200;
+  }
+
+  .input-error {
+    @apply input border-destructive focus:border-destructive focus:ring-destructive/20;
+  }
+
+  /* Select */
+  .select {
+    @apply input appearance-none bg-no-repeat bg-right pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2300417b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-size: 1.5rem;
+    background-position: right 0.75rem center;
+  }
+
+  /* Label */
+  .label {
+    @apply block text-sm font-semibold text-agesci-blue mb-2;
+  }
+
+  /* Link stilizzato */
+  .link {
+    @apply text-agesci-blue underline decoration-agesci-yellow decoration-2
+           underline-offset-4 hover:decoration-4 transition-all;
+  }
+
+  /* Sezione con sfondo decorativo */
+  .section-wave {
+    @apply relative overflow-hidden;
+  }
+
+  .section-wave::before {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0 h-16;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 100'%3E%3Cpath fill='%23fdfaf0' d='M0,50 C360,100 1080,0 1440,50 L1440,100 L0,100 Z'%3E%3C/path%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* Container responsive */
+  .container-scout {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Animazione sottolineatura per nav link */
+  .nav-link {
+    @apply relative text-agesci-blue font-medium transition-colors;
+  }
+
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 bg-agesci-yellow transition-all duration-300;
+  }
+
+  .nav-link:hover::after {
+    @apply w-full;
+  }
+
+  .nav-link.active::after {
+    @apply w-full;
+  }
+
+  /* Icona decorativa */
+  .icon-playful {
+    @apply w-12 h-12 flex items-center justify-center rounded-2xl
+           bg-agesci-yellow text-agesci-blue shadow-playful-sm;
+  }
+}
+
+/* ========================================
+   UTILITIES AGGIUNTIVE
+   ======================================== */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-pattern-dots {
+    background-image: radial-gradient(var(--agesci-blue) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .bg-pattern-lines {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 10px,
+      var(--agesci-blue) 10px,
+      var(--agesci-blue) 11px
+    );
+    opacity: 0.05;
+  }
+
+  /* Gradient di sfondo */
+  .gradient-scout {
+    background: linear-gradient(135deg, var(--scout-cream) 0%, #f5f0e0 100%);
+  }
+
+  .gradient-blue {
+    background: linear-gradient(135deg, var(--agesci-blue) 0%, var(--agesci-blue-light) 100%);
+  }
+
+  .gradient-yellow {
+    background: linear-gradient(135deg, var(--agesci-yellow) 0%, var(--agesci-yellow-light) 100%);
+  }
+
+  /* Testo gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--agesci-blue) 0%, var(--lc-green) 100%);
+  }
 }

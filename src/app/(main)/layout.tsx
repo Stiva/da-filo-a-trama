@@ -1,5 +1,4 @@
-import { UserButton } from '@clerk/nextjs';
-import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 export default function MainLayout({
   children,
@@ -7,48 +6,35 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-scout-cream">
       {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center">
-              <Link href="/dashboard" className="font-bold text-xl" style={{ color: 'var(--scout-green)' }}>
-                Da Filo a Trama
-              </Link>
-            </div>
+      <Navbar />
 
-            {/* Nav Links */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link href="/events" className="text-gray-600 hover:text-gray-900">
-                Eventi
-              </Link>
-              <Link href="/map" className="text-gray-600 hover:text-gray-900">
-                Mappa
-              </Link>
-              <Link href="/profile" className="text-gray-600 hover:text-gray-900">
-                Profilo
-              </Link>
-            </div>
+      {/* Main Content */}
+      <main>{children}</main>
 
-            {/* User Menu */}
-            <div className="flex items-center">
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-10 h-10',
-                  },
-                }}
-              />
+      {/* Footer */}
+      <footer className="bg-agesci-blue text-white py-8 mt-16">
+        <div className="container-scout">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-agesci-yellow rounded-xl flex items-center justify-center">
+                <span className="text-agesci-blue font-display font-bold text-lg">DF</span>
+              </div>
+              <div>
+                <span className="font-display font-bold text-lg">Da Filo a Trama</span>
+                <span className="block text-xs text-white/60">Evento Scout AGESCI 2026</span>
+              </div>
+            </div>
+            <div className="text-sm text-white/60 text-center md:text-right">
+              <p>&copy; 2026 AGESCI - Tutti i diritti riservati</p>
+              <p className="mt-1">
+                Branca L/C - Lupetti e Coccinelle
+              </p>
             </div>
           </div>
         </div>
-      </nav>
-
-      {/* Main Content */}
-      {children}
+      </footer>
     </div>
   );
 }
