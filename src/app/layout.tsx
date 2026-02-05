@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { itIT } from '@clerk/localizations';
 import './globals.css';
@@ -7,7 +7,12 @@ export const metadata: Metadata = {
   title: 'Da Filo a Trama - Evento Scout 2026',
   description: 'Piattaforma digitale per l\'evento nazionale scout',
   manifest: '/manifest.json',
-  themeColor: '#2D5016',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#2e7d32',
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

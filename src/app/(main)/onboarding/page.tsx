@@ -78,26 +78,56 @@ export default function OnboardingPage() {
     }));
   };
 
+  // Funzione per salvare con retry (gestisce race condition con webhook)
+  const saveProfileWithRetry = async (maxRetries = 3): Promise<boolean> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch('/api/profiles', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...formData,
+            onboarding_completed: true,
+          }),
+        });
+
+        if (response.ok) {
+          return true;
+        }
+
+        const data = await response.json();
+
+        // Se 404, il profilo non esiste ancora - attendi e riprova
+        if (response.status === 404 && attempt < maxRetries) {
+          console.log(`Profilo non trovato, tentativo ${attempt}/${maxRetries}. Riprovo...`);
+          await new Promise(r => setTimeout(r, 1000 * attempt)); // Exponential backoff
+          continue;
+        }
+
+        throw new Error(data.error || 'Errore durante il salvataggio');
+      } catch (err) {
+        if (attempt === maxRetries) {
+          throw err;
+        }
+        // Attendi prima di riprovare
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+    return false;
+  };
+
   const handleComplete = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/profiles', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          onboarding_completed: true,
-        }),
-      });
+      const success = await saveProfileWithRetry(3);
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Errore durante il salvataggio');
+      if (success) {
+        router.push('/dashboard');
+      } else {
+        throw new Error('Impossibile salvare il profilo. Riprova.');
       }
-
-      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
     } finally {
