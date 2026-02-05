@@ -10,6 +10,7 @@ interface EventCardProps {
   isEnrolled?: boolean;
   onEnroll?: () => void;
   enrolling?: boolean;
+  enrollmentCount?: number;
 }
 
 // Icone decorative per angolo
@@ -28,6 +29,7 @@ export default function EventCard({
   isEnrolled = false,
   onEnroll,
   enrolling = false,
+  enrollmentCount = 0,
 }: EventCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -39,8 +41,8 @@ export default function EventCard({
     });
   };
 
-  const spotsLeft = event.max_participants
-    ? event.max_participants - (event.current_participants || 0)
+  const spotsLeft = event.max_posti > 0
+    ? event.max_posti - enrollmentCount
     : null;
 
   const icon = event.tags?.[0]
