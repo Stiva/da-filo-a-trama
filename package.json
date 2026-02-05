@@ -12,12 +12,15 @@
     "@clerk/localizations": "^3.12.0",
     "@clerk/nextjs": "^6.37.2",
     "@supabase/supabase-js": "^2.94.0",
+    "leaflet": "^1.9.4",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0",
     "svix": "^1.84.1"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^22.15.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
