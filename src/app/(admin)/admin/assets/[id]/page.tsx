@@ -39,7 +39,7 @@ export default async function EditAssetPage({ params }: PageProps) {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Modifica Asset</h1>
-        <p className="text-gray-500 mt-1">{asset.name}</p>
+        <p className="text-gray-500 mt-1">{asset.title || asset.file_name}</p>
       </div>
 
       <AssetForm asset={asset} isEditing />

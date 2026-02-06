@@ -30,7 +30,7 @@ export async function GET(
 
     // Parametri di filtro
     const { searchParams } = new URL(request.url);
-    const fileType = searchParams.get('file_type') as AssetType | null;
+    const tipo = searchParams.get('tipo') as AssetType | null;
     const eventId = searchParams.get('event_id');
     const visibilita = searchParams.get('visibilita') as AssetVisibility | null;
 
@@ -39,8 +39,8 @@ export async function GET(
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (fileType) {
-      query = query.eq('file_type', fileType);
+    if (tipo) {
+      query = query.eq('tipo', tipo);
     }
     if (eventId) {
       query = query.eq('event_id', eventId);
@@ -92,20 +92,25 @@ export async function POST(
     const supabase = createServiceRoleClient();
 
     // Validazione campi obbligatori
-    if (!body.name || !body.file_url || !body.file_type) {
+    if (!body.file_name || !body.file_url || !body.tipo) {
       return NextResponse.json(
-        { error: 'Campi obbligatori mancanti: name, file_url, file_type' },
+        { error: 'Campi obbligatori mancanti: file_name, file_url, tipo' },
         { status: 400 }
       );
     }
 
     const insertData = {
-      name: body.name,
+      file_name: body.file_name,
       file_url: body.file_url,
-      file_type: body.file_type,
-      file_size: body.file_size || null,
+      tipo: body.tipo,
+      file_size_bytes: body.file_size_bytes || null,
+      mime_type: body.mime_type || null,
       event_id: body.event_id || null,
+      poi_id: body.poi_id || null,
       visibilita: body.visibilita || 'public',
+      title: body.title || null,
+      description: body.description || null,
+      sort_order: body.sort_order || 0,
     };
 
     const { data, error } = await supabase
@@ -115,6 +120,7 @@ export async function POST(
       .single();
 
     if (error) {
+      console.error('Supabase insert error:', error);
       throw error;
     }
 

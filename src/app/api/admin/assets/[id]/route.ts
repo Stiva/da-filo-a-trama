@@ -91,12 +91,17 @@ export async function PUT(
     const updateData: Record<string, unknown> = {};
 
     // Campi consentiti per l'aggiornamento
-    if (body.name !== undefined) updateData.name = body.name;
+    if (body.file_name !== undefined) updateData.file_name = body.file_name;
     if (body.file_url !== undefined) updateData.file_url = body.file_url;
-    if (body.file_type !== undefined) updateData.file_type = body.file_type;
-    if (body.file_size !== undefined) updateData.file_size = body.file_size;
+    if (body.tipo !== undefined) updateData.tipo = body.tipo;
+    if (body.file_size_bytes !== undefined) updateData.file_size_bytes = body.file_size_bytes;
+    if (body.mime_type !== undefined) updateData.mime_type = body.mime_type;
     if (body.event_id !== undefined) updateData.event_id = body.event_id;
+    if (body.poi_id !== undefined) updateData.poi_id = body.poi_id;
     if (body.visibilita !== undefined) updateData.visibilita = body.visibilita;
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.sort_order !== undefined) updateData.sort_order = body.sort_order;
 
     const { data, error } = await supabase
       .from('assets')

@@ -206,13 +206,18 @@ export type AssetVisibility = 'public' | 'registered' | 'staff';
 export interface Asset {
   id: string;
   event_id: string | null;
-  name: string;
-  file_type: AssetType;
+  poi_id: string | null;
   file_url: string;
-  file_size: number | null;
+  file_name: string;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  tipo: AssetType;
   visibilita: AssetVisibility;
-  download_count: number;
+  title: string | null;
+  description: string | null;
+  sort_order: number;
   created_at: string;
+  uploaded_by: string | null;
 }
 
 // ============================================

@@ -31,12 +31,15 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
   const [events, setEvents] = useState<Event[]>([]);
 
   const [formData, setFormData] = useState({
-    name: asset?.name || '',
+    file_name: asset?.file_name || '',
     file_url: asset?.file_url || '',
-    file_type: asset?.file_type || 'document' as AssetType,
-    file_size: asset?.file_size || null as number | null,
+    tipo: asset?.tipo || 'document' as AssetType,
+    file_size_bytes: asset?.file_size_bytes || null as number | null,
+    mime_type: asset?.mime_type || '',
     event_id: asset?.event_id || '',
     visibilita: asset?.visibilita || 'public' as AssetVisibility,
+    title: asset?.title || '',
+    description: asset?.description || '',
   });
 
   // Fetch eventi per il dropdown
@@ -65,11 +68,28 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     return 'document';
   };
 
+  // Auto-detect mime type from URL
+  const detectMimeType = (url: string): string => {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.endsWith('.pdf')) return 'application/pdf';
+    if (lowercaseUrl.endsWith('.jpg') || lowercaseUrl.endsWith('.jpeg')) return 'image/jpeg';
+    if (lowercaseUrl.endsWith('.png')) return 'image/png';
+    if (lowercaseUrl.endsWith('.gif')) return 'image/gif';
+    if (lowercaseUrl.endsWith('.webp')) return 'image/webp';
+    if (lowercaseUrl.endsWith('.svg')) return 'image/svg+xml';
+    if (lowercaseUrl.endsWith('.mp4')) return 'video/mp4';
+    if (lowercaseUrl.endsWith('.webm')) return 'video/webm';
+    if (lowercaseUrl.endsWith('.mp3')) return 'audio/mpeg';
+    if (lowercaseUrl.endsWith('.wav')) return 'audio/wav';
+    return 'application/octet-stream';
+  };
+
   const handleUrlChange = (url: string) => {
     setFormData(prev => ({
       ...prev,
       file_url: url,
-      file_type: detectFileType(url),
+      tipo: detectFileType(url),
+      mime_type: detectMimeType(url),
     }));
   };
 
@@ -88,6 +108,9 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       const payload = {
         ...formData,
         event_id: formData.event_id || null,
+        title: formData.title || null,
+        description: formData.description || null,
+        mime_type: formData.mime_type || null,
       };
 
       const response = await fetch(url, {
@@ -164,15 +187,41 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome *
+              Nome File *
             </label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              value={formData.file_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, file_name: e.target.value }))}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-              placeholder="Nome dell'asset"
+              placeholder="Nome del file"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Titolo (visualizzato)
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+              placeholder="Titolo visualizzato agli utenti"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descrizione
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+              placeholder="Descrizione opzionale"
             />
           </div>
 
@@ -199,10 +248,10 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
                 Tipo File
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{getFileTypeIcon(formData.file_type)}</span>
+                <span className="text-2xl">{getFileTypeIcon(formData.tipo)}</span>
                 <select
-                  value={formData.file_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, file_type: e.target.value as AssetType }))}
+                  value={formData.tipo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value as AssetType }))}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
                 >
                   {ASSET_TYPES.map((type) => (
@@ -220,8 +269,8 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
               </label>
               <input
                 type="number"
-                value={formData.file_size || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, file_size: e.target.value ? parseInt(e.target.value) : null }))}
+                value={formData.file_size_bytes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, file_size_bytes: e.target.value ? parseInt(e.target.value) : null }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
                 placeholder="Opzionale"
               />
@@ -283,7 +332,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       </div>
 
       {/* Preview */}
-      {formData.file_url && formData.file_type === 'image' && (
+      {formData.file_url && formData.tipo === 'image' && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Anteprima</h2>
           <div className="max-w-md">

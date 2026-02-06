@@ -40,7 +40,7 @@ export default function AdminAssetsPage() {
 
     try {
       const params = new URLSearchParams();
-      if (filterType) params.set('file_type', filterType);
+      if (filterType) params.set('tipo', filterType);
       if (filterVisibility) params.set('visibilita', filterVisibility);
       if (filterEventId) params.set('event_id', filterEventId);
 
@@ -198,19 +198,19 @@ export default function AdminAssetsPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">PDF</p>
           <p className="text-2xl font-bold text-red-600">
-            {assets.filter(a => a.file_type === 'pdf').length}
+            {assets.filter(a => a.tipo === 'pdf').length}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Immagini</p>
           <p className="text-2xl font-bold text-blue-600">
-            {assets.filter(a => a.file_type === 'image').length}
+            {assets.filter(a => a.tipo === 'image').length}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500">Download Totali</p>
-          <p className="text-2xl font-bold text-agesci-blue">
-            {assets.reduce((sum, a) => sum + (a.download_count || 0), 0)}
+          <p className="text-sm text-gray-500">Video/Audio</p>
+          <p className="text-2xl font-bold text-purple-600">
+            {assets.filter(a => a.tipo === 'video' || a.tipo === 'audio').length}
           </p>
         </div>
       </div>
@@ -249,9 +249,6 @@ export default function AdminAssetsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Dimensione
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Download
-                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Azioni
                 </th>
@@ -262,9 +259,11 @@ export default function AdminAssetsPage() {
                 <tr key={asset.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{getFileTypeIcon(asset.file_type)}</span>
+                      <span className="text-xl">{getFileTypeIcon(asset.tipo)}</span>
                       <div>
-                        <div className="font-medium text-gray-900">{asset.name}</div>
+                        <div className="font-medium text-gray-900">
+                          {asset.title || asset.file_name}
+                        </div>
                         <a
                           href={asset.file_url}
                           target="_blank"
@@ -277,8 +276,8 @@ export default function AdminAssetsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getFileTypeColor(asset.file_type)}`}>
-                      {asset.file_type.toUpperCase()}
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getFileTypeColor(asset.tipo)}`}>
+                      {asset.tipo.toUpperCase()}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -290,10 +289,7 @@ export default function AdminAssetsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatFileSize(asset.file_size)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {asset.download_count || 0}
+                    {formatFileSize(asset.file_size_bytes)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
