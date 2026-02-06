@@ -35,23 +35,48 @@ export async function POST(
     });
 
     if (error) {
-      // Gestisci errori specifici
-      if (error.message.includes('gia iscritto') || error.message.includes('already enrolled')) {
-        return NextResponse.json(
-          { error: 'Sei gia iscritto a questo evento' },
-          { status: 409 }
-        );
-      }
-      if (error.message.includes('non trovato') || error.message.includes('not found')) {
-        return NextResponse.json(
-          { error: 'Evento non trovato' },
-          { status: 404 }
-        );
-      }
+      console.error('RPC error:', error);
       throw error;
     }
 
-    const result = data as EnrollmentResult;
+    // L'RPC ritorna un JSONB con success/error/message
+    const rpcResult = data as {
+      success: boolean;
+      error?: string;
+      message?: string;
+      enrollment_id?: string;
+      status?: 'confirmed' | 'waitlist';
+      waitlist_position?: number;
+    };
+
+    // Gestisci errori specifici dall'RPC
+    if (!rpcResult.success) {
+      const errorMap: Record<string, { message: string; status: number }> = {
+        'UNAUTHORIZED': { message: 'Autenticazione richiesta', status: 401 },
+        'PROFILE_NOT_FOUND': { message: 'Completa prima il tuo profilo per iscriverti agli eventi', status: 400 },
+        'EVENT_NOT_FOUND': { message: 'Evento non trovato', status: 404 },
+        'EVENT_NOT_PUBLISHED': { message: 'Evento non ancora disponibile per le iscrizioni', status: 400 },
+        'ALREADY_ENROLLED': { message: 'Sei gia iscritto a questo evento', status: 409 },
+        'EVENT_STARTED': { message: 'L\'evento e gia iniziato', status: 400 },
+      };
+
+      const errorInfo = errorMap[rpcResult.error || ''] || {
+        message: rpcResult.message || 'Errore durante l\'iscrizione',
+        status: 400
+      };
+
+      return NextResponse.json(
+        { error: errorInfo.message },
+        { status: errorInfo.status }
+      );
+    }
+
+    // Costruisci il risultato di successo
+    const result: EnrollmentResult = {
+      success: true,
+      status: rpcResult.status || 'confirmed',
+      waitlist_position: rpcResult.waitlist_position,
+    };
 
     // Messaggio in base allo status
     let message = 'Iscrizione confermata!';
@@ -100,13 +125,34 @@ export async function DELETE(
     });
 
     if (error) {
-      if (error.message.includes('non trovata') || error.message.includes('not found')) {
-        return NextResponse.json(
-          { error: 'Iscrizione non trovata' },
-          { status: 404 }
-        );
-      }
+      console.error('RPC error:', error);
       throw error;
+    }
+
+    // L'RPC ritorna un JSONB con success/error/message
+    const rpcResult = data as {
+      success: boolean;
+      error?: string;
+      message?: string;
+    };
+
+    // Gestisci errori specifici dall'RPC
+    if (!rpcResult.success) {
+      const errorMap: Record<string, { message: string; status: number }> = {
+        'UNAUTHORIZED': { message: 'Autenticazione richiesta', status: 401 },
+        'PROFILE_NOT_FOUND': { message: 'Profilo non trovato', status: 400 },
+        'ENROLLMENT_NOT_FOUND': { message: 'Iscrizione non trovata', status: 404 },
+      };
+
+      const errorInfo = errorMap[rpcResult.error || ''] || {
+        message: rpcResult.message || 'Errore durante la cancellazione',
+        status: 400
+      };
+
+      return NextResponse.json(
+        { error: errorInfo.message },
+        { status: errorInfo.status }
+      );
     }
 
     return NextResponse.json({

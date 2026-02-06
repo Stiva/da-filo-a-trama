@@ -5,25 +5,26 @@ import type { Poi, PoiCategory, ApiResponse } from '@/types/database';
 /**
  * GET /api/poi
  * Lista tutti i POI attivi
- * Query params: category (filtro opzionale)
+ * Query params: tipo (filtro opzionale per categoria)
  */
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<Poi[]>>> {
   try {
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category') as PoiCategory | null;
+    const tipo = searchParams.get('tipo') as PoiCategory | null;
 
     const supabase = createServiceRoleClient();
 
     // Query base: solo POI attivi
+    // DB columns: id, nome, descrizione, coordinate, tipo, icon_url, is_active, created_at, updated_at
     let query = supabase
       .from('poi')
       .select('*')
       .eq('is_active', true)
-      .order('category', { ascending: true });
+      .order('tipo', { ascending: true });
 
-    // Filtro per categoria
-    if (category) {
-      query = query.eq('category', category);
+    // Filtro per tipo (categoria)
+    if (tipo) {
+      query = query.eq('tipo', tipo);
     }
 
     const { data, error } = await query;
@@ -34,13 +35,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
 
     // Trasforma i dati per estrarre lat/lng dalla geografia PostGIS
     const pois: Poi[] = (data || []).map((poi) => {
-      // Se coordinates è un oggetto geography, estrai lat/lng
-      let latitude = poi.latitude;
-      let longitude = poi.longitude;
+      let latitude = 0;
+      let longitude = 0;
 
-      // Se esistono coordinate come oggetto PostGIS
-      if (poi.coordinates && typeof poi.coordinates === 'object') {
-        const coords = poi.coordinates as { coordinates?: [number, number] };
+      // PostGIS geography returns GeoJSON format: { type: "Point", coordinates: [lng, lat] }
+      if (poi.coordinate && typeof poi.coordinate === 'object') {
+        const coords = poi.coordinate as { coordinates?: [number, number] };
         if (coords.coordinates) {
           longitude = coords.coordinates[0];
           latitude = coords.coordinates[1];
@@ -49,12 +49,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
 
       return {
         id: poi.id,
-        name: poi.name,
-        description: poi.description,
-        category: poi.category,
+        nome: poi.nome,
+        descrizione: poi.descrizione,
+        tipo: poi.tipo,
         latitude,
         longitude,
-        icon: poi.icon,
+        icon_url: poi.icon_url,
         is_active: poi.is_active,
         created_at: poi.created_at,
       };

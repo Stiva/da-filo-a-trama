@@ -88,6 +88,9 @@ export default function AdminEventsPage() {
       gioco: 'bg-yellow-100 text-yellow-800',
       spiritualita: 'bg-indigo-100 text-indigo-800',
       servizio: 'bg-orange-100 text-orange-800',
+      natura: 'bg-emerald-100 text-emerald-800',
+      arte: 'bg-pink-100 text-pink-800',
+      musica: 'bg-rose-100 text-rose-800',
       altro: 'bg-gray-100 text-gray-800',
     };
     return colors[cat] || colors.altro;

@@ -66,6 +66,9 @@ export default function MyEventsPage() {
       gioco: 'bg-yellow-100 text-yellow-800',
       spiritualita: 'bg-indigo-100 text-indigo-800',
       servizio: 'bg-orange-100 text-orange-800',
+      natura: 'bg-emerald-100 text-emerald-800',
+      arte: 'bg-pink-100 text-pink-800',
+      musica: 'bg-rose-100 text-rose-800',
       altro: 'bg-gray-100 text-gray-800',
     };
     return colors[cat] || colors.altro;
@@ -201,12 +204,12 @@ export default function MyEventsPage() {
                             </svg>
                             {formatDate(event.start_time)}
                           </span>
-                          {event.location && (
+                          {event.location_details && (
                             <span className="flex items-center">
                               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               </svg>
-                              {event.location}
+                              {event.location_details}
                             </span>
                           )}
                         </div>

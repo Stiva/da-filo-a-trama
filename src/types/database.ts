@@ -77,6 +77,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
 // ============================================
 // EVENTS
 // ============================================
+// Must match DB CHECK constraint in 003_events.sql
 export type EventCategory =
   | 'workshop'
   | 'conferenza'
@@ -84,6 +85,9 @@ export type EventCategory =
   | 'gioco'
   | 'spiritualita'
   | 'servizio'
+  | 'natura'
+  | 'arte'
+  | 'musica'
   | 'altro';
 
 export interface Event {
@@ -92,14 +96,15 @@ export interface Event {
   description: string | null;
   category: EventCategory;
   tags: string[];
-  location: string | null;
-  poi_id: string | null;
+  location_details: string | null;  // DB column name
+  location_poi_id: string | null;   // DB column name
   start_time: string;
   end_time: string;
   max_posti: number;
   speaker_name: string | null;
   speaker_bio: string | null;
   is_published: boolean;
+  is_featured: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -135,25 +140,62 @@ export interface EnrollmentResult {
 // ============================================
 // POI (Points of Interest)
 // ============================================
+// Must match DB CHECK constraint in 005_poi.sql
 export type PoiCategory =
-  | 'evento'
-  | 'servizi'
-  | 'ristoro'
-  | 'emergenza'
-  | 'info'
-  | 'parcheggio';
+  | 'stage'      // Palco/area eventi
+  | 'food'       // Punto ristoro
+  | 'toilet'     // Servizi igienici
+  | 'medical'    // Punto medico
+  | 'info'       // Info point
+  | 'camping'    // Area campeggio
+  | 'parking'    // Parcheggio
+  | 'worship'    // Area spiritualita
+  | 'activity'   // Area attivita
+  | 'entrance'   // Ingresso
+  | 'other';     // Altro
 
+// Raw POI from database
+export interface PoiRaw {
+  id: string;
+  nome: string;
+  descrizione: string | null;
+  tipo: PoiCategory;
+  coordinate: unknown;  // PostGIS geography
+  icon_url: string | null;
+  is_active: boolean;
+  floor_level: number;
+  opening_hours: Record<string, string> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// POI with extracted lat/lng for frontend use
 export interface Poi {
   id: string;
-  name: string;
-  description: string | null;
-  category: PoiCategory;
+  nome: string;
+  descrizione: string | null;
+  tipo: PoiCategory;
   latitude: number;
   longitude: number;
-  icon: string | null;
+  icon_url: string | null;
   is_active: boolean;
   created_at: string;
 }
+
+// POI type labels in Italian for UI display
+export const POI_TYPE_LABELS: Record<PoiCategory, string> = {
+  stage: 'Palco',
+  food: 'Ristoro',
+  toilet: 'Servizi Igienici',
+  medical: 'Punto Medico',
+  info: 'Info Point',
+  camping: 'Campeggio',
+  parking: 'Parcheggio',
+  worship: 'Spiritualità',
+  activity: 'Attività',
+  entrance: 'Ingresso',
+  other: 'Altro',
+};
 
 // ============================================
 // ASSETS

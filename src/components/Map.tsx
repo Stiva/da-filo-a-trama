@@ -5,22 +5,28 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Poi, PoiCategory } from '@/types/database';
+import { POI_TYPE_LABELS } from '@/types/database';
 
 // Fix per le icone di Leaflet in Next.js
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 
-// Icone personalizzate per categoria
-const createIcon = (category: PoiCategory) => {
+// Icone personalizzate per tipo POI (allineato con DB CHECK constraint)
+const createIcon = (tipo: PoiCategory) => {
   const colors: Record<PoiCategory, string> = {
-    evento: '#2e7d32',
-    servizi: '#1976d2',
-    ristoro: '#f57c00',
-    emergenza: '#d32f2f',
-    info: '#7b1fa2',
-    parcheggio: '#455a64',
+    stage: '#7c3aed',      // Palco - viola
+    food: '#f97316',       // Ristoro - arancione
+    toilet: '#3b82f6',     // Servizi igienici - blu
+    medical: '#ef4444',    // Punto medico - rosso
+    info: '#22c55e',       // Info point - verde
+    camping: '#10b981',    // Campeggio - verde smeraldo
+    parking: '#64748b',    // Parcheggio - grigio
+    worship: '#8b5cf6',    // Spiritualita - viola chiaro
+    activity: '#eab308',   // Attivita - giallo
+    entrance: '#06b6d4',   // Ingresso - ciano
+    other: '#6b7280',      // Altro - grigio
   };
 
-  const color = colors[category] || '#666';
+  const color = colors[tipo] || '#666';
 
   return L.divIcon({
     className: 'custom-marker',
@@ -44,7 +50,7 @@ const createIcon = (category: PoiCategory) => {
           color: white;
           font-size: 14px;
         ">
-          ${getCategoryEmoji(category)}
+          ${getTypeEmoji(tipo)}
         </div>
       </div>
     `,
@@ -54,16 +60,21 @@ const createIcon = (category: PoiCategory) => {
   });
 };
 
-const getCategoryEmoji = (category: PoiCategory) => {
+const getTypeEmoji = (tipo: PoiCategory) => {
   const emojis: Record<PoiCategory, string> = {
-    evento: '🎪',
-    servizi: '🚻',
-    ristoro: '🍽',
-    emergenza: '🏥',
+    stage: '🎪',
+    food: '🍽',
+    toilet: '🚻',
+    medical: '🏥',
     info: 'ℹ',
-    parcheggio: '🅿',
+    camping: '⛺',
+    parking: '🅿',
+    worship: '🙏',
+    activity: '🎯',
+    entrance: '🚪',
+    other: '📍',
   };
-  return emojis[category] || '📍';
+  return emojis[tipo] || '📍';
 };
 
 // Componente per centrare la mappa su un POI selezionato
@@ -127,17 +138,17 @@ export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
           <Marker
             key={poi.id}
             position={[poi.latitude, poi.longitude]}
-            icon={createIcon(poi.category)}
+            icon={createIcon(poi.tipo)}
             eventHandlers={{
               click: () => onPoiSelect(poi),
             }}
           >
             <Popup>
               <div className="min-w-[150px]">
-                <h3 className="font-semibold">{poi.name}</h3>
-                <p className="text-sm text-gray-500 capitalize">{poi.category}</p>
-                {poi.description && (
-                  <p className="text-sm mt-1">{poi.description}</p>
+                <h3 className="font-semibold">{poi.nome}</h3>
+                <p className="text-sm text-gray-500">{POI_TYPE_LABELS[poi.tipo]}</p>
+                {poi.descrizione && (
+                  <p className="text-sm mt-1">{poi.descrizione}</p>
                 )}
               </div>
             </Popup>

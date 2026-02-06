@@ -112,6 +112,9 @@ export default function EventDetailPage() {
       gioco: 'bg-yellow-100 text-yellow-800',
       spiritualita: 'bg-indigo-100 text-indigo-800',
       servizio: 'bg-orange-100 text-orange-800',
+      natura: 'bg-emerald-100 text-emerald-800',
+      arte: 'bg-pink-100 text-pink-800',
+      musica: 'bg-rose-100 text-rose-800',
       altro: 'bg-gray-100 text-gray-800',
     };
     return colors[cat] || colors.altro;
@@ -238,7 +241,7 @@ export default function EventDetailPage() {
                 </div>
 
                 {/* Location */}
-                {event.location && (
+                {event.location_details && (
                   <div>
                     <div className="flex items-center text-gray-500 mb-1">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +250,7 @@ export default function EventDetailPage() {
                       </svg>
                       <span className="text-sm font-medium">Luogo</span>
                     </div>
-                    <p className="text-gray-700 ml-7">{event.location}</p>
+                    <p className="text-gray-700 ml-7">{event.location_details}</p>
                   </div>
                 )}
 
@@ -299,9 +302,9 @@ export default function EventDetailPage() {
                   </button>
                 )}
 
-                {event.poi_id && (
+                {event.location_poi_id && (
                   <Link
-                    href={`/map?poi=${event.poi_id}`}
+                    href={`/map?poi=${event.location_poi_id}`}
                     className="block w-full py-3 px-4 rounded-lg text-center border-2 font-medium"
                     style={{ borderColor: 'var(--scout-green)', color: 'var(--scout-green)' }}
                   >

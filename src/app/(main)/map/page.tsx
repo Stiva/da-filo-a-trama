@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { Poi, PoiCategory } from '@/types/database';
+import { POI_TYPE_LABELS } from '@/types/database';
 
 // Import dinamico per evitare errori SSR con Leaflet
 const MapComponent = dynamic(() => import('@/components/Map'), {
@@ -18,14 +19,19 @@ const MapComponent = dynamic(() => import('@/components/Map'), {
   ),
 });
 
-const CATEGORIES: { value: PoiCategory | ''; label: string; icon: string }[] = [
+// Tipi POI allineati con DB CHECK constraint
+const POI_TYPES: { value: PoiCategory | ''; label: string; icon: string }[] = [
   { value: '', label: 'Tutti', icon: '📍' },
-  { value: 'evento', label: 'Eventi', icon: '🎪' },
-  { value: 'servizi', label: 'Servizi', icon: '🚻' },
-  { value: 'ristoro', label: 'Ristoro', icon: '🍽️' },
-  { value: 'emergenza', label: 'Emergenza', icon: '🏥' },
-  { value: 'info', label: 'Info Point', icon: 'ℹ️' },
-  { value: 'parcheggio', label: 'Parcheggio', icon: '🅿️' },
+  { value: 'stage', label: 'Palco', icon: '🎪' },
+  { value: 'food', label: 'Ristoro', icon: '🍽' },
+  { value: 'toilet', label: 'Servizi', icon: '🚻' },
+  { value: 'medical', label: 'Punto Medico', icon: '🏥' },
+  { value: 'info', label: 'Info Point', icon: 'ℹ' },
+  { value: 'camping', label: 'Campeggio', icon: '⛺' },
+  { value: 'parking', label: 'Parcheggio', icon: '🅿' },
+  { value: 'worship', label: 'Spiritualita', icon: '🙏' },
+  { value: 'activity', label: 'Attivita', icon: '🎯' },
+  { value: 'entrance', label: 'Ingresso', icon: '🚪' },
 ];
 
 // Componente interno che usa useSearchParams
@@ -46,7 +52,7 @@ function MapPageContent() {
 
   useEffect(() => {
     if (selectedCategory) {
-      setFilteredPois(pois.filter(p => p.category === selectedCategory));
+      setFilteredPois(pois.filter(p => p.tipo === selectedCategory));
     } else {
       setFilteredPois(pois);
     }
@@ -82,9 +88,9 @@ function MapPageContent() {
     }
   };
 
-  const getCategoryIcon = (category: PoiCategory) => {
-    const cat = CATEGORIES.find(c => c.value === category);
-    return cat?.icon || '📍';
+  const getTypeIcon = (tipo: PoiCategory) => {
+    const type = POI_TYPES.find(t => t.value === tipo);
+    return type?.icon || '📍';
   };
 
   return (
@@ -99,21 +105,21 @@ function MapPageContent() {
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Sidebar - POI List */}
         <div className="lg:col-span-1 order-2 lg:order-1">
-          {/* Category Filter */}
+          {/* Type Filter */}
           <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-            <h2 className="font-semibold mb-3">Filtra per categoria</h2>
+            <h2 className="font-semibold mb-3">Filtra per tipo</h2>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
+              {POI_TYPES.map((type) => (
                 <button
-                  key={cat.value}
-                  onClick={() => setSelectedCategory(cat.value)}
+                  key={type.value}
+                  onClick={() => setSelectedCategory(type.value)}
                   className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                    selectedCategory === cat.value
+                    selectedCategory === type.value
                       ? 'bg-green-500 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {cat.icon} {cat.label}
+                  {type.icon} {type.label}
                 </button>
               ))}
             </div>
@@ -142,12 +148,12 @@ function MapPageContent() {
                       }`}
                     >
                       <div className="flex items-start gap-2">
-                        <span className="text-lg">{getCategoryIcon(poi.category)}</span>
+                        <span className="text-lg">{getTypeIcon(poi.tipo)}</span>
                         <div>
-                          <p className="font-medium text-sm">{poi.name}</p>
-                          {poi.description && (
+                          <p className="font-medium text-sm">{poi.nome}</p>
+                          {poi.descrizione && (
                             <p className="text-xs text-gray-500 line-clamp-1">
-                              {poi.description}
+                              {poi.descrizione}
                             </p>
                           )}
                         </div>
@@ -174,12 +180,12 @@ function MapPageContent() {
           {selectedPoi && (
             <div className="mt-4 bg-white rounded-lg shadow-md p-4">
               <div className="flex items-start gap-3">
-                <span className="text-2xl">{getCategoryIcon(selectedPoi.category)}</span>
+                <span className="text-2xl">{getTypeIcon(selectedPoi.tipo)}</span>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{selectedPoi.name}</h3>
-                  <p className="text-sm text-gray-500 capitalize">{selectedPoi.category}</p>
-                  {selectedPoi.description && (
-                    <p className="mt-2 text-gray-600">{selectedPoi.description}</p>
+                  <h3 className="font-semibold text-lg">{selectedPoi.nome}</h3>
+                  <p className="text-sm text-gray-500">{POI_TYPE_LABELS[selectedPoi.tipo]}</p>
+                  {selectedPoi.descrizione && (
+                    <p className="mt-2 text-gray-600">{selectedPoi.descrizione}</p>
                   )}
                 </div>
                 <button
@@ -200,10 +206,10 @@ function MapPageContent() {
       <div className="mt-6 bg-white rounded-lg shadow-md p-4">
         <h2 className="font-semibold mb-3">Legenda</h2>
         <div className="flex flex-wrap gap-4">
-          {CATEGORIES.filter(c => c.value !== '').map((cat) => (
-            <div key={cat.value} className="flex items-center gap-2 text-sm">
-              <span>{cat.icon}</span>
-              <span className="text-gray-600">{cat.label}</span>
+          {POI_TYPES.filter(t => t.value !== '').map((type) => (
+            <div key={type.value} className="flex items-center gap-2 text-sm">
+              <span>{type.icon}</span>
+              <span className="text-gray-600">{type.label}</span>
             </div>
           ))}
         </div>

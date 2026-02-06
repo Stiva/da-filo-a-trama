@@ -11,6 +11,9 @@ const CATEGORIES: { value: EventCategory; label: string }[] = [
   { value: 'gioco', label: 'Gioco' },
   { value: 'spiritualita', label: 'Spiritualita' },
   { value: 'servizio', label: 'Servizio' },
+  { value: 'natura', label: 'Natura' },
+  { value: 'arte', label: 'Arte' },
+  { value: 'musica', label: 'Musica' },
   { value: 'altro', label: 'Altro' },
 ];
 
@@ -29,7 +32,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     description: event?.description || '',
     category: event?.category || 'workshop' as EventCategory,
     tags: event?.tags || [],
-    location: event?.location || '',
+    location_details: event?.location_details || '',
     start_time: event?.start_time
       ? new Date(event.start_time).toISOString().slice(0, 16)
       : '',
@@ -170,8 +173,8 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             </label>
             <input
               type="text"
-              value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              value={formData.location_details}
+              onChange={(e) => setFormData(prev => ({ ...prev, location_details: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="es. Sala Conferenze A"
             />
