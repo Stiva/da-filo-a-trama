@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, ApiResponse } from '@/types/database';
@@ -9,10 +9,18 @@ import type { Event, ApiResponse } from '@/types/database';
  */
 export async function GET(): Promise<NextResponse<ApiResponse<Event[]>>> {
   try {
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const { userId } = await auth();
 
-    if (metadata?.role !== 'admin' && metadata?.role !== 'staff') {
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verifica ruolo admin via Clerk
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(userId);
+    const role = (clerkUser.publicMetadata as { role?: string })?.role;
+
+    if (role !== 'admin' && role !== 'staff') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -43,10 +51,18 @@ export async function GET(): Promise<NextResponse<ApiResponse<Event[]>>> {
  */
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<Event>>> {
   try {
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const { userId } = await auth();
 
-    if (metadata?.role !== 'admin' && metadata?.role !== 'staff') {
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verifica ruolo admin via Clerk
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(userId);
+    const role = (clerkUser.publicMetadata as { role?: string })?.role;
+
+    if (role !== 'admin' && role !== 'staff') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

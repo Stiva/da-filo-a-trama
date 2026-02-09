@@ -135,7 +135,7 @@ export async function PUT(
 
 /**
  * DELETE /api/admin/assets/[id]
- * Elimina asset (admin only)
+ * Elimina asset (admin only) - elimina anche il file da Storage
  */
 export async function DELETE(
   _request: Request,
@@ -163,13 +163,47 @@ export async function DELETE(
 
     const supabase = createServiceRoleClient();
 
-    const { error } = await supabase
+    // 1. Recupera l'asset per ottenere il file_url
+    const { data: asset, error: fetchError } = await supabase
+      .from('assets')
+      .select('file_url')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Asset non trovato' }, { status: 404 });
+      }
+      throw fetchError;
+    }
+
+    // 2. Estrai il path dallo Storage URL e elimina il file
+    if (asset?.file_url) {
+      const storageUrl = asset.file_url;
+      // URL formato: https://xxx.supabase.co/storage/v1/object/public/assets/uploads/123_file.pdf
+      const match = storageUrl.match(/\/storage\/v1\/object\/public\/assets\/(.+)$/);
+
+      if (match) {
+        const filePath = match[1];
+        const { error: storageError } = await supabase.storage
+          .from('assets')
+          .remove([filePath]);
+
+        if (storageError) {
+          console.error('Errore eliminazione file dallo Storage:', storageError);
+          // Continua comunque con l'eliminazione del record DB
+        }
+      }
+    }
+
+    // 3. Elimina il record dal database
+    const { error: deleteError } = await supabase
       .from('assets')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      throw error;
+    if (deleteError) {
+      throw deleteError;
     }
 
     return NextResponse.json({

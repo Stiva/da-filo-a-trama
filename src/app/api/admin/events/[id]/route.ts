@@ -1,10 +1,21 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, ApiResponse } from '@/types/database';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+// Helper function to check admin role
+async function checkAdminRole(userId: string | null): Promise<{ isAuthorized: boolean; role?: string }> {
+  if (!userId) {
+    return { isAuthorized: false };
+  }
+  const client = await clerkClient();
+  const clerkUser = await client.users.getUser(userId);
+  const role = (clerkUser.publicMetadata as { role?: string })?.role;
+  return { isAuthorized: role === 'admin' || role === 'staff', role };
 }
 
 /**
@@ -17,10 +28,14 @@ export async function GET(
 ): Promise<NextResponse<ApiResponse<Event>>> {
   try {
     const { id } = await params;
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const { userId } = await auth();
 
-    if (metadata?.role !== 'admin' && metadata?.role !== 'staff') {
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { isAuthorized } = await checkAdminRole(userId);
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -59,10 +74,14 @@ export async function PUT(
 ): Promise<NextResponse<ApiResponse<Event>>> {
   try {
     const { id } = await params;
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const { userId } = await auth();
 
-    if (metadata?.role !== 'admin' && metadata?.role !== 'staff') {
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { isAuthorized } = await checkAdminRole(userId);
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -129,10 +148,14 @@ export async function PATCH(
 ): Promise<NextResponse<ApiResponse<Event>>> {
   try {
     const { id } = await params;
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const { userId } = await auth();
 
-    if (metadata?.role !== 'admin' && metadata?.role !== 'staff') {
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { isAuthorized } = await checkAdminRole(userId);
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -194,10 +217,14 @@ export async function DELETE(
 ): Promise<NextResponse<ApiResponse<{ deleted: boolean }>>> {
   try {
     const { id } = await params;
-    const { sessionClaims } = await auth();
-    const metadata = sessionClaims?.metadata as { role?: string } | undefined;
+    const { userId } = await auth();
 
-    if (metadata?.role !== 'admin' && metadata?.role !== 'staff') {
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { isAuthorized } = await checkAdminRole(userId);
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
