@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
 
@@ -18,6 +18,8 @@ const VISIBILITY_OPTIONS: { value: AssetVisibility; label: string; description: 
   { value: 'staff', label: 'Staff', description: 'Solo staff e admin' },
 ];
 
+type InputMode = 'upload' | 'url';
+
 interface AssetFormProps {
   asset?: Asset;
   isEditing?: boolean;
@@ -25,10 +27,14 @@ interface AssetFormProps {
 
 export default function AssetForm({ asset, isEditing = false }: AssetFormProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [inputMode, setInputMode] = useState<InputMode>(isEditing ? 'url' : 'upload');
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     file_name: asset?.file_name || '',
@@ -58,32 +64,51 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     fetchEvents();
   }, []);
 
-  // Auto-detect file type from URL
-  const detectFileType = (url: string): AssetType => {
-    const lowercaseUrl = url.toLowerCase();
-    if (lowercaseUrl.match(/\.(pdf)$/)) return 'pdf';
-    if (lowercaseUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) return 'image';
-    if (lowercaseUrl.match(/\.(mp4|webm|mov|avi)$/)) return 'video';
-    if (lowercaseUrl.match(/\.(mp3|wav|ogg|m4a)$/)) return 'audio';
-    return 'document';
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setError(null);
+    setUploadProgress('Caricamento in corso...');
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const response = await fetch('/api/admin/assets/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Errore durante il caricamento');
+      }
+
+      // Aggiorna form con i dati del file caricato
+      setFormData(prev => ({
+        ...prev,
+        file_name: result.data.file_name,
+        file_url: result.data.file_url,
+        tipo: result.data.tipo as AssetType,
+        file_size_bytes: result.data.file_size_bytes,
+        mime_type: result.data.mime_type,
+      }));
+
+      setUploadProgress('File caricato con successo!');
+      setTimeout(() => setUploadProgress(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore sconosciuto');
+      setUploadProgress(null);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  // Auto-detect mime type from URL
-  const detectMimeType = (url: string): string => {
-    const lowercaseUrl = url.toLowerCase();
-    if (lowercaseUrl.endsWith('.pdf')) return 'application/pdf';
-    if (lowercaseUrl.endsWith('.jpg') || lowercaseUrl.endsWith('.jpeg')) return 'image/jpeg';
-    if (lowercaseUrl.endsWith('.png')) return 'image/png';
-    if (lowercaseUrl.endsWith('.gif')) return 'image/gif';
-    if (lowercaseUrl.endsWith('.webp')) return 'image/webp';
-    if (lowercaseUrl.endsWith('.svg')) return 'image/svg+xml';
-    if (lowercaseUrl.endsWith('.mp4')) return 'video/mp4';
-    if (lowercaseUrl.endsWith('.webm')) return 'video/webm';
-    if (lowercaseUrl.endsWith('.mp3')) return 'audio/mpeg';
-    if (lowercaseUrl.endsWith('.wav')) return 'audio/wav';
-    return 'application/octet-stream';
-  };
-
+  // Handle URL input (for manual URL entry)
   const handleUrlChange = (url: string) => {
     setFormData(prev => ({
       ...prev,
@@ -93,8 +118,45 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     }));
   };
 
+  // Auto-detect file type from URL
+  const detectFileType = (url: string): AssetType => {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.match(/\.(pdf)(\?|$)/)) return 'pdf';
+    if (lowercaseUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return 'image';
+    if (lowercaseUrl.match(/\.(mp4|webm|mov|avi)(\?|$)/)) return 'video';
+    if (lowercaseUrl.match(/\.(mp3|wav|ogg|m4a)(\?|$)/)) return 'audio';
+    return 'document';
+  };
+
+  // Auto-detect mime type from URL
+  const detectMimeType = (url: string): string => {
+    const lowercaseUrl = url.toLowerCase();
+    if (lowercaseUrl.match(/\.pdf(\?|$)/)) return 'application/pdf';
+    if (lowercaseUrl.match(/\.(jpg|jpeg)(\?|$)/)) return 'image/jpeg';
+    if (lowercaseUrl.match(/\.png(\?|$)/)) return 'image/png';
+    if (lowercaseUrl.match(/\.gif(\?|$)/)) return 'image/gif';
+    if (lowercaseUrl.match(/\.webp(\?|$)/)) return 'image/webp';
+    if (lowercaseUrl.match(/\.svg(\?|$)/)) return 'image/svg+xml';
+    if (lowercaseUrl.match(/\.mp4(\?|$)/)) return 'video/mp4';
+    if (lowercaseUrl.match(/\.webm(\?|$)/)) return 'video/webm';
+    if (lowercaseUrl.match(/\.mp3(\?|$)/)) return 'audio/mpeg';
+    if (lowercaseUrl.match(/\.wav(\?|$)/)) return 'audio/wav';
+    return 'application/octet-stream';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.file_url) {
+      setError('URL file obbligatorio. Carica un file o inserisci un URL.');
+      return;
+    }
+
+    if (!formData.file_name) {
+      setError('Nome file obbligatorio');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
 
@@ -172,6 +234,13 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     }
   };
 
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -180,28 +249,157 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         </div>
       )}
 
-      {/* Basic Info */}
+      {/* File Source Selection */}
+      {!isEditing && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">Sorgente File</h2>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setInputMode('upload')}
+              className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
+                inputMode === 'upload'
+                  ? 'border-agesci-blue bg-agesci-blue/5'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-2xl mb-2">📤</div>
+              <div className="font-medium">Carica File</div>
+              <div className="text-sm text-gray-500">Upload diretto dal tuo dispositivo</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('url')}
+              className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
+                inputMode === 'url'
+                  ? 'border-agesci-blue bg-agesci-blue/5'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="text-2xl mb-2">🔗</div>
+              <div className="font-medium">URL Esterno</div>
+              <div className="text-sm text-gray-500">Inserisci URL di un file esistente</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Section */}
+      {inputMode === 'upload' && !isEditing && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">Carica File</h2>
+
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+              isUploading
+                ? 'border-agesci-blue bg-agesci-blue/5'
+                : 'border-gray-300 hover:border-agesci-blue hover:bg-gray-50'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg,.mp4,.webm,.mp3,.wav"
+            />
+
+            {isUploading ? (
+              <div>
+                <div className="inline-block w-8 h-8 border-4 border-agesci-blue border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p className="text-agesci-blue font-medium">{uploadProgress}</p>
+              </div>
+            ) : formData.file_url ? (
+              <div>
+                <div className="text-4xl mb-2">{getFileTypeIcon(formData.tipo)}</div>
+                <p className="font-medium text-gray-900">{formData.file_name}</p>
+                <p className="text-sm text-gray-500">
+                  {formatFileSize(formData.file_size_bytes)} {formData.file_size_bytes && '•'} {formData.tipo.toUpperCase()}
+                </p>
+                <p className="text-xs text-agesci-blue mt-2">Clicca per sostituire</p>
+              </div>
+            ) : (
+              <div>
+                <div className="text-4xl mb-2">📁</div>
+                <p className="font-medium text-gray-900">Clicca o trascina un file</p>
+                <p className="text-sm text-gray-500">PDF, immagini, video, audio, documenti (max 50MB)</p>
+              </div>
+            )}
+          </div>
+
+          {uploadProgress && !isUploading && (
+            <p className="mt-2 text-sm text-green-600">{uploadProgress}</p>
+          )}
+        </div>
+      )}
+
+      {/* URL Input Section */}
+      {(inputMode === 'url' || isEditing) && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">
+            {isEditing ? 'Informazioni File' : 'URL Esterno'}
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                URL File *
+              </label>
+              <input
+                type="url"
+                value={formData.file_url}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+                placeholder="https://esempio.com/file.pdf"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Tipo e MIME vengono rilevati automaticamente dall'estensione
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nome File *
+              </label>
+              <input
+                type="text"
+                value={formData.file_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, file_name: e.target.value }))}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+                placeholder="documento.pdf"
+              />
+            </div>
+
+            {/* File Info Display */}
+            {formData.file_url && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{getFileTypeIcon(formData.tipo)}</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{formData.tipo.toUpperCase()}</p>
+                    <p className="text-xs text-gray-500">{formData.mime_type || 'MIME non rilevato'}</p>
+                  </div>
+                  {formData.file_size_bytes && (
+                    <p className="text-sm text-gray-600">{formatFileSize(formData.file_size_bytes)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Metadata */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Informazioni Base</h2>
+        <h2 className="text-lg font-semibold mb-4">Metadata</h2>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome File *
-            </label>
-            <input
-              type="text"
-              value={formData.file_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, file_name: e.target.value }))}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-              placeholder="Nome del file"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Titolo (visualizzato)
+              Titolo (visualizzato agli utenti)
             </label>
             <input
               type="text"
@@ -223,23 +421,6 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
               placeholder="Descrizione opzionale"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL File *
-            </label>
-            <input
-              type="url"
-              value={formData.file_url}
-              onChange={(e) => handleUrlChange(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-              placeholder="https://esempio.com/file.pdf"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Il tipo file viene rilevato automaticamente dall'estensione
-            </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -265,14 +446,13 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dimensione File (bytes)
+                Dimensione
               </label>
               <input
-                type="number"
-                value={formData.file_size_bytes || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, file_size_bytes: e.target.value ? parseInt(e.target.value) : null }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-                placeholder="Opzionale"
+                type="text"
+                value={formatFileSize(formData.file_size_bytes) || 'Non disponibile'}
+                disabled
+                className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-500"
               />
             </div>
           </div>
@@ -353,7 +533,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       <div className="flex gap-4">
         <button
           type="submit"
-          disabled={isSaving}
+          disabled={isSaving || !formData.file_url}
           className="px-6 py-2 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light transition-colors disabled:opacity-50"
         >
           {isSaving ? 'Salvataggio...' : isEditing ? 'Salva Modifiche' : 'Crea Asset'}
