@@ -36,6 +36,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
       .eq('is_published', true)
       .order('start_time', { ascending: true });
 
+    // Filtro visibilita: visitatori vedono solo eventi pubblici
+    // Utenti autenticati vedono sia pubblici che registrati
+    if (!userId) {
+      query = query.eq('visibility', 'public');
+    }
+
     // Filtri opzionali
     if (category) {
       query = query.eq('category', category);

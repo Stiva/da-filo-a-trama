@@ -101,13 +101,14 @@ export async function PUT(
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
-      location: body.location || null,
+      location_details: body.location_details || body.location || null,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published || false,
+      visibility: body.visibility || 'public',
       updated_at: new Date().toISOString(),
     };
 
@@ -173,12 +174,14 @@ export async function PATCH(
     if (body.description !== undefined) updateData.description = body.description;
     if (body.category !== undefined) updateData.category = body.category;
     if (body.tags !== undefined) updateData.tags = body.tags;
-    if (body.location !== undefined) updateData.location = body.location;
+    if (body.location_details !== undefined) updateData.location_details = body.location_details;
+    if (body.location !== undefined) updateData.location_details = body.location;
     if (body.start_time !== undefined) updateData.start_time = body.start_time;
     if (body.end_time !== undefined) updateData.end_time = body.end_time;
     if (body.max_posti !== undefined) updateData.max_posti = body.max_posti;
     if (body.speaker_name !== undefined) updateData.speaker_name = body.speaker_name;
     if (body.speaker_bio !== undefined) updateData.speaker_bio = body.speaker_bio;
+    if (body.visibility !== undefined) updateData.visibility = body.visibility;
 
     const { data, error } = await supabase
       .from('events')

@@ -90,6 +90,9 @@ export type EventCategory =
   | 'musica'
   | 'altro';
 
+// Event visibility - public = everyone, registered = only authenticated users
+export type EventVisibility = 'public' | 'registered';
+
 export interface Event {
   id: string;
   title: string;
@@ -105,6 +108,7 @@ export interface Event {
   speaker_bio: string | null;
   is_published: boolean;
   is_featured: boolean;
+  visibility: EventVisibility;
   created_at: string;
   updated_at: string;
 }

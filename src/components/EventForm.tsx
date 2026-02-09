@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PREFERENCE_TAGS, type Event, type EventCategory } from '@/types/database';
+import { PREFERENCE_TAGS, type Event, type EventCategory, type EventVisibility } from '@/types/database';
 
 const CATEGORIES: { value: EventCategory; label: string }[] = [
   { value: 'workshop', label: 'Workshop' },
@@ -43,6 +43,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     speaker_name: event?.speaker_name || '',
     speaker_bio: event?.speaker_bio || '',
     is_published: event?.is_published || false,
+    visibility: event?.visibility || 'public' as EventVisibility,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -272,13 +273,14 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
         </div>
       </div>
 
-      {/* Publish */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Publish & Visibility */}
+      <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        {/* Publish Toggle */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Pubblica</h2>
             <p className="text-sm text-gray-500">
-              Gli eventi pubblicati sono visibili a tutti gli utenti
+              Gli eventi pubblicati sono visibili agli utenti
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -290,6 +292,26 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
           </label>
+        </div>
+
+        {/* Visibility */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Visibilita
+          </label>
+          <select
+            value={formData.visibility}
+            onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as EventVisibility }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="public">Pubblico - Visibile a tutti i visitatori</option>
+            <option value="registered">Riservato - Solo utenti registrati</option>
+          </select>
+          <p className="text-sm text-gray-500 mt-1">
+            {formData.visibility === 'public'
+              ? 'L\'evento sara visibile anche ai visitatori non registrati'
+              : 'L\'evento sara visibile solo agli utenti con un account'}
+          </p>
         </div>
       </div>
 

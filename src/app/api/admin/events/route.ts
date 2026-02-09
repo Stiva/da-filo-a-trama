@@ -83,13 +83,14 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
-      location: body.location || null,
+      location_details: body.location_details || body.location || null,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published || false,
+      visibility: body.visibility || 'public',
     };
 
     const { data, error } = await supabase

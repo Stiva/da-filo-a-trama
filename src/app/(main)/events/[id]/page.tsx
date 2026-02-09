@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { EventWithEnrollment, EventCategory } from '@/types/database';
+import EventAssets from '@/components/EventAssets';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -223,6 +224,9 @@ export default function EventDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Assets/Documents */}
+              <EventAssets eventId={eventId} />
             </div>
 
             {/* Sidebar */}
