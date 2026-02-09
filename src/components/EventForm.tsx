@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PREFERENCE_TAGS, type Event, type EventCategory, type EventVisibility } from '@/types/database';
 
@@ -27,12 +27,13 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [pois, setPois] = useState<{ id: string; nome: string }[]>([]);
   const [formData, setFormData] = useState({
     title: event?.title || '',
     description: event?.description || '',
     category: event?.category || 'workshop' as EventCategory,
     tags: event?.tags || [],
-    location_details: event?.location_details || '',
+    location_poi_id: event?.location_poi_id || '',
     start_time: event?.start_time
       ? new Date(event.start_time).toISOString().slice(0, 16)
       : '',
@@ -45,6 +46,21 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     is_published: event?.is_published || false,
     visibility: event?.visibility || 'public' as EventVisibility,
   });
+
+  useEffect(() => {
+    const fetchPois = async () => {
+      try {
+        const response = await fetch('/api/admin/poi');
+        if (!response.ok) throw new Error('Failed to fetch POIs');
+        const { data } = await response.json();
+        setPois(data);
+      } catch (error) {
+        console.error(error);
+        setError('Impossibile caricare i luoghi (POI).');
+      }
+    };
+    fetchPois();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,15 +186,21 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Luogo
+              Luogo (POI) *
             </label>
-            <input
-              type="text"
-              value={formData.location_details}
-              onChange={(e) => setFormData(prev => ({ ...prev, location_details: e.target.value }))}
+            <select
+              value={formData.location_poi_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, location_poi_id: e.target.value }))}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="es. Sala Conferenze A"
-            />
+            >
+              <option value="" disabled>Seleziona un luogo</option>
+              {pois.map((poi) => (
+                <option key={poi.id} value={poi.id}>
+                  {poi.nome}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

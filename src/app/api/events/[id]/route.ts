@@ -24,7 +24,7 @@ export async function GET(
     // Recupera evento
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('*')
+      .select('*, poi:location_poi_id (*)')
       .eq('id', id)
       .eq('is_published', true)
       .single();

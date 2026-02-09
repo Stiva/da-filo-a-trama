@@ -99,8 +99,8 @@ export interface Event {
   description: string | null;
   category: EventCategory;
   tags: string[];
-  location_details: string | null;  // DB column name
-  location_poi_id: string | null;   // DB column name
+  location_poi_id: string;
+  poi: Poi;
   start_time: string;
   end_time: string;
   max_posti: number;

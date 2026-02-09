@@ -245,7 +245,7 @@ export default function EventDetailPage() {
                 </div>
 
                 {/* Location */}
-                {event.location_details && (
+                {event.poi && (
                   <div>
                     <div className="flex items-center text-gray-500 mb-1">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +254,7 @@ export default function EventDetailPage() {
                       </svg>
                       <span className="text-sm font-medium">Luogo</span>
                     </div>
-                    <p className="text-gray-700 ml-7">{event.location_details}</p>
+                    <p className="text-gray-700 ml-7">{event.poi.nome}</p>
                   </div>
                 )}
 

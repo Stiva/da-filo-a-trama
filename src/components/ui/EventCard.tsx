@@ -88,7 +88,7 @@ export default function EventCard({
         )}
 
         {/* Location */}
-        {event.location_details && (
+        {event.poi?.nome && (
           <div className="flex items-center gap-2 text-sm text-agesci-blue/60 mb-3">
             <svg
               className="w-4 h-4"
@@ -109,7 +109,7 @@ export default function EventCard({
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            {event.location_details}
+            {event.poi.nome}
           </div>
         )}
 
