@@ -50,9 +50,9 @@ export default function EventCard({
     : categoryIcons.default;
 
   return (
-    <div className="card-hover group relative overflow-hidden">
+    <div className="card-hover group relative overflow-hidden active:scale-[0.99] transition-transform">
       {/* Icona decorativa angolo */}
-      <div className="absolute -top-2 -right-2 w-16 h-16 bg-agesci-yellow rounded-full flex items-center justify-center text-2xl transform rotate-12 group-hover:rotate-0 transition-transform duration-300 shadow-md">
+      <div className="absolute -top-2 -right-2 w-16 h-16 bg-agesci-yellow rounded-full flex items-center justify-center text-2xl transform rotate-12 group-hover:rotate-0 group-active:rotate-0 transition-transform duration-300 shadow-md">
         {icon}
       </div>
 
@@ -60,7 +60,7 @@ export default function EventCard({
         {/* Data */}
         <div className="flex items-center gap-2 text-sm text-agesci-blue/70 mb-2">
           <svg
-            className="w-4 h-4"
+            className="w-4 h-4 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -72,11 +72,11 @@ export default function EventCard({
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          {formatDate(event.start_time)}
+          <span className="truncate">{formatDate(event.start_time)}</span>
         </div>
 
         {/* Titolo */}
-        <h3 className="font-display text-xl font-bold text-agesci-blue mb-2 line-clamp-2 group-hover:text-agesci-blue-light transition-colors">
+        <h3 className="font-display text-xl font-bold text-agesci-blue mb-2 line-clamp-2 group-hover:text-agesci-blue-light group-active:text-agesci-blue-light transition-colors">
           {event.title}
         </h3>
 
@@ -91,7 +91,7 @@ export default function EventCard({
         {event.poi?.nome && (
           <div className="flex items-center gap-2 text-sm text-agesci-blue/60 mb-3">
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -109,7 +109,7 @@ export default function EventCard({
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            {event.poi.nome}
+            <span className="truncate">{event.poi.nome}</span>
           </div>
         )}
 
@@ -125,7 +125,7 @@ export default function EventCard({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-agesci-blue/10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-agesci-blue/10">
           {/* Posti disponibili */}
           {spotsLeft !== null && (
             <div
@@ -141,19 +141,22 @@ export default function EventCard({
             </div>
           )}
 
-          {/* Azioni */}
-          <div className="flex gap-2 ml-auto">
+          {/* Azioni - Touch friendly with larger gap */}
+          <div className="flex gap-3 sm:ml-auto">
             {showEnrollButton && !isEnrolled && spotsLeft !== 0 && (
               <button
-                onClick={onEnroll}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEnroll?.();
+                }}
                 disabled={enrolling}
-                className="btn-primary btn-sm"
+                className="btn-primary btn-sm flex-1 sm:flex-none"
               >
                 {enrolling ? 'Iscrizione...' : 'Iscriviti'}
               </button>
             )}
             {isEnrolled && (
-              <span className="badge-green">
+              <span className="badge-green inline-flex items-center">
                 <svg
                   className="w-4 h-4 mr-1"
                   fill="none"
@@ -172,7 +175,8 @@ export default function EventCard({
             )}
             <Link
               href={`/events/${event.id}`}
-              className="btn-outline btn-sm group/link"
+              onClick={(e) => e.stopPropagation()}
+              className="btn-outline btn-sm group/link flex-1 sm:flex-none justify-center"
             >
               Dettagli
               <svg

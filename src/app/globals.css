@@ -119,49 +119,56 @@ h4 { font-size: 1.25rem; }
    ======================================== */
 @layer components {
   /* Bottoni */
+  /* Bottoni - Touch-safe con minimo 44px */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3
            font-semibold rounded-xl transition-all duration-200
            focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           disabled:opacity-50 disabled:cursor-not-allowed
+           min-h-[44px];
   }
 
   .btn-primary {
     @apply btn bg-agesci-yellow text-agesci-blue
            hover:shadow-playful hover:-translate-y-0.5
+           active:scale-95 active:shadow-none active:translate-y-0
            focus:ring-agesci-yellow;
   }
 
   .btn-secondary {
     @apply btn bg-agesci-blue text-white
            hover:bg-agesci-blue-light hover:-translate-y-0.5
+           active:scale-95 active:bg-agesci-blue-dark
            focus:ring-agesci-blue;
   }
 
   .btn-outline {
     @apply btn border-2 border-agesci-blue text-agesci-blue bg-transparent
            hover:bg-agesci-blue hover:text-white
+           active:scale-95 active:bg-agesci-blue active:text-white
            focus:ring-agesci-blue;
   }
 
   .btn-ghost {
     @apply btn text-agesci-blue bg-transparent
            hover:bg-agesci-blue/10
+           active:scale-95 active:bg-agesci-blue/20
            focus:ring-agesci-blue;
   }
 
   .btn-accent {
     @apply btn bg-lc-green text-white
            hover:bg-lc-green-dark hover:-translate-y-0.5
+           active:scale-95 active:bg-lc-green-dark
            focus:ring-lc-green;
   }
 
   .btn-sm {
-    @apply px-4 py-2 text-sm rounded-lg;
+    @apply px-4 py-2.5 text-sm rounded-lg min-h-[44px];
   }
 
   .btn-lg {
-    @apply px-8 py-4 text-lg rounded-2xl;
+    @apply px-8 py-4 text-lg rounded-2xl min-h-[48px];
   }
 
   /* Card */
@@ -207,12 +214,13 @@ h4 { font-size: 1.25rem; }
     @apply badge border-2 border-current bg-transparent;
   }
 
-  /* Input */
+  /* Input - Touch-safe con minimo 44px */
   .input {
     @apply w-full px-4 py-3 rounded-lg border-2 border-agesci-blue/30
            bg-white text-agesci-blue placeholder:text-agesci-blue/40
            focus:outline-none focus:border-agesci-blue focus:ring-2 focus:ring-agesci-blue/20
-           transition-all duration-200;
+           transition-all duration-200
+           min-h-[44px];
   }
 
   .input-error {
@@ -278,6 +286,72 @@ h4 { font-size: 1.25rem; }
     @apply w-12 h-12 flex items-center justify-center rounded-2xl
            bg-agesci-yellow text-agesci-blue shadow-playful-sm;
   }
+
+  /* ========================================
+     TOUCH-FIRST UTILITIES
+     ======================================== */
+
+  /* Modal close button - touch safe 44px */
+  .modal-close {
+    @apply w-11 h-11 min-w-[44px] min-h-[44px]
+           flex items-center justify-center rounded-full
+           text-gray-400 hover:text-gray-600 hover:bg-gray-100
+           active:bg-gray-200 transition-colors;
+  }
+
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply overflow-x-auto relative;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Scroll indicator gradient (destra) */
+  .table-responsive::after {
+    content: '';
+    @apply absolute right-0 top-0 bottom-0 w-6 pointer-events-none opacity-50;
+    background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+  }
+
+  /* Mobile card view per tabelle */
+  .data-card {
+    @apply bg-white rounded-lg shadow-md p-4 space-y-3;
+  }
+
+  .data-card-row {
+    @apply flex justify-between items-center text-sm gap-2;
+  }
+
+  .data-card-label {
+    @apply text-gray-500 font-medium flex-shrink-0;
+  }
+
+  .data-card-value {
+    @apply text-gray-900 text-right;
+  }
+
+  .data-card-actions {
+    @apply flex justify-end gap-3 pt-3 mt-3 border-t border-gray-100;
+  }
+
+  /* Touch-safe action button per tabelle/cards */
+  .action-btn {
+    @apply p-3 min-w-[44px] min-h-[44px]
+           flex items-center justify-center rounded-lg
+           text-gray-500 hover:text-gray-700 hover:bg-gray-100
+           active:bg-gray-200 transition-colors;
+  }
+
+  .action-btn-primary {
+    @apply action-btn text-agesci-blue hover:text-agesci-blue-light hover:bg-agesci-blue/10;
+  }
+
+  .action-btn-danger {
+    @apply action-btn text-red-500 hover:text-red-700 hover:bg-red-50 active:bg-red-100;
+  }
+
+  .action-btn-success {
+    @apply action-btn text-green-500 hover:text-green-700 hover:bg-green-50 active:bg-green-100;
+  }
 }
 
 /* ========================================
@@ -321,5 +395,45 @@ h4 { font-size: 1.25rem; }
   .text-gradient {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, var(--agesci-blue) 0%, var(--lc-green) 100%);
+  }
+
+  /* ========================================
+     TOUCH-FIRST UTILITIES
+     ======================================== */
+
+  /* Touch target minimo 44px */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Padding responsive mobile-first */
+  .p-mobile {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .px-mobile {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  .py-mobile {
+    @apply py-4 sm:py-6 lg:py-8;
+  }
+}
+
+/* ========================================
+   HOVER CONDIZIONALE - Solo dispositivi con mouse
+   ======================================== */
+@media (hover: hover) {
+  .card-hover:hover {
+    box-shadow: var(--tw-shadow-playful-lg, 0 8px 30px rgba(0, 65, 123, 0.15));
+    transform: translateY(-4px);
+  }
+}
+
+/* Touch feedback per dispositivi touch */
+@media (hover: none) {
+  .card-hover:active {
+    box-shadow: var(--tw-shadow-playful, 0 4px 14px rgba(0, 65, 123, 0.1));
+    transform: scale(0.99);
   }
 }

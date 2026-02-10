@@ -123,7 +123,7 @@ export default function EventDetailPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto text-center py-12">
           <div className="inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="mt-2 text-gray-600">Caricamento evento...</p>
@@ -134,11 +134,11 @@ export default function EventDetailPage() {
 
   if (error || !event) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-100 text-red-700 p-6 rounded-lg text-center">
             <p className="font-semibold">{error || 'Evento non trovato'}</p>
-            <Link href="/events" className="mt-4 inline-block text-red-600 underline">
+            <Link href="/events" className="mt-4 inline-block text-red-600 underline min-h-[44px] py-2">
               Torna agli eventi
             </Link>
           </div>
@@ -151,10 +151,13 @@ export default function EventDetailPage() {
   const isFull = spotsLeft <= 0;
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Back Link */}
-        <Link href="/events" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+        {/* Back Link - Touch friendly */}
+        <Link
+          href="/events"
+          className="inline-flex items-center text-gray-600 hover:text-gray-900 active:text-gray-900 mb-4 sm:mb-6 min-h-[44px] py-2"
+        >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -163,8 +166,8 @@ export default function EventDetailPage() {
 
         {/* Event Header */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="p-4 sm:p-6 border-b border-gray-100">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
               <span className={`px-3 py-1 text-sm font-medium rounded-full ${getCategoryColor(event.category)}`}>
                 {event.category}
               </span>
@@ -179,19 +182,19 @@ export default function EventDetailPage() {
               )}
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
 
             {event.speaker_name && (
-              <p className="text-lg text-gray-600">
+              <p className="text-base sm:text-lg text-gray-600">
                 con <span className="font-medium">{event.speaker_name}</span>
               </p>
             )}
           </div>
 
-          {/* Event Details */}
-          <div className="p-6 grid md:grid-cols-3 gap-6">
+          {/* Event Details - Responsive grid */}
+          <div className="p-4 sm:p-6 grid lg:grid-cols-3 gap-6">
             {/* Main Content */}
-            <div className="md:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6">
               {/* Description */}
               <div>
                 <h2 className="text-lg font-semibold mb-2">Descrizione</h2>
@@ -229,14 +232,14 @@ export default function EventDetailPage() {
               <EventAssets eventId={eventId} />
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar - Stacks on mobile */}
             <div className="space-y-4">
               {/* Info Card */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                 {/* Date */}
                 <div>
                   <div className="flex items-center text-gray-500 mb-1">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span className="text-sm font-medium">Data e ora</span>
@@ -248,7 +251,7 @@ export default function EventDetailPage() {
                 {event.poi && (
                   <div>
                     <div className="flex items-center text-gray-500 mb-1">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
@@ -261,7 +264,7 @@ export default function EventDetailPage() {
                 {/* Capacity */}
                 <div>
                   <div className="flex items-center text-gray-500 mb-1">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                     <span className="text-sm font-medium">Posti</span>
@@ -285,13 +288,13 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="space-y-2">
+              {/* Action Buttons - Touch friendly */}
+              <div className="space-y-3">
                 {!event.is_enrolled ? (
                   <button
                     onClick={handleEnroll}
                     disabled={isEnrolling}
-                    className="w-full py-3 px-4 rounded-lg text-white font-medium disabled:opacity-50"
+                    className="w-full py-3 px-4 rounded-lg text-white font-medium disabled:opacity-50 min-h-[48px] active:scale-[0.98] transition-transform"
                     style={{ backgroundColor: isFull ? 'var(--scout-azure)' : 'var(--scout-green)' }}
                   >
                     {isEnrolling ? 'Iscrizione in corso...' : isFull ? 'Iscriviti alla lista d\'attesa' : 'Iscriviti'}
@@ -300,7 +303,7 @@ export default function EventDetailPage() {
                   <button
                     onClick={handleCancelEnrollment}
                     disabled={isEnrolling}
-                    className="w-full py-3 px-4 rounded-lg text-white font-medium bg-red-500 hover:bg-red-600 disabled:opacity-50"
+                    className="w-full py-3 px-4 rounded-lg text-white font-medium bg-red-500 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
                   >
                     {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
                   </button>
@@ -309,7 +312,7 @@ export default function EventDetailPage() {
                 {event.location_poi_id && (
                   <Link
                     href={`/map?poi=${event.location_poi_id}`}
-                    className="block w-full py-3 px-4 rounded-lg text-center border-2 font-medium"
+                    className="block w-full py-3 px-4 rounded-lg text-center border-2 font-medium min-h-[48px] active:scale-[0.98] transition-transform flex items-center justify-center"
                     style={{ borderColor: 'var(--scout-green)', color: 'var(--scout-green)' }}
                   >
                     Vedi sulla mappa

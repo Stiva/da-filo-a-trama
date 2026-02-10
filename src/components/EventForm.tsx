@@ -119,7 +119,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
       )}
 
       {/* Basic Info */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="text-lg font-semibold mb-4">Informazioni Base</h2>
 
         <div className="space-y-4">
@@ -132,7 +132,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full"
               placeholder="Titolo dell'evento"
             />
           </div>
@@ -145,12 +145,12 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full resize-y"
               placeholder="Descrizione dettagliata dell'evento"
             />
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Categoria *
@@ -159,7 +159,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 value={formData.category}
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as EventCategory }))}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input w-full"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -179,7 +179,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 onChange={(e) => setFormData(prev => ({ ...prev, max_posti: parseInt(e.target.value) || 0 }))}
                 required
                 min={1}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input w-full"
               />
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               value={formData.location_poi_id}
               onChange={(e) => setFormData(prev => ({ ...prev, location_poi_id: e.target.value }))}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full"
             >
               <option value="" disabled>Seleziona un luogo</option>
               {pois.map((poi) => (
@@ -206,10 +206,10 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
       </div>
 
       {/* Date & Time */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="text-lg font-semibold mb-4">Data e Ora</h2>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Inizio *
@@ -219,7 +219,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               value={formData.start_time}
               onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full"
             />
           </div>
 
@@ -231,14 +231,14 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               type="datetime-local"
               value={formData.end_time}
               onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full"
             />
           </div>
         </div>
       </div>
 
       {/* Speaker */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="text-lg font-semibold mb-4">Speaker</h2>
 
         <div className="space-y-4">
@@ -250,7 +250,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               type="text"
               value={formData.speaker_name}
               onChange={(e) => setFormData(prev => ({ ...prev, speaker_name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full"
               placeholder="Nome e cognome dello speaker"
             />
           </div>
@@ -263,30 +263,30 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               value={formData.speaker_bio}
               onChange={(e) => setFormData(prev => ({ ...prev, speaker_bio: e.target.value }))}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-full resize-y"
               placeholder="Breve biografia dello speaker"
             />
           </div>
         </div>
       </div>
 
-      {/* Tags */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Tags - Touch friendly */}
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="text-lg font-semibold mb-4">Tag (per raccomandazioni)</h2>
         <p className="text-sm text-gray-500 mb-4">
           Seleziona i tag che descrivono l&apos;evento. Questi verranno usati per consigliare l&apos;evento agli utenti.
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           {PREFERENCE_TAGS.map((tag) => (
             <button
               key={tag}
               type="button"
               onClick={() => toggleTag(tag)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] active:scale-95 ${
                 formData.tags.includes(tag)
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
               }`}
             >
               {tag}
@@ -296,23 +296,23 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
       </div>
 
       {/* Publish & Visibility */}
-      <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-        {/* Publish Toggle */}
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 space-y-6">
+        {/* Publish Toggle - Larger for touch */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
             <h2 className="text-lg font-semibold">Pubblica</h2>
             <p className="text-sm text-gray-500">
               Gli eventi pubblicati sono visibili agli utenti
             </p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
             <input
               type="checkbox"
               checked={formData.is_published}
               onChange={(e) => setFormData(prev => ({ ...prev, is_published: e.target.checked }))}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
           </label>
         </div>
 
@@ -324,7 +324,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           <select
             value={formData.visibility}
             onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as EventVisibility }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input w-full"
           >
             <option value="public">Pubblico - Visibile a tutti i visitatori</option>
             <option value="registered">Riservato - Solo utenti registrati</option>
@@ -337,21 +337,21 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-4">
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {isSaving ? 'Salvataggio...' : isEditing ? 'Salva Modifiche' : 'Crea Evento'}
-        </button>
+      {/* Actions - Responsive, full width on mobile */}
+      <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          className="w-full sm:w-auto px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 active:bg-gray-400 active:scale-[0.98] transition-all min-h-[48px]"
         >
           Annulla
+        </button>
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 min-h-[48px]"
+        >
+          {isSaving ? 'Salvataggio...' : isEditing ? 'Salva Modifiche' : 'Crea Evento'}
         </button>
       </div>
     </form>

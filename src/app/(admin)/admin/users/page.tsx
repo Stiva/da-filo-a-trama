@@ -147,17 +147,17 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestione Partecipanti</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestione Partecipanti</h1>
           <p className="text-gray-500 mt-1">
             {total} utenti registrati
           </p>
         </div>
         <button
           onClick={exportCSV}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-lc-green text-white rounded-lg hover:bg-lc-green-dark transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-lc-green text-white rounded-lg hover:bg-lc-green-dark active:scale-95 transition-all min-h-[44px] w-full sm:w-auto"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -166,11 +166,11 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Touch friendly */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           {/* Ricerca */}
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Cerca</label>
             <input
               type="text"
@@ -182,7 +182,7 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Filtro ruolo */}
-          <div className="w-40">
+          <div className="flex-1 sm:flex-none sm:w-40">
             <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
             <select
               value={roleFilter}
@@ -197,7 +197,7 @@ export default function AdminUsersPage() {
           </div>
 
           {/* Filtro onboarding */}
-          <div className="w-40">
+          <div className="flex-1 sm:flex-none sm:w-40">
             <label className="block text-sm font-medium text-gray-700 mb-1">Onboarding</label>
             <select
               value={onboardingFilter}
@@ -227,11 +227,11 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Users Table */}
+      {/* Users Content */}
       {!isLoading && !error && (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <>
           {users.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
               <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
@@ -239,58 +239,168 @@ export default function AdminUsersPage() {
             </div>
           ) : (
             <>
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Utente
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Gruppo Scout
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ruolo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stato
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Registrato
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Azioni
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <AvatarPreview config={user.avatar_config} size="xs" />
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {user.name || user.first_name || 'N/D'} {user.surname || ''}
-                            </p>
-                            <p className="text-sm text-gray-500">{user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {user.scout_group || '-'}
-                      </td>
-                      <td className="px-6 py-4">
+              {/* Desktop: Table View */}
+              <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="table-responsive">
+                  <table className="w-full min-w-[800px]">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Utente
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Gruppo Scout
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ruolo
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Stato
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Registrato
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Azioni
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <AvatarPreview config={user.avatar_config} size="xs" />
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {user.name || user.first_name || 'N/D'} {user.surname || ''}
+                                </p>
+                                <p className="text-sm text-gray-500">{user.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {user.scout_group || '-'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <select
+                              value={user.role}
+                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                              className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(user.role)}`}
+                            >
+                              <option value="user">Utente</option>
+                              <option value="staff">Staff</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                user.onboarding_completed
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}
+                            >
+                              {user.onboarding_completed ? 'Completato' : 'In attesa'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">
+                            {new Date(user.created_at).toLocaleDateString('it-IT', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Link
+                                href={`/admin/users/${user.id}`}
+                                className="p-2 text-gray-400 hover:text-agesci-blue transition-colors"
+                                title="Dettagli"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </Link>
+                              <button
+                                onClick={() => handleDelete(user.id, `${user.name || ''} ${user.surname || ''}`.trim() || user.email)}
+                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                title="Elimina"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination - Desktop */}
+                {totalPages > 1 && (
+                  <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">
+                      Pagina {page} di {totalPages} ({total} risultati)
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Precedente
+                      </button>
+                      <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Successiva
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile: Card View */}
+              <div className="md:hidden space-y-4">
+                {users.map((user) => (
+                  <div key={user.id} className="data-card">
+                    {/* User Header */}
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                      <AvatarPreview config={user.avatar_config} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          {user.name || user.first_name || 'N/D'} {user.surname || ''}
+                        </p>
+                        <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                      </div>
+                    </div>
+
+                    {/* User Details */}
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Gruppo Scout</span>
+                        <span className="text-gray-900">{user.scout_group || '-'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Ruolo</span>
                         <select
                           value={user.role}
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(user.role)}`}
+                          className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer min-h-[32px] ${getRoleBadgeColor(user.role)}`}
                         >
                           <option value="user">Utente</option>
                           <option value="staff">Staff</option>
                           <option value="admin">Admin</option>
                         </select>
-                      </td>
-                      <td className="px-6 py-4">
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Onboarding</span>
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${
                             user.onboarding_completed
@@ -300,69 +410,72 @@ export default function AdminUsersPage() {
                         >
                           {user.onboarding_completed ? 'Completato' : 'In attesa'}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(user.created_at).toLocaleDateString('it-IT', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/admin/users/${user.id}`}
-                            className="p-2 text-gray-400 hover:text-agesci-blue transition-colors"
-                            title="Dettagli"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(user.id, `${user.name || ''} ${user.surname || ''}`.trim() || user.email)}
-                            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                            title="Elimina"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Registrato</span>
+                        <span className="text-gray-900">
+                          {new Date(user.created_at).toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                  <p className="text-sm text-gray-500">
-                    Pagina {page} di {totalPages} ({total} risultati)
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Precedente
-                    </button>
-                    <button
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                      className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Successiva
-                    </button>
+                    {/* Actions */}
+                    <div className="data-card-actions">
+                      <Link
+                        href={`/admin/users/${user.id}`}
+                        className="action-btn text-agesci-blue"
+                        title="Dettagli"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(user.id, `${user.name || ''} ${user.surname || ''}`.trim() || user.email)}
+                        className="action-btn text-red-600"
+                        title="Elimina"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                ))}
+
+                {/* Pagination - Mobile */}
+                {totalPages > 1 && (
+                  <div className="bg-white rounded-lg shadow-md p-4">
+                    <p className="text-sm text-gray-500 text-center mb-3">
+                      Pagina {page} di {totalPages} ({total} risultati)
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100 min-h-[44px]"
+                      >
+                        Precedente
+                      </button>
+                      <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100 min-h-[44px]"
+                      >
+                        Successiva
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
-        </div>
+        </>
       )}
     </div>
   );
