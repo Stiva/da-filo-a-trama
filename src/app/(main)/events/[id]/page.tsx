@@ -177,7 +177,9 @@ export default function EventDetailPage() {
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {event.enrollment_status === 'confirmed' ? 'Iscritto' : 'In lista d\'attesa'}
+                  {event.enrollment_status === 'confirmed'
+                    ? 'Iscritto'
+                    : `In lista d'attesa${event.waitlist_position ? ` #${event.waitlist_position}` : ''}`}
                 </span>
               )}
             </div>
@@ -307,6 +309,12 @@ export default function EventDetailPage() {
                   >
                     {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
                   </button>
+                )}
+
+                {event.enrollment_status === 'waitlist' && event.waitlist_position && (
+                  <div className="text-sm text-gray-600 text-center">
+                    Sei in lista d'attesa, posizione {event.waitlist_position}
+                  </div>
                 )}
 
                 {event.location_poi_id && (

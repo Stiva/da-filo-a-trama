@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/notify-upcoming-events",
+      "schedule": "*/2 * * * *"
+    }
+  ]
+}

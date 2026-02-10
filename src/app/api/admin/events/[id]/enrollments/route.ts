@@ -43,6 +43,61 @@ async function checkAdminRole(userId: string | null): Promise<{ isAuthorized: bo
   return { isAuthorized: role === 'admin' || role === 'staff', role };
 }
 
+async function reorderWaitlist(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string) {
+  const { data: waitlist, error } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('status', 'waitlist')
+    .order('registration_time', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!waitlist?.length) {
+    return;
+  }
+
+  await Promise.all(
+    waitlist.map((enrollment, index) =>
+      supabase
+        .from('enrollments')
+        .update({ waitlist_position: index + 1 })
+        .eq('id', enrollment.id)
+    )
+  );
+}
+
+async function notifyWaitlistPromotion(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  userId: string,
+  eventId: string,
+  eventTitle: string
+) {
+  const { error } = await supabase
+    .from('notifications')
+    .upsert(
+      {
+        user_id: userId,
+        type: 'waitlist_promoted',
+        title: 'Iscrizione confermata',
+        body: `Che fortuna! Sei ora iscritto/a all'evento ${eventTitle} per cui eri in lista di attesa.`,
+        action_url: `/events/${eventId}`,
+        event_id: eventId,
+        payload: {
+          event_id: eventId,
+          event_title: eventTitle,
+        },
+      },
+      { onConflict: 'user_id,type,event_id' }
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
 /**
  * GET /api/admin/events/[id]/enrollments
  * Lista iscrizioni per un evento (admin only)
@@ -268,14 +323,74 @@ export async function DELETE(
 
     const supabase = createServiceRoleClient();
 
-    const { error } = await supabase
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('title')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError) {
+      if (eventError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
+      }
+      throw eventError;
+    }
+
+    const { data: deletedEnrollment, error } = await supabase
       .from('enrollments')
       .delete()
       .eq('id', enrollmentId)
-      .eq('event_id', eventId);
+      .eq('event_id', eventId)
+      .select('id,status')
+      .maybeSingle();
 
     if (error) {
       throw error;
+    }
+
+    const deleted = deletedEnrollment;
+
+    if (!deleted) {
+      return NextResponse.json(
+        { error: 'Iscrizione non trovata' },
+        { status: 404 }
+      );
+    }
+
+    if (deleted.status === 'confirmed') {
+      const { data: waitlistTop, error: waitlistError } = await supabase
+        .from('enrollments')
+        .select('id, user_id')
+        .eq('event_id', eventId)
+        .eq('status', 'waitlist')
+        .order('waitlist_position', { ascending: true, nullsFirst: false })
+        .order('registration_time', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (waitlistError) {
+        throw waitlistError;
+      }
+
+      if (waitlistTop?.id) {
+        const { data: promoted, error: promoteError } = await supabase
+          .from('enrollments')
+          .update({ status: 'confirmed', waitlist_position: null })
+          .eq('id', waitlistTop.id)
+          .select('id')
+          .maybeSingle();
+
+        if (promoteError) {
+          throw promoteError;
+        }
+
+        if (promoted) {
+          await notifyWaitlistPromotion(supabase, waitlistTop.user_id, eventId, event.title);
+          await reorderWaitlist(supabase, eventId);
+        }
+      }
+    } else if (deleted.status === 'waitlist') {
+      await reorderWaitlist(supabase, eventId);
     }
 
     return NextResponse.json({

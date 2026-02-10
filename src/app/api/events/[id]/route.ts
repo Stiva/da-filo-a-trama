@@ -49,6 +49,7 @@ export async function GET(
     // Verifica se l'utente e' iscritto
     let isEnrolled = false;
     let enrollmentStatus = null;
+    let waitlistPosition = null;
 
     if (userId) {
       const supabaseAuth = await createServerSupabaseClient();
@@ -63,7 +64,7 @@ export async function GET(
       if (profile) {
         const { data: enrollment } = await supabase
           .from('enrollments')
-          .select('status')
+          .select('status, waitlist_position')
           .eq('event_id', id)
           .eq('user_id', profile.id)
           .neq('status', 'cancelled')
@@ -72,6 +73,7 @@ export async function GET(
         if (enrollment) {
           isEnrolled = true;
           enrollmentStatus = enrollment.status;
+          waitlistPosition = enrollment.waitlist_position;
         }
       }
     }
@@ -81,6 +83,7 @@ export async function GET(
       enrollment_count: enrollmentCount || 0,
       is_enrolled: isEnrolled,
       enrollment_status: enrollmentStatus,
+      waitlist_position: waitlistPosition,
     };
 
     return NextResponse.json({ data: eventWithEnrollment });

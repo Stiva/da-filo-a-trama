@@ -118,6 +118,7 @@ export interface EventWithEnrollment extends Event {
   enrollment_count: number;
   is_enrolled: boolean;
   enrollment_status: EnrollmentStatus | null;
+  waitlist_position?: number | null;
 }
 
 // ============================================
@@ -140,6 +141,24 @@ export interface EnrollmentResult {
   status: EnrollmentStatus;
   waitlist_position?: number;
   message?: string;
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+export type NotificationType = 'waitlist_promoted' | 'event_starting_soon';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  action_url: string | null;
+  event_id: string | null;
+  payload: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
 }
 
 // ============================================

@@ -18,6 +18,123 @@ async function checkAdminRole(userId: string | null): Promise<{ isAuthorized: bo
   return { isAuthorized: role === 'admin' || role === 'staff', role };
 }
 
+async function promoteWaitlist(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  eventId: string,
+  slots: number
+) {
+  if (slots <= 0) {
+    return [] as { id: string; user_id: string }[];
+  }
+
+  const { data: waitlist, error } = await supabase
+    .from('enrollments')
+    .select('id, user_id')
+    .eq('event_id', eventId)
+    .eq('status', 'waitlist')
+    .order('waitlist_position', { ascending: true, nullsFirst: false })
+    .order('registration_time', { ascending: true })
+    .limit(slots);
+
+  if (error) {
+    throw error;
+  }
+
+  if (!waitlist?.length) {
+    return [] as { id: string; user_id: string }[];
+  }
+
+  const ids = waitlist.map((entry) => entry.id);
+  const { error: updateError } = await supabase
+    .from('enrollments')
+    .update({ status: 'confirmed', waitlist_position: null })
+    .in('id', ids);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  const { data: remaining, error: remainingError } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('status', 'waitlist')
+    .order('registration_time', { ascending: true });
+
+  if (remainingError) {
+    throw remainingError;
+  }
+
+  if (remaining?.length) {
+    await Promise.all(
+      remaining.map((entry, index) =>
+        supabase
+          .from('enrollments')
+          .update({ waitlist_position: index + 1 })
+          .eq('id', entry.id)
+      )
+    );
+  }
+
+  return waitlist as { id: string; user_id: string }[];
+}
+
+async function fillWaitlistIfCapacityIncreased(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  eventId: string,
+  oldMax: number,
+  newMax: number
+) {
+  if (newMax <= oldMax) {
+    return [] as { id: string; user_id: string }[];
+  }
+
+  const { count: confirmedCount, error: countError } = await supabase
+    .from('enrollments')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_id', eventId)
+    .eq('status', 'confirmed');
+
+  if (countError) {
+    throw countError;
+  }
+
+  const availableSlots = Math.max(newMax - (confirmedCount ?? 0), 0);
+  return promoteWaitlist(supabase, eventId, availableSlots);
+}
+
+async function notifyWaitlistPromotions(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  userIds: string[],
+  eventId: string,
+  eventTitle: string
+) {
+  if (!userIds.length) {
+    return;
+  }
+
+  const notifications = userIds.map((userId) => ({
+    user_id: userId,
+    type: 'waitlist_promoted',
+    title: 'Iscrizione confermata',
+    body: `Che fortuna! Sei ora iscritto/a all'evento ${eventTitle} per cui eri in lista di attesa.`,
+    action_url: `/events/${eventId}`,
+    event_id: eventId,
+    payload: {
+      event_id: eventId,
+      event_title: eventTitle,
+    },
+  }));
+
+  const { error } = await supabase
+    .from('notifications')
+    .upsert(notifications, { onConflict: 'user_id,type,event_id' });
+
+  if (error) {
+    throw error;
+  }
+}
+
 async function enrollAllProfilesToEvent(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string) {
   const { data: profiles, error } = await supabase
     .from('profiles')
@@ -128,7 +245,7 @@ export async function PUT(
 
     const { data: existingEvent, error: existingError } = await supabase
       .from('events')
-      .select('auto_enroll_all')
+      .select('auto_enroll_all, max_posti')
       .eq('id', id)
       .single();
 
@@ -174,6 +291,22 @@ export async function PUT(
       await enrollAllProfilesToEvent(supabase, data.id);
     }
 
+    const promoted = await fillWaitlistIfCapacityIncreased(
+      supabase,
+      data.id,
+      existingEvent.max_posti,
+      eventData.max_posti
+    );
+
+    if (promoted.length) {
+      await notifyWaitlistPromotions(
+        supabase,
+        promoted.map((entry) => entry.user_id),
+        data.id,
+        data.title
+      );
+    }
+
     return NextResponse.json({
       data: data as Event,
       message: 'Evento aggiornato con successo',
@@ -214,7 +347,7 @@ export async function PATCH(
 
     const { data: existingEvent, error: existingError } = await supabase
       .from('events')
-      .select('auto_enroll_all')
+      .select('auto_enroll_all, max_posti')
       .eq('id', id)
       .single();
 
@@ -261,6 +394,24 @@ export async function PATCH(
 
     if (!existingEvent.auto_enroll_all && body.auto_enroll_all === true) {
       await enrollAllProfilesToEvent(supabase, data.id);
+    }
+
+    if (body.max_posti !== undefined) {
+      const promoted = await fillWaitlistIfCapacityIncreased(
+        supabase,
+        data.id,
+        existingEvent.max_posti,
+        body.max_posti
+      );
+
+      if (promoted.length) {
+        await notifyWaitlistPromotions(
+          supabase,
+          promoted.map((entry) => entry.user_id),
+          data.id,
+          data.title
+        );
+      }
     }
 
     return NextResponse.json({
