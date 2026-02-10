@@ -261,7 +261,7 @@ export async function PUT(
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
-      location_details: body.location_details || body.location || null,
+      location_poi_id: body.location_poi_id,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,
@@ -368,8 +368,7 @@ export async function PATCH(
     if (body.description !== undefined) updateData.description = body.description;
     if (body.category !== undefined) updateData.category = body.category;
     if (body.tags !== undefined) updateData.tags = body.tags;
-    if (body.location_details !== undefined) updateData.location_details = body.location_details;
-    if (body.location !== undefined) updateData.location_details = body.location;
+    if (body.location_poi_id !== undefined) updateData.location_poi_id = body.location_poi_id;
     if (body.start_time !== undefined) updateData.start_time = body.start_time;
     if (body.end_time !== undefined) updateData.end_time = body.end_time;
     if (body.max_posti !== undefined) updateData.max_posti = body.max_posti;

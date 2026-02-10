@@ -50,12 +50,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
       .select(`
         status,
         waitlist_position,
-        created_at,
+        registration_time,
         events (*)
       `)
       .eq('user_id', profile.id)
       .neq('status', 'cancelled')
-      .order('created_at', { ascending: false });
+      .order('registration_time', { ascending: false });
 
     // Filtro per status
     if (statusFilter !== 'all') {
@@ -72,7 +72,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
     const myEvents: MyEvent[] = (data || []).map((enrollment) => ({
       ...(enrollment.events as unknown as Event),
       enrollment_status: enrollment.status as EnrollmentStatus,
-      enrollment_date: enrollment.created_at,
+      enrollment_date: enrollment.registration_time,
       waitlist_position: enrollment.waitlist_position,
     }));
 

@@ -32,7 +32,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
     // Query base: solo eventi pubblicati
     let query = supabase
       .from('events')
-      .select('*')
+      .select('*, poi:location_poi_id ( id, nome, tipo )')
       .eq('is_published', true)
       .order('start_time', { ascending: true });
 

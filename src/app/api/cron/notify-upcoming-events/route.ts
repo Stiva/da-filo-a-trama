@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     const { data: events, error: eventsError } = await supabase
       .from('events')
-      .select('id, title, start_time, location_details, poi:location_poi_id ( nome )')
+      .select('id, title, start_time, poi:location_poi_id ( nome )')
       .gte('start_time', now.toISOString())
       .lte('start_time', windowEnd.toISOString())
       .eq('is_published', true);
@@ -38,8 +38,8 @@ export async function GET(request: Request) {
     let createdCount = 0;
 
     for (const event of events) {
-      const locationName =
-        event.poi?.nome || event.location_details || 'luogo evento';
+      const poi = event.poi as unknown as { nome: string } | null;
+      const locationName = poi?.nome || 'luogo evento';
 
       const { data: enrollments, error: enrollmentsError } = await supabase
         .from('enrollments')

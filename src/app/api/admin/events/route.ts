@@ -113,7 +113,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
-      location_details: body.location_details || body.location || null,
+      location_poi_id: body.location_poi_id,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,

@@ -100,16 +100,18 @@ export interface Event {
   category: EventCategory;
   tags: string[];
   location_poi_id: string;
-  poi: Poi;
+  poi?: Poi;
   start_time: string;
   end_time: string;
   max_posti: number;
   speaker_name: string | null;
   speaker_bio: string | null;
+  speaker_image_url: string | null;
   is_published: boolean;
   is_featured: boolean;
   auto_enroll_all: boolean;
   visibility: EventVisibility;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -132,7 +134,9 @@ export interface Enrollment {
   event_id: string;
   status: EnrollmentStatus;
   waitlist_position: number | null;
-  created_at: string;
+  registration_type: string;
+  checked_in_at: string | null;
+  registration_time: string;
   updated_at: string;
 }
 
