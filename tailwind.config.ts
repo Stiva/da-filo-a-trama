@@ -8,28 +8,38 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Palette AGESCI + Branca L/C
+      // Palette AGESCI - Da Filo a Trama 2026
       colors: {
-        // Colori principali AGESCI
-        'agesci-blue': {
-          DEFAULT: '#00417b',
-          light: '#1a5a9e',
-          dark: '#002d54',
+        // Colore principale - Viola AGESCI
+        'agesci-purple': {
+          DEFAULT: '#4b2c7f',
+          light: '#6b4c9f',
+          dark: '#3b1c6f',
         },
+        // Giallo piu' caldo
         'agesci-yellow': {
-          DEFAULT: '#ffde00',
-          light: '#fff066',
-          dark: '#e6c800',
+          DEFAULT: '#f1b42f',
+          light: '#f8cc6b',
+          dark: '#d9a020',
         },
+        // Colori accento
+        'brand-cyan': '#29bbce',
+        'brand-red': '#e94e5a',
         // Verde Branca L/C (Lupetti/Coccinelle)
         'lc-green': {
           DEFAULT: '#4eaf48',
           light: '#6bc963',
           dark: '#3a8f34',
         },
-        // Sfondo "quaderno di caccia"
-        'scout-cream': '#fdfaf0',
-        // Colori legacy (per compatibilità)
+        // Sfondo
+        'scout-cream': '#fdfaf6',
+        // Alias per compatibilita' (blue -> purple)
+        'agesci-blue': {
+          DEFAULT: '#4b2c7f',
+          light: '#6b4c9f',
+          dark: '#3b1c6f',
+        },
+        // Colori legacy
         'scout-green': '#2D5016',
         'scout-green-light': '#4A7C23',
         'scout-azure': '#1E6091',
@@ -41,6 +51,7 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         display: ['var(--font-quicksand)', 'system-ui', 'sans-serif'],
+        brand: ['var(--font-dancing-script)', 'cursive'],
       },
       // Border radius arrotondati "playful"
       borderRadius: {
@@ -51,13 +62,13 @@ const config: Config = {
       borderWidth: {
         '3': '3px',
       },
-      // Ombre colorate "pop"
+      // Ombre colorate "pop" - viola
       boxShadow: {
-        'playful': '4px 4px 0 0 #00417b',
-        'playful-sm': '2px 2px 0 0 #00417b',
-        'playful-lg': '6px 6px 0 0 #00417b',
-        'yellow': '4px 4px 0 0 #ffde00',
-        'yellow-sm': '2px 2px 0 0 #ffde00',
+        'playful': '4px 4px 0 0 #4b2c7f',
+        'playful-sm': '2px 2px 0 0 #4b2c7f',
+        'playful-lg': '6px 6px 0 0 #4b2c7f',
+        'yellow': '4px 4px 0 0 #f1b42f',
+        'yellow-sm': '2px 2px 0 0 #f1b42f',
         'green': '4px 4px 0 0 #4eaf48',
       },
       // Animazioni fluide

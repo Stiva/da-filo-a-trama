@@ -4,27 +4,35 @@
 
 :root {
   /* ========================================
-     PALETTE AGESCI + BRANCA L/C
+     PALETTE AGESCI - Da Filo a Trama 2026
      ======================================== */
 
-  /* Colori principali AGESCI */
-  --agesci-blue: #00417b;
-  --agesci-blue-light: #1a5a9e;
-  --agesci-blue-dark: #002d54;
+  /* Colore principale - Viola AGESCI */
+  --agesci-purple: #4b2c7f;
+  --agesci-purple-light: #6b4c9f;
+  --agesci-purple-dark: #3b1c6f;
 
-  --agesci-yellow: #ffde00;
-  --agesci-yellow-light: #fff066;
-  --agesci-yellow-dark: #e6c800;
+  /* Giallo piu' caldo */
+  --agesci-yellow: #f1b42f;
+  --agesci-yellow-light: #f8cc6b;
+  --agesci-yellow-dark: #d9a020;
+
+  /* Colori accento */
+  --brand-cyan: #29bbce;
+  --brand-red: #e94e5a;
 
   /* Verde Branca L/C */
   --lc-green: #4eaf48;
   --lc-green-light: #6bc963;
   --lc-green-dark: #3a8f34;
 
-  /* Sfondo "quaderno di caccia" */
-  --scout-cream: #fdfaf0;
+  /* Sfondo */
+  --scout-cream: #fdfaf6;
 
-  /* Colori legacy (compatibilità) */
+  /* Colori legacy (per compatibilita') */
+  --agesci-blue: #4b2c7f; /* Mappato a purple per transizione */
+  --agesci-blue-light: #6b4c9f;
+  --agesci-blue-dark: #3b1c6f;
   --scout-green: #2D5016;
   --scout-green-light: #4A7C23;
   --scout-azure: #1E6091;
@@ -36,19 +44,19 @@
      SISTEMA SEMANTICO
      ======================================== */
   --background: var(--scout-cream);
-  --foreground: var(--agesci-blue);
+  --foreground: var(--agesci-purple);
   --primary: var(--agesci-yellow);
-  --primary-foreground: var(--agesci-blue);
-  --secondary: var(--agesci-blue);
+  --primary-foreground: var(--agesci-purple);
+  --secondary: var(--agesci-purple);
   --secondary-foreground: #ffffff;
   --accent: var(--lc-green);
   --accent-foreground: #ffffff;
   --muted: #f0ebe0;
   --muted-foreground: #6b7280;
-  --destructive: #dc2626;
+  --destructive: var(--brand-red);
   --destructive-foreground: #ffffff;
   --border: #d4cfc0;
-  --ring: var(--agesci-blue);
+  --ring: var(--agesci-purple);
   --radius: 0.75rem;
 }
 
@@ -179,6 +187,18 @@ h4 { font-size: 1.25rem; }
 
   .card-hover {
     @apply card hover:shadow-playful-lg hover:-translate-y-1;
+  }
+
+  /* Card asimmetrica stile "handcrafted" */
+  .handcrafted-card {
+    @apply bg-white border-2 border-agesci-purple transition-all duration-200;
+    border-radius: 15px 30px 15px 30px;
+    box-shadow: 4px 4px 0px var(--agesci-purple);
+  }
+
+  .handcrafted-card:hover {
+    box-shadow: 6px 6px 0px var(--agesci-purple);
+    transform: translateY(-2px);
   }
 
   .card-body {

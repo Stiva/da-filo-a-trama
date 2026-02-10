@@ -2,25 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import type { Event, EventCategory } from '@/types/database';
-
-const CATEGORIES: { value: EventCategory | ''; label: string }[] = [
-  { value: '', label: 'Tutte le categorie' },
-  { value: 'workshop', label: 'Workshop' },
-  { value: 'conferenza', label: 'Conferenza' },
-  { value: 'laboratorio', label: 'Laboratorio' },
-  { value: 'gioco', label: 'Gioco' },
-  { value: 'spiritualita', label: 'Spiritualita' },
-  { value: 'servizio', label: 'Servizio' },
-  { value: 'altro', label: 'Altro' },
-];
+import type { Event, EventCategory, EventCategoryRecord } from '@/types/database';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [categories, setCategories] = useState<EventCategoryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>('');
   const [showRecommended, setShowRecommended] = useState(false);
+
+  // Fetch categories once on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          const result = await response.json();
+          setCategories(result.data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     fetchEvents();
@@ -62,19 +68,13 @@ export default function EventsPage() {
   };
 
   const getCategoryColor = (cat: EventCategory) => {
-    const colors: Record<EventCategory, string> = {
-      workshop: 'bg-blue-100 text-blue-800',
-      conferenza: 'bg-purple-100 text-purple-800',
-      laboratorio: 'bg-green-100 text-green-800',
-      gioco: 'bg-yellow-100 text-yellow-800',
-      spiritualita: 'bg-indigo-100 text-indigo-800',
-      servizio: 'bg-orange-100 text-orange-800',
-      natura: 'bg-emerald-100 text-emerald-800',
-      arte: 'bg-pink-100 text-pink-800',
-      musica: 'bg-rose-100 text-rose-800',
-      altro: 'bg-gray-100 text-gray-800',
-    };
-    return colors[cat] || colors.altro;
+    const categoryRecord = categories.find(c => c.slug === cat);
+    return categoryRecord?.color || 'bg-gray-100 text-gray-800';
+  };
+
+  const getCategoryName = (cat: EventCategory) => {
+    const categoryRecord = categories.find(c => c.slug === cat);
+    return categoryRecord?.name || cat;
   };
 
   return (
@@ -99,9 +99,10 @@ export default function EventsPage() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="input w-full"
               >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
+                <option value="">Tutte le categorie</option>
+                {categories.map((cat) => (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.name}
                   </option>
                 ))}
               </select>

@@ -274,6 +274,38 @@ export interface DashboardContent {
 }
 
 // ============================================
+// EVENT CATEGORIES (database-driven)
+// ============================================
+export interface EventCategoryRecord {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// PREFERENCE TAGS (database-driven)
+// ============================================
+export interface PreferenceTagRecord {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  color: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // API Response types
 // ============================================
 export interface ApiResponse<T> {

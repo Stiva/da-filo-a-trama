@@ -12,7 +12,7 @@ interface EnrollmentWithProfile {
   user_id: string;
   status: string;
   waitlist_position: number | null;
-  created_at: string;
+  registration_time: string;
   profiles: {
     id: string;
     clerk_id: string;
@@ -88,7 +88,7 @@ export async function GET(
         user_id,
         status,
         waitlist_position,
-        created_at,
+        registration_time,
         profiles (
           id,
           clerk_id,
@@ -99,7 +99,7 @@ export async function GET(
         )
       `)
       .eq('event_id', eventId)
-      .order('created_at', { ascending: true });
+      .order('registration_time', { ascending: true });
 
     if (enrollmentsError) {
       throw enrollmentsError;
@@ -111,7 +111,7 @@ export async function GET(
       user_id: enrollment.user_id,
       status: enrollment.status,
       waitlist_position: enrollment.waitlist_position,
-      created_at: enrollment.created_at,
+      registration_time: enrollment.registration_time,
       profiles: Array.isArray(enrollment.profiles)
         ? enrollment.profiles[0] ?? null
         : enrollment.profiles,

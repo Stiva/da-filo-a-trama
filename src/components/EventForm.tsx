@@ -2,20 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PREFERENCE_TAGS, type Event, type EventCategory, type EventVisibility } from '@/types/database';
-
-const CATEGORIES: { value: EventCategory; label: string }[] = [
-  { value: 'workshop', label: 'Workshop' },
-  { value: 'conferenza', label: 'Conferenza' },
-  { value: 'laboratorio', label: 'Laboratorio' },
-  { value: 'gioco', label: 'Gioco' },
-  { value: 'spiritualita', label: 'Spiritualita' },
-  { value: 'servizio', label: 'Servizio' },
-  { value: 'natura', label: 'Natura' },
-  { value: 'arte', label: 'Arte' },
-  { value: 'musica', label: 'Musica' },
-  { value: 'altro', label: 'Altro' },
-];
+import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord } from '@/types/database';
 
 interface EventFormProps {
   event?: Event;
@@ -28,10 +15,12 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
   const [error, setError] = useState<string | null>(null);
 
   const [pois, setPois] = useState<{ id: string; nome: string }[]>([]);
+  const [categories, setCategories] = useState<EventCategoryRecord[]>([]);
+  const [tags, setTags] = useState<PreferenceTagRecord[]>([]);
   const [formData, setFormData] = useState({
     title: event?.title || '',
     description: event?.description || '',
-    category: event?.category || 'workshop' as EventCategory,
+    category: event?.category || '' as EventCategory,
     tags: event?.tags || [],
     location_poi_id: event?.location_poi_id || '',
     start_time: event?.start_time
@@ -48,18 +37,33 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
   });
 
   useEffect(() => {
-    const fetchPois = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/admin/poi');
-        if (!response.ok) throw new Error('Failed to fetch POIs');
-        const { data } = await response.json();
-        setPois(data);
+        const [poisRes, categoriesRes, tagsRes] = await Promise.all([
+          fetch('/api/admin/poi'),
+          fetch('/api/categories'),
+          fetch('/api/tags'),
+        ]);
+
+        if (!poisRes.ok) throw new Error('Failed to fetch POIs');
+        if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
+        if (!tagsRes.ok) throw new Error('Failed to fetch tags');
+
+        const [poisData, categoriesData, tagsData] = await Promise.all([
+          poisRes.json(),
+          categoriesRes.json(),
+          tagsRes.json(),
+        ]);
+
+        setPois(poisData.data || []);
+        setCategories(categoriesData.data || []);
+        setTags(tagsData.data || []);
       } catch (error) {
         console.error(error);
-        setError('Impossibile caricare i luoghi (POI).');
+        setError('Impossibile caricare i dati del form.');
       }
     };
-    fetchPois();
+    fetchData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,9 +165,10 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 required
                 className="input w-full"
               >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
+                <option value="" disabled>Seleziona categoria</option>
+                {categories.map((cat) => (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -278,18 +283,18 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
         </p>
 
         <div className="flex flex-wrap gap-2 sm:gap-3">
-          {PREFERENCE_TAGS.map((tag) => (
+          {tags.map((tag) => (
             <button
-              key={tag}
+              key={tag.slug}
               type="button"
-              onClick={() => toggleTag(tag)}
+              onClick={() => toggleTag(tag.slug)}
               className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] active:scale-95 ${
-                formData.tags.includes(tag)
+                formData.tags.includes(tag.slug)
                   ? 'bg-blue-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
               }`}
             >
-              {tag}
+              {tag.name}
             </button>
           ))}
         </div>

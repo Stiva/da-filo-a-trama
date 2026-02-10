@@ -19,7 +19,7 @@ interface Enrollment {
   user_id: string;
   status: string;
   waitlist_position: number | null;
-  created_at: string;
+  registration_time: string;
   profiles: Profile | null;
 }
 
@@ -100,7 +100,7 @@ export default function EventEnrollmentsPage() {
         profile?.email || '',
         profile?.scout_group || '',
         getStatusLabel(enrollment.status),
-        new Date(enrollment.created_at).toLocaleDateString('it-IT'),
+        new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
       ].map(value => `"${String(value).replace(/"/g, '""')}"`);
       csvRows.push(row.join(','));
     }
@@ -128,7 +128,7 @@ export default function EventEnrollmentsPage() {
         Email: enrollment.profiles?.email || '',
         'Gruppo Scout': enrollment.profiles?.scout_group || '',
         Stato: getStatusLabel(enrollment.status),
-        'Data Iscrizione': new Date(enrollment.created_at).toLocaleDateString('it-IT'),
+        'Data Iscrizione': new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
       }));
 
       const ws = XLSX.utils.json_to_sheet(data);
@@ -339,7 +339,7 @@ export default function EventEnrollmentsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(enrollment.created_at).toLocaleDateString('it-IT', {
+                          {new Date(enrollment.registration_time).toLocaleDateString('it-IT', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
@@ -397,7 +397,7 @@ export default function EventEnrollmentsPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500">Data Iscrizione</span>
                       <span className="text-gray-900">
-                        {new Date(enrollment.created_at).toLocaleDateString('it-IT', {
+                        {new Date(enrollment.registration_time).toLocaleDateString('it-IT', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',

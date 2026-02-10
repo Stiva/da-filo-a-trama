@@ -75,6 +75,27 @@ export default function AdminLayout({
     },
   ];
 
+  const configLinks = [
+    {
+      href: '/admin/categories',
+      label: 'Categorie',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      ),
+    },
+    {
+      href: '/admin/tags',
+      label: 'Tags',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+        </svg>
+      ),
+    },
+  ];
+
   const isLinkActive = (href: string, exact?: boolean) => {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
@@ -184,6 +205,29 @@ export default function AdminLayout({
             </p>
 
             {mapLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={closeSidebar}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-lg
+                  transition-colors min-h-[44px]
+                  ${isLinkActive(link.href)
+                    ? 'bg-gray-700 text-white'
+                    : 'hover:bg-gray-700 active:bg-gray-600 text-gray-300'
+                  }
+                `}
+              >
+                {link.icon}
+                <span>{link.label}</span>
+              </Link>
+            ))}
+
+            <p className="text-xs uppercase text-gray-500 font-semibold mt-6 mb-4 px-3">
+              Configurazione
+            </p>
+
+            {configLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

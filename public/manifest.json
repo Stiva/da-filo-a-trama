@@ -4,10 +4,16 @@
   "description": "Piattaforma digitale per l'evento scout nazionale 2026",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fdfaf0",
-  "theme_color": "#00417b",
+  "background_color": "#fdfaf6",
+  "theme_color": "#4b2c7f",
   "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon.svg",
       "sizes": "any",
