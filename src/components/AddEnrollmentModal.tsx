@@ -37,12 +37,14 @@ export default function AddEnrollmentModal({
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}&limit=10`);
+      const response = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}&pageSize=10`);
       const result = await response.json();
 
-      if (response.ok && result.data) {
-        setSearchResults(result.data);
+      if (!response.ok) {
+        throw new Error(result.error || 'Errore nella ricerca utenti');
       }
+
+      setSearchResults(result.data?.profiles || []);
     } catch (err) {
       console.error('Errore ricerca utenti:', err);
     } finally {
@@ -191,7 +193,7 @@ export default function AddEnrollmentModal({
           {/* No Results */}
           {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && !selectedProfile && (
             <div className="mb-4 p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-              Nessun utente trovato per &quot;{searchQuery}&quot;
+              La ricerca non ha restituito utenti per &quot;{searchQuery}&quot;
             </div>
           )}
         </div>
