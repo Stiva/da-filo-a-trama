@@ -76,6 +76,12 @@ export default function AdminPoiPage() {
     return colors[tipo] || 'bg-gray-100 text-gray-800';
   };
 
+  const formatCoordinates = (poi: Poi) => {
+    const lat = Number.isFinite(poi.latitude) ? poi.latitude.toFixed(5) : 'N/D';
+    const lng = Number.isFinite(poi.longitude) ? poi.longitude.toFixed(5) : 'N/D';
+    return `${lat}, ${lng}`;
+  };
+
   return (
     <div>
       {/* Header - Responsive */}
@@ -199,7 +205,7 @@ export default function AdminPoiPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {poi.latitude.toFixed(5)}, {poi.longitude.toFixed(5)}
+                        {formatCoordinates(poi)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -270,7 +276,7 @@ export default function AdminPoiPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500">Coordinate</span>
                     <span className="text-gray-900 font-mono text-xs">
-                      {poi.latitude.toFixed(5)}, {poi.longitude.toFixed(5)}
+                      {formatCoordinates(poi)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
