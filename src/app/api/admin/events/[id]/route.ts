@@ -18,6 +18,36 @@ async function checkAdminRole(userId: string | null): Promise<{ isAuthorized: bo
   return { isAuthorized: role === 'admin' || role === 'staff', role };
 }
 
+async function enrollAllProfilesToEvent(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string) {
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('id');
+
+  if (error) {
+    throw error;
+  }
+
+  if (!profiles?.length) {
+    return;
+  }
+
+  const enrollments = profiles.map((profile) => ({
+    event_id: eventId,
+    user_id: profile.id,
+    status: 'confirmed',
+    waitlist_position: null,
+    registration_type: 'auto',
+  }));
+
+  const { error: insertError } = await supabase
+    .from('enrollments')
+    .upsert(enrollments, { onConflict: 'user_id,event_id', ignoreDuplicates: true });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 /**
  * GET /api/admin/events/[id]
  * Recupera un singolo evento (admin only)
@@ -96,6 +126,19 @@ export async function PUT(
 
     const supabase = createServiceRoleClient();
 
+    const { data: existingEvent, error: existingError } = await supabase
+      .from('events')
+      .select('auto_enroll_all')
+      .eq('id', id)
+      .single();
+
+    if (existingError) {
+      if (existingError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
+      }
+      throw existingError;
+    }
+
     const eventData = {
       title: body.title,
       description: body.description || null,
@@ -108,6 +151,7 @@ export async function PUT(
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published || false,
+      auto_enroll_all: body.auto_enroll_all || false,
       visibility: body.visibility || 'public',
       updated_at: new Date().toISOString(),
     };
@@ -124,6 +168,10 @@ export async function PUT(
         return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
       }
       throw error;
+    }
+
+    if (!existingEvent.auto_enroll_all && eventData.auto_enroll_all) {
+      await enrollAllProfilesToEvent(supabase, data.id);
     }
 
     return NextResponse.json({
@@ -164,6 +212,19 @@ export async function PATCH(
 
     const supabase = createServiceRoleClient();
 
+    const { data: existingEvent, error: existingError } = await supabase
+      .from('events')
+      .select('auto_enroll_all')
+      .eq('id', id)
+      .single();
+
+    if (existingError) {
+      if (existingError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
+      }
+      throw existingError;
+    }
+
     // Costruisci oggetto update solo con i campi forniti
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -182,6 +243,7 @@ export async function PATCH(
     if (body.speaker_name !== undefined) updateData.speaker_name = body.speaker_name;
     if (body.speaker_bio !== undefined) updateData.speaker_bio = body.speaker_bio;
     if (body.visibility !== undefined) updateData.visibility = body.visibility;
+    if (body.auto_enroll_all !== undefined) updateData.auto_enroll_all = body.auto_enroll_all;
 
     const { data, error } = await supabase
       .from('events')
@@ -195,6 +257,10 @@ export async function PATCH(
         return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
       }
       throw error;
+    }
+
+    if (!existingEvent.auto_enroll_all && body.auto_enroll_all === true) {
+      await enrollAllProfilesToEvent(supabase, data.id);
     }
 
     return NextResponse.json({

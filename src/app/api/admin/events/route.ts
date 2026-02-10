@@ -3,6 +3,36 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, ApiResponse } from '@/types/database';
 
+async function enrollAllProfilesToEvent(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string) {
+  const { data: profiles, error } = await supabase
+    .from('profiles')
+    .select('id');
+
+  if (error) {
+    throw error;
+  }
+
+  if (!profiles?.length) {
+    return;
+  }
+
+  const enrollments = profiles.map((profile) => ({
+    event_id: eventId,
+    user_id: profile.id,
+    status: 'confirmed',
+    waitlist_position: null,
+    registration_type: 'auto',
+  }));
+
+  const { error: insertError } = await supabase
+    .from('enrollments')
+    .upsert(enrollments, { onConflict: 'user_id,event_id', ignoreDuplicates: true });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 /**
  * GET /api/admin/events
  * Lista tutti gli eventi (admin only)
@@ -90,6 +120,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published || false,
+      auto_enroll_all: body.auto_enroll_all || false,
       visibility: body.visibility || 'public',
     };
 
@@ -101,6 +132,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
 
     if (error) {
       throw error;
+    }
+
+    if (eventData.auto_enroll_all) {
+      await enrollAllProfilesToEvent(supabase, data.id);
     }
 
     return NextResponse.json({

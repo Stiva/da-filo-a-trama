@@ -108,6 +108,7 @@ export interface Event {
   speaker_bio: string | null;
   is_published: boolean;
   is_featured: boolean;
+  auto_enroll_all: boolean;
   visibility: EventVisibility;
   created_at: string;
   updated_at: string;

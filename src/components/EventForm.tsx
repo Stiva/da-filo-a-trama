@@ -33,6 +33,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     speaker_name: event?.speaker_name || '',
     speaker_bio: event?.speaker_bio || '',
     is_published: event?.is_published || false,
+    auto_enroll_all: event?.auto_enroll_all || false,
     visibility: event?.visibility || 'public' as EventVisibility,
   });
 
@@ -315,6 +316,25 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               type="checkbox"
               checked={formData.is_published}
               onChange={(e) => setFormData(prev => ({ ...prev, is_published: e.target.checked }))}
+              className="sr-only peer"
+            />
+            <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Auto Enroll Toggle */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold">Iscrizione automatica</h2>
+            <p className="text-sm text-gray-500">
+              Iscrive automaticamente tutti gli utenti a questo evento
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
+            <input
+              type="checkbox"
+              checked={formData.auto_enroll_all}
+              onChange={(e) => setFormData(prev => ({ ...prev, auto_enroll_all: e.target.checked }))}
               className="sr-only peer"
             />
             <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>

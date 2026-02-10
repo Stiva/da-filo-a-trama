@@ -4,6 +4,40 @@ import { WebhookEvent } from '@clerk/nextjs/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
+async function enrollProfileToAutoEvents(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  profileId: string
+) {
+  const { data: events, error } = await supabase
+    .from('events')
+    .select('id')
+    .eq('auto_enroll_all', true);
+
+  if (error) {
+    throw error;
+  }
+
+  if (!events?.length) {
+    return;
+  }
+
+  const enrollments = events.map((event) => ({
+    event_id: event.id,
+    user_id: profileId,
+    status: 'confirmed',
+    waitlist_position: null,
+    registration_type: 'auto',
+  }));
+
+  const { error: insertError } = await supabase
+    .from('enrollments')
+    .upsert(enrollments, { onConflict: 'user_id,event_id', ignoreDuplicates: true });
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 /**
  * Webhook endpoint per Clerk.
  * Sincronizza gli utenti Clerk con la tabella profiles in Supabase.
@@ -99,6 +133,18 @@ export async function POST(req: Request) {
             throw error;
           }
         }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('clerk_id', id)
+          .single();
+
+        if (profileError) {
+          throw profileError;
+        }
+
+        await enrollProfileToAutoEvents(supabase, profile.id);
 
         console.log('Profilo creato per:', id);
         break;
