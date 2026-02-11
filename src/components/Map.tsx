@@ -180,6 +180,12 @@ export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
                 {poi.descrizione && (
                   <p className="text-sm mt-1">{poi.descrizione}</p>
                 )}
+                <a
+                  href={`/events?poi=${poi.id}&poiName=${encodeURIComponent(poi.nome)}`}
+                  className="inline-block mt-2 text-sm font-medium text-green-700 hover:text-green-800"
+                >
+                  Vedi eventi qui &rarr;
+                </a>
               </div>
             </Popup>
           </Marker>

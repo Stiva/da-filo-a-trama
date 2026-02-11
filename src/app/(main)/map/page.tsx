@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
 
@@ -187,6 +188,12 @@ function MapPageContent() {
                   {selectedPoi.descrizione && (
                     <p className="mt-2 text-gray-600">{selectedPoi.descrizione}</p>
                   )}
+                  <Link
+                    href={`/events?poi=${selectedPoi.id}&poiName=${encodeURIComponent(selectedPoi.nome)}`}
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-green-700 hover:text-green-800"
+                  >
+                    Vedi eventi in questo luogo &rarr;
+                  </Link>
                 </div>
                 <button
                   onClick={() => setSelectedPoi(null)}

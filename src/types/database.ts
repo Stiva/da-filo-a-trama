@@ -120,6 +120,10 @@ export interface Event {
   updated_at: string;
 }
 
+export interface EventListItem extends Event {
+  enrollment_count: number;
+}
+
 export interface EventWithEnrollment extends Event {
   enrollment_count: number;
   is_enrolled: boolean;

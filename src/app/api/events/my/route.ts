@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, EnrollmentStatus, ApiResponse } from '@/types/database';
 
 interface MyEvent extends Event {
@@ -28,7 +28,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status') || 'all';
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServiceRoleClient();
 
     // Recupera profile_id dell'utente
     const { data: profile, error: profileError } = await supabase
@@ -38,10 +38,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json(
-        { error: 'Profilo non trovato' },
-        { status: 404 }
-      );
+      return NextResponse.json({ data: [] as MyEvent[] });
     }
 
     // Query iscrizioni con join eventi
