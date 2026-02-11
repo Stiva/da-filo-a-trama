@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Notification, ApiResponse } from '@/types/database';
 
 interface MarkReadBody {
@@ -20,7 +20,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<Notification[]>>> 
       return NextResponse.json({ error: 'Autenticazione richiesta' }, { status: 401 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServiceRoleClient();
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -29,7 +29,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<Notification[]>>> 
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profilo non trovato' }, { status: 404 });
+      // Profilo non ancora creato (webhook in corso) — restituisci array vuoto
+      return NextResponse.json({ data: [] as Notification[] });
     }
 
     const { data, error } = await supabase
@@ -67,7 +68,7 @@ export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<
 
     const body = (await request.json()) as MarkReadBody;
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServiceRoleClient();
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -76,7 +77,7 @@ export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<
       .single();
 
     if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profilo non trovato' }, { status: 404 });
+      return NextResponse.json({ data: { updated: 0 } });
     }
 
     let query = supabase

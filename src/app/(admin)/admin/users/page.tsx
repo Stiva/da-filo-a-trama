@@ -124,14 +124,14 @@ export default function AdminUsersPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Ruolo', 'Onboarding', 'Data Iscrizione'];
+    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Ruolo', 'Stato Profilo', 'Data Iscrizione'];
     const rows = users.map((u) => [
       u.name || '',
       u.surname || '',
       u.email,
       u.scout_group || '',
       u.role,
-      u.onboarding_completed ? 'Completato' : 'In attesa',
+      u.profile_setup_complete ? 'Completato' : 'In attesa',
       new Date(u.created_at).toLocaleDateString('it-IT'),
     ]);
 
@@ -196,9 +196,9 @@ export default function AdminUsersPage() {
             </select>
           </div>
 
-          {/* Filtro onboarding */}
+          {/* Filtro stato profilo */}
           <div className="flex-1 sm:flex-none sm:w-40">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Onboarding</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Stato Profilo</label>
             <select
               value={onboardingFilter}
               onChange={(e) => { setOnboardingFilter(e.target.value); setPage(1); }}
@@ -270,7 +270,17 @@ export default function AdminUsersPage() {
                         <tr key={user.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <AvatarPreview config={user.avatar_config} size="xs" />
+                              {user.profile_image_url ? (
+                                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                                  <img
+                                    src={user.profile_image_url}
+                                    alt={`${user.name || 'Utente'}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <AvatarPreview config={user.avatar_config} size="xs" />
+                              )}
                               <div>
                                 <p className="font-medium text-gray-900">
                                   {user.name || user.first_name || 'N/D'} {user.surname || ''}
@@ -296,12 +306,12 @@ export default function AdminUsersPage() {
                           <td className="px-6 py-4">
                             <span
                               className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                user.onboarding_completed
+                                user.profile_setup_complete
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-yellow-100 text-yellow-800'
                               }`}
                             >
-                              {user.onboarding_completed ? 'Completato' : 'In attesa'}
+                              {user.profile_setup_complete ? 'Completato' : 'In attesa'}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
@@ -372,7 +382,17 @@ export default function AdminUsersPage() {
                   <div key={user.id} className="data-card">
                     {/* User Header */}
                     <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                      <AvatarPreview config={user.avatar_config} size="sm" />
+                      {user.profile_image_url ? (
+                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                          <img
+                            src={user.profile_image_url}
+                            alt={`${user.name || 'Utente'}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <AvatarPreview config={user.avatar_config} size="sm" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">
                           {user.name || user.first_name || 'N/D'} {user.surname || ''}
@@ -400,15 +420,15 @@ export default function AdminUsersPage() {
                         </select>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Onboarding</span>
+                        <span className="text-gray-500">Stato Profilo</span>
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            user.onboarding_completed
+                            user.profile_setup_complete
                               ? 'bg-green-100 text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
                           }`}
                         >
-                          {user.onboarding_completed ? 'Completato' : 'In attesa'}
+                          {user.profile_setup_complete ? 'Completato' : 'In attesa'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">

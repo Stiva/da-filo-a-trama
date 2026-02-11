@@ -56,11 +56,11 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Us
       query = query.eq('role', roleFilter);
     }
 
-    // Filtro onboarding
+    // Filtro stato profilo
     if (onboardingFilter === 'completed') {
-      query = query.eq('onboarding_completed', true);
+      query = query.eq('profile_setup_complete', true);
     } else if (onboardingFilter === 'pending') {
-      query = query.eq('onboarding_completed', false);
+      query = query.eq('profile_setup_complete', false);
     }
 
     // Paginazione

@@ -17,6 +17,7 @@ export interface Profile {
   role: 'user' | 'staff' | 'admin';
   preferences: string[];
   avatar_config: AvatarConfig;
+  profile_image_url: string | null;
   onboarding_completed: boolean;
   avatar_completed: boolean;
   preferences_set: boolean;
@@ -52,6 +53,7 @@ export interface ProfileUpdate {
   scout_group?: string;
   preferences?: string[];
   avatar_config?: Partial<AvatarConfig>;
+  profile_image_url?: string | null;
   onboarding_completed?: boolean;
   avatar_completed?: boolean;
   preferences_set?: boolean;
