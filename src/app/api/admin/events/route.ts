@@ -113,16 +113,16 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
-      location_poi_id: body.location_poi_id,
+      location_poi_id: body.location_poi_id || null,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
-      is_published: body.is_published || false,
-      auto_enroll_all: body.auto_enroll_all || false,
-      checkin_enabled: body.checkin_enabled || false,
-      user_can_upload_assets: body.user_can_upload_assets || false,
+      is_published: body.is_published ?? false,
+      auto_enroll_all: body.auto_enroll_all ?? false,
+      checkin_enabled: body.checkin_enabled ?? false,
+      user_can_upload_assets: body.user_can_upload_assets ?? false,
       visibility: body.visibility || 'public',
     };
 
@@ -146,8 +146,9 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
     });
   } catch (error) {
     console.error('Errore POST /api/admin/events:', error);
+    const message = error instanceof Error ? error.message : 'Errore nella creazione dell\'evento';
     return NextResponse.json(
-      { error: 'Errore nella creazione dell\'evento' },
+      { error: message },
       { status: 500 }
     );
   }

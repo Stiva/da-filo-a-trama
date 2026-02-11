@@ -261,16 +261,16 @@ export async function PUT(
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
-      location_poi_id: body.location_poi_id,
+      location_poi_id: body.location_poi_id || null,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
-      is_published: body.is_published || false,
-      auto_enroll_all: body.auto_enroll_all || false,
-      checkin_enabled: body.checkin_enabled || false,
-      user_can_upload_assets: body.user_can_upload_assets || false,
+      is_published: body.is_published ?? false,
+      auto_enroll_all: body.auto_enroll_all ?? false,
+      checkin_enabled: body.checkin_enabled ?? false,
+      user_can_upload_assets: body.user_can_upload_assets ?? false,
       visibility: body.visibility || 'public',
       updated_at: new Date().toISOString(),
     };
@@ -315,8 +315,9 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Errore PUT /api/admin/events/[id]:', error);
+    const message = error instanceof Error ? error.message : 'Errore nell\'aggiornamento dell\'evento';
     return NextResponse.json(
-      { error: 'Errore nell\'aggiornamento dell\'evento' },
+      { error: message },
       { status: 500 }
     );
   }
