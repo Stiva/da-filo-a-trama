@@ -34,6 +34,8 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     speaker_bio: event?.speaker_bio || '',
     is_published: event?.is_published || false,
     auto_enroll_all: event?.auto_enroll_all || false,
+    checkin_enabled: event?.checkin_enabled || false,
+    user_can_upload_assets: event?.user_can_upload_assets || false,
     visibility: event?.visibility || 'public' as EventVisibility,
   });
 
@@ -335,6 +337,44 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               type="checkbox"
               checked={formData.auto_enroll_all}
               onChange={(e) => setFormData(prev => ({ ...prev, auto_enroll_all: e.target.checked }))}
+              className="sr-only peer"
+            />
+            <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Check-in Toggle */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold">Abilita check-in</h2>
+            <p className="text-sm text-gray-500">
+              Gli utenti possono registrare la presenza 15 min prima dell&apos;evento
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
+            <input
+              type="checkbox"
+              checked={formData.checkin_enabled}
+              onChange={(e) => setFormData(prev => ({ ...prev, checkin_enabled: e.target.checked }))}
+              className="sr-only peer"
+            />
+            <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* User Upload Toggle */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold">Upload materiale utenti</h2>
+            <p className="text-sm text-gray-500">
+              Dopo il check-in, gli utenti possono caricare documenti o link
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
+            <input
+              type="checkbox"
+              checked={formData.user_can_upload_assets}
+              onChange={(e) => setFormData(prev => ({ ...prev, user_can_upload_assets: e.target.checked }))}
               className="sr-only peer"
             />
             <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>

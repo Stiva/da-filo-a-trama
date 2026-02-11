@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { auth } from '@clerk/nextjs/server';
 import type { Poi, PoiCategory, ApiResponse } from '@/types/database';
+import { extractCoordinates } from '@/lib/geo';
 
 /**
  * GET /api/admin/poi
@@ -35,16 +36,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
     }
 
     const pois: Poi[] = (data || []).map((poi) => {
-      let latitude = 0;
-      let longitude = 0;
-
-      if (poi.coordinate && typeof poi.coordinate === 'object') {
-        const coords = poi.coordinate as { coordinates?: [number, number] };
-        if (coords.coordinates) {
-          longitude = coords.coordinates[0];
-          latitude = coords.coordinates[1];
-        }
-      }
+      const { latitude, longitude } = extractCoordinates(poi.coordinate);
 
       return {
         id: poi.id,

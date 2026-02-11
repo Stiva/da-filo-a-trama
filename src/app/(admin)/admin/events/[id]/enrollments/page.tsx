@@ -20,6 +20,7 @@ interface Enrollment {
   status: string;
   waitlist_position: number | null;
   registration_time: string;
+  checked_in_at: string | null;
   profiles: Profile | null;
 }
 
@@ -27,6 +28,7 @@ interface EventInfo {
   id: string;
   title: string;
   max_posti: number;
+  checkin_enabled: boolean;
 }
 
 export default function EventEnrollmentsPage() {
@@ -90,6 +92,7 @@ export default function EventEnrollmentsPage() {
     if (!enrollments.length) return;
 
     const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Stato', 'Data Iscrizione'];
+    if (event?.checkin_enabled) headers.push('Check-in');
     const csvRows = [headers.join(',')];
 
     for (const enrollment of filteredEnrollments) {
@@ -101,8 +104,14 @@ export default function EventEnrollmentsPage() {
         profile?.scout_group || '',
         getStatusLabel(enrollment.status),
         new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
-      ].map(value => `"${String(value).replace(/"/g, '""')}"`);
-      csvRows.push(row.join(','));
+      ];
+      if (event?.checkin_enabled) {
+        row.push(enrollment.checked_in_at
+          ? new Date(enrollment.checked_in_at).toLocaleString('it-IT')
+          : '');
+      }
+      const escaped = row.map(value => `"${String(value).replace(/"/g, '""')}"`);
+      csvRows.push(escaped.join(','));
     }
 
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -122,14 +131,22 @@ export default function EventEnrollmentsPage() {
     try {
       const XLSX = await import('xlsx');
 
-      const data = filteredEnrollments.map(enrollment => ({
-        Nome: enrollment.profiles?.name || '',
-        Cognome: enrollment.profiles?.surname || '',
-        Email: enrollment.profiles?.email || '',
-        'Gruppo Scout': enrollment.profiles?.scout_group || '',
-        Stato: getStatusLabel(enrollment.status),
-        'Data Iscrizione': new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
-      }));
+      const data = filteredEnrollments.map(enrollment => {
+        const row: Record<string, string> = {
+          Nome: enrollment.profiles?.name || '',
+          Cognome: enrollment.profiles?.surname || '',
+          Email: enrollment.profiles?.email || '',
+          'Gruppo Scout': enrollment.profiles?.scout_group || '',
+          Stato: getStatusLabel(enrollment.status),
+          'Data Iscrizione': new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
+        };
+        if (event?.checkin_enabled) {
+          row['Check-in'] = enrollment.checked_in_at
+            ? new Date(enrollment.checked_in_at).toLocaleString('it-IT')
+            : '';
+        }
+        return row;
+      });
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
@@ -165,6 +182,7 @@ export default function EventEnrollmentsPage() {
 
   const confirmedCount = enrollments.filter(e => e.status === 'confirmed').length;
   const waitlistCount = enrollments.filter(e => e.status === 'waitlist').length;
+  const checkinCount = enrollments.filter(e => e.checked_in_at !== null).length;
 
   if (isLoading) {
     return (
@@ -206,7 +224,7 @@ export default function EventEnrollmentsPage() {
       </div>
 
       {/* Stats - Responsive grid */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+      <div className={`grid gap-3 sm:gap-4 mb-6 ${event?.checkin_enabled ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
         <div className="bg-white rounded-lg shadow p-3 sm:p-4">
           <p className="text-xs sm:text-sm text-gray-500">Confermati</p>
           <p className="text-lg sm:text-2xl font-bold text-green-600">{confirmedCount} / {event?.max_posti}</p>
@@ -215,6 +233,12 @@ export default function EventEnrollmentsPage() {
           <p className="text-xs sm:text-sm text-gray-500">Lista d&apos;attesa</p>
           <p className="text-lg sm:text-2xl font-bold text-yellow-600">{waitlistCount}</p>
         </div>
+        {event?.checkin_enabled && (
+          <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-gray-500">Check-in</p>
+            <p className="text-lg sm:text-2xl font-bold text-blue-600">{checkinCount} / {confirmedCount}</p>
+          </div>
+        )}
         <div className="bg-white rounded-lg shadow p-3 sm:p-4">
           <p className="text-xs sm:text-sm text-gray-500">Totale</p>
           <p className="text-lg sm:text-2xl font-bold text-gray-900">{enrollments.length}</p>
@@ -309,6 +333,11 @@ export default function EventEnrollmentsPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data Iscrizione
                     </th>
+                    {event?.checkin_enabled && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Check-in
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Azioni
                     </th>
@@ -347,6 +376,23 @@ export default function EventEnrollmentsPage() {
                             minute: '2-digit',
                           })}
                         </td>
+                        {event?.checkin_enabled && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {enrollment.checked_in_at ? (
+                              <span className="inline-flex items-center gap-1 text-green-700">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                {new Date(enrollment.checked_in_at).toLocaleTimeString('it-IT', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
                             onClick={() => handleRemoveEnrollment(enrollment.id, fullName)}
@@ -404,6 +450,24 @@ export default function EventEnrollmentsPage() {
                         })}
                       </span>
                     </div>
+                    {event?.checkin_enabled && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Check-in</span>
+                        {enrollment.checked_in_at ? (
+                          <span className="inline-flex items-center gap-1 text-green-700 text-sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {new Date(enrollment.checked_in_at).toLocaleTimeString('it-IT', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}

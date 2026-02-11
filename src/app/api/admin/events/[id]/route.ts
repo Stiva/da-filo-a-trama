@@ -269,6 +269,8 @@ export async function PUT(
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published || false,
       auto_enroll_all: body.auto_enroll_all || false,
+      checkin_enabled: body.checkin_enabled || false,
+      user_can_upload_assets: body.user_can_upload_assets || false,
       visibility: body.visibility || 'public',
       updated_at: new Date().toISOString(),
     };
@@ -376,6 +378,8 @@ export async function PATCH(
     if (body.speaker_bio !== undefined) updateData.speaker_bio = body.speaker_bio;
     if (body.visibility !== undefined) updateData.visibility = body.visibility;
     if (body.auto_enroll_all !== undefined) updateData.auto_enroll_all = body.auto_enroll_all;
+    if (body.checkin_enabled !== undefined) updateData.checkin_enabled = body.checkin_enabled;
+    if (body.user_can_upload_assets !== undefined) updateData.user_can_upload_assets = body.user_can_upload_assets;
 
     const { data, error } = await supabase
       .from('events')

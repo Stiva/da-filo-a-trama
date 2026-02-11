@@ -50,6 +50,7 @@ export async function GET(
     let isEnrolled = false;
     let enrollmentStatus = null;
     let waitlistPosition = null;
+    let checkedInAt = null;
 
     if (userId) {
       const supabaseAuth = await createServerSupabaseClient();
@@ -64,7 +65,7 @@ export async function GET(
       if (profile) {
         const { data: enrollment } = await supabase
           .from('enrollments')
-          .select('status, waitlist_position')
+          .select('status, waitlist_position, checked_in_at')
           .eq('event_id', id)
           .eq('user_id', profile.id)
           .neq('status', 'cancelled')
@@ -74,6 +75,7 @@ export async function GET(
           isEnrolled = true;
           enrollmentStatus = enrollment.status;
           waitlistPosition = enrollment.waitlist_position;
+          checkedInAt = enrollment.checked_in_at;
         }
       }
     }
@@ -84,6 +86,7 @@ export async function GET(
       is_enrolled: isEnrolled,
       enrollment_status: enrollmentStatus,
       waitlist_position: waitlistPosition,
+      checked_in_at: checkedInAt,
     };
 
     return NextResponse.json({ data: eventWithEnrollment });

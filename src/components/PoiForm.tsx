@@ -24,8 +24,8 @@ export default function PoiForm({ poi, isEditing = false }: PoiFormProps) {
     nome: poi?.nome || '',
     descrizione: poi?.descrizione || '',
     tipo: poi?.tipo || 'info' as PoiCategory,
-    latitude: poi?.latitude || 42.1024,  // Default: Bracciano
-    longitude: poi?.longitude || 12.1764,
+    latitude: poi?.latitude ?? 44.58218434389957,
+    longitude: poi?.longitude ?? 11.132567610213458,
     icon_url: poi?.icon_url || '',
     is_active: poi?.is_active ?? true,
   });
@@ -185,7 +185,7 @@ export default function PoiForm({ poi, isEditing = false }: PoiFormProps) {
               onChange={(e) => setFormData(prev => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }))}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-              placeholder="42.1024"
+              placeholder="44.58218"
             />
           </div>
 
@@ -200,7 +200,7 @@ export default function PoiForm({ poi, isEditing = false }: PoiFormProps) {
               onChange={(e) => setFormData(prev => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }))}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-              placeholder="12.1764"
+              placeholder="11.13257"
             />
           </div>
         </div>

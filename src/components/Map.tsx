@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -77,17 +77,30 @@ const getTypeEmoji = (tipo: PoiCategory) => {
   return emojis[tipo] || '📍';
 };
 
-// Componente per centrare la mappa su un POI selezionato
-function MapController({ selectedPoi }: { selectedPoi: Poi | null }) {
+// Componente per centrare la mappa su un POI selezionato o sulla posizione utente
+function MapController({
+  selectedPoi,
+  userPosition,
+}: {
+  selectedPoi: Poi | null;
+  userPosition: [number, number] | null;
+}) {
   const map = useMap();
+  const hasFlownToUser = useRef(false);
 
   useEffect(() => {
     if (selectedPoi && selectedPoi.latitude && selectedPoi.longitude) {
       map.flyTo([selectedPoi.latitude, selectedPoi.longitude], 17, {
         duration: 0.5,
       });
+      return;
     }
-  }, [selectedPoi, map]);
+
+    if (userPosition && !hasFlownToUser.current) {
+      map.flyTo(userPosition, 15, { duration: 0.5 });
+      hasFlownToUser.current = true;
+    }
+  }, [selectedPoi, userPosition, map]);
 
   return null;
 }
@@ -98,17 +111,34 @@ interface MapProps {
   onPoiSelect: (poi: Poi | null) => void;
 }
 
+// Coordinate evento scout 2026
+const EVENT_CENTER: [number, number] = [44.58218434389957, 11.132567610213458];
+
 export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
   const mapRef = useRef<L.Map>(null);
+  const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
 
-  // Centro default - Bracciano (location evento scout)
-  const defaultCenter: [number, number] = [42.1024, 12.1764];
   const defaultZoom = 15;
+
+  // Richiedi geolocalizzazione utente
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserPosition([position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        // Geolocalizzazione negata o non disponibile — usa default
+      },
+      { enableHighAccuracy: false, timeout: 5000 }
+    );
+  }, []);
 
   // Calcola il centro basato sui POI se presenti
   const getCenter = (): [number, number] => {
     const validPois = pois.filter(p => p.latitude && p.longitude);
-    if (validPois.length === 0) return defaultCenter;
+    if (validPois.length === 0) return EVENT_CENTER;
 
     const avgLat = validPois.reduce((sum, p) => sum + p.latitude, 0) / validPois.length;
     const avgLng = validPois.reduce((sum, p) => sum + p.longitude, 0) / validPois.length;
@@ -129,7 +159,7 @@ export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <MapController selectedPoi={selectedPoi} />
+      <MapController selectedPoi={selectedPoi} userPosition={userPosition} />
 
       {pois.map((poi) => {
         if (!poi.latitude || !poi.longitude) return null;

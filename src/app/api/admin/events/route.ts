@@ -121,6 +121,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published || false,
       auto_enroll_all: body.auto_enroll_all || false,
+      checkin_enabled: body.checkin_enabled || false,
+      user_can_upload_assets: body.user_can_upload_assets || false,
       visibility: body.visibility || 'public',
     };
 

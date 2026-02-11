@@ -124,7 +124,7 @@ export async function GET(
     // Fetch event info
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, max_posti')
+      .select('id, title, max_posti, checkin_enabled')
       .eq('id', eventId)
       .single();
 
@@ -144,6 +144,7 @@ export async function GET(
         status,
         waitlist_position,
         registration_time,
+        checked_in_at,
         profiles (
           id,
           clerk_id,

@@ -2,6 +2,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Poi, ApiResponse } from '@/types/database';
+import { extractCoordinates } from '@/lib/geo';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -50,16 +51,7 @@ export async function GET(
       throw error;
     }
 
-    // Estrai coordinate
-    let latitude = 0;
-    let longitude = 0;
-    if (data.coordinate && typeof data.coordinate === 'object') {
-      const coords = data.coordinate as { coordinates?: [number, number] };
-      if (coords.coordinates) {
-        longitude = coords.coordinates[0];
-        latitude = coords.coordinates[1];
-      }
-    }
+    const { latitude, longitude } = extractCoordinates(data.coordinate);
 
     const poi: Poi = {
       id: data.id,
@@ -142,16 +134,7 @@ export async function PUT(
       throw error;
     }
 
-    // Estrai coordinate per la risposta
-    let latitude = body.latitude || 0;
-    let longitude = body.longitude || 0;
-    if (data.coordinate && typeof data.coordinate === 'object') {
-      const coords = data.coordinate as { coordinates?: [number, number] };
-      if (coords.coordinates) {
-        longitude = coords.coordinates[0];
-        latitude = coords.coordinates[1];
-      }
-    }
+    const { latitude, longitude } = extractCoordinates(data.coordinate);
 
     const poi: Poi = {
       id: data.id,

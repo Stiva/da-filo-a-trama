@@ -2,6 +2,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import PoiForm from '@/components/PoiForm';
 import type { Poi } from '@/types/database';
+import { extractCoordinates } from '@/lib/geo';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -23,16 +24,7 @@ async function getPoi(id: string): Promise<Poi | null> {
     return null;
   }
 
-  // Extract coordinates from PostGIS geography
-  let latitude = 0;
-  let longitude = 0;
-  if (data.coordinate && typeof data.coordinate === 'object') {
-    const coords = data.coordinate as { coordinates?: [number, number] };
-    if (coords.coordinates) {
-      longitude = coords.coordinates[0];
-      latitude = coords.coordinates[1];
-    }
-  }
+  const { latitude, longitude } = extractCoordinates(data.coordinate);
 
   return {
     id: data.id,

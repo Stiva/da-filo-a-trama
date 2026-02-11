@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { EventWithEnrollment, EventCategory } from '@/types/database';
 import EventAssets from '@/components/EventAssets';
+import UserEventAssets from '@/components/UserEventAssets';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -16,6 +17,8 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (eventId) {
@@ -91,6 +94,36 @@ export default function EventDetailPage() {
     } finally {
       setIsEnrolling(false);
     }
+  };
+
+  const handleCheckin = async () => {
+    setIsCheckingIn(true);
+    setCheckinMessage(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/checkin`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Errore durante il check-in');
+      }
+
+      setCheckinMessage(result.message);
+      fetchEvent();
+    } catch (err) {
+      setCheckinMessage(err instanceof Error ? err.message : 'Errore sconosciuto');
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  const isCheckinAvailable = (startTime: string): boolean => {
+    const now = new Date();
+    const start = new Date(startTime);
+    const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
+    return now >= windowStart;
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -232,6 +265,11 @@ export default function EventDetailPage() {
 
               {/* Assets/Documents */}
               <EventAssets eventId={eventId} />
+
+              {/* User Uploaded Assets - solo dopo check-in */}
+              {event.user_can_upload_assets && event.checked_in_at && (
+                <UserEventAssets eventId={eventId} />
+              )}
             </div>
 
             {/* Sidebar - Stacks on mobile */}
@@ -327,6 +365,53 @@ export default function EventDetailPage() {
                   </Link>
                 )}
               </div>
+
+              {/* Check-in Section */}
+              {event.checkin_enabled && event.is_enrolled && event.enrollment_status === 'confirmed' && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Check-in</h3>
+
+                  {event.checked_in_at ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Check-in effettuato</p>
+                        <p className="text-xs text-green-600">
+                          {new Date(event.checked_in_at).toLocaleString('it-IT', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  ) : isCheckinAvailable(event.start_time) ? (
+                    <div className="space-y-2">
+                      <button
+                        onClick={handleCheckin}
+                        disabled={isCheckingIn}
+                        className="w-full py-3 px-4 rounded-lg text-white font-medium bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
+                      >
+                        {isCheckingIn ? 'Check-in in corso...' : 'Fai il Check-in'}
+                      </button>
+                      {checkinMessage && (
+                        <p className={`text-sm text-center ${
+                          checkinMessage.includes('Errore') ? 'text-red-600' : 'text-green-600'
+                        }`}>
+                          {checkinMessage}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center">
+                      Check-in disponibile 15 minuti prima dell&apos;evento
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

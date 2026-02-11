@@ -110,6 +110,8 @@ export interface Event {
   is_published: boolean;
   is_featured: boolean;
   auto_enroll_all: boolean;
+  checkin_enabled: boolean;
+  user_can_upload_assets: boolean;
   visibility: EventVisibility;
   created_by: string | null;
   created_at: string;
@@ -121,6 +123,7 @@ export interface EventWithEnrollment extends Event {
   is_enrolled: boolean;
   enrollment_status: EnrollmentStatus | null;
   waitlist_position?: number | null;
+  checked_in_at?: string | null;
 }
 
 // ============================================
@@ -247,6 +250,33 @@ export interface Asset {
   created_at: string;
   uploaded_by: string | null;
 }
+
+// ============================================
+// USER EVENT ASSETS
+// ============================================
+export type UserAssetType = 'file' | 'link';
+export type LinkType = 'google_drive' | 'notion' | 'web' | 'other';
+
+export interface UserEventAsset {
+  id: string;
+  user_id: string;
+  event_id: string;
+  type: UserAssetType;
+  title: string;
+  url: string;
+  link_type: LinkType | null;
+  file_name: string | null;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  created_at: string;
+}
+
+export const LINK_TYPE_LABELS: Record<LinkType, string> = {
+  google_drive: 'Google Drive',
+  notion: 'Notion',
+  web: 'Web',
+  other: 'Altro',
+};
 
 // ============================================
 // PREFERENCE TAGS (costanti)
