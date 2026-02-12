@@ -35,7 +35,7 @@ export interface NeckerchiefConfig {
   color3?: string;
 }
 
-export type AvatarStyle = 'adventurer' | 'avataaars' | 'lorelei' | 'openPeeps';
+export type AvatarStyle = 'adventurer';
 
 export interface AvatarConfig {
   style: AvatarStyle;
@@ -45,7 +45,11 @@ export interface AvatarConfig {
   hair?: string;
   hairColor?: string;
   eyes?: string;
+  eyebrows?: string;
   mouth?: string;
+  glasses?: string;
+  earrings?: string;
+  features?: string[];
   // Campi legacy per retrocompatibilita' con profili esistenti
   gender?: 'male' | 'female';
   neckerchief?: NeckerchiefConfig;
@@ -71,12 +75,18 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   backgroundColor: '#E8F4E8',
 };
 
-export const AVATAR_STYLES: { value: AvatarStyle; label: string }[] = [
-  { value: 'adventurer', label: 'Avventuriero' },
-  { value: 'avataaars', label: 'Classico' },
-  { value: 'lorelei', label: 'Minimal' },
-  { value: 'openPeeps', label: 'Schizzo' },
-];
+export const ADVENTURER_OPTIONS = {
+  eyes: Array.from({ length: 26 }, (_, i) => `variant${String(i + 1).padStart(2, '0')}`),
+  eyebrows: Array.from({ length: 15 }, (_, i) => `variant${String(i + 1).padStart(2, '0')}`),
+  mouth: Array.from({ length: 30 }, (_, i) => `variant${String(i + 1).padStart(2, '0')}`),
+  hair: [
+    ...Array.from({ length: 19 }, (_, i) => `short${String(i + 1).padStart(2, '0')}`),
+    ...Array.from({ length: 26 }, (_, i) => `long${String(i + 1).padStart(2, '0')}`),
+  ],
+  glasses: Array.from({ length: 5 }, (_, i) => `variant${String(i + 1).padStart(2, '0')}`),
+  earrings: Array.from({ length: 6 }, (_, i) => `variant${String(i + 1).padStart(2, '0')}`),
+  features: ['mustache', 'blush', 'birthmark', 'freckles'] as const,
+};
 
 // ============================================
 // EVENTS

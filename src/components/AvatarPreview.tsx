@@ -2,22 +2,9 @@
 
 import { useMemo } from 'react';
 import { createAvatar } from '@dicebear/core';
-import {
-  adventurer,
-  avataaars,
-  lorelei,
-  openPeeps,
-} from '@dicebear/collection';
-import type { AvatarConfig, AvatarStyle } from '@/types/database';
+import { adventurer } from '@dicebear/collection';
+import type { AvatarConfig } from '@/types/database';
 import { DEFAULT_AVATAR_CONFIG } from '@/types/database';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const STYLE_MODULES: Record<AvatarStyle, any> = {
-  adventurer,
-  avataaars,
-  lorelei,
-  openPeeps,
-};
 
 interface AvatarPreviewProps {
   config?: Partial<AvatarConfig>;
@@ -35,7 +22,6 @@ const sizeMap: Record<string, number> = {
 
 const isLegacyConfig = (config?: Partial<AvatarConfig>): boolean => {
   if (!config) return true;
-  // Vecchio formato aveva hairStyle ma non style
   return 'hairStyle' in config && !('style' in config);
 };
 
@@ -49,9 +35,8 @@ export default function AvatarPreview({
       ? DEFAULT_AVATAR_CONFIG
       : { ...DEFAULT_AVATAR_CONFIG, ...config };
 
-    const styleModule = STYLE_MODULES[cfg.style as AvatarStyle] || adventurer;
-
-    const options: Record<string, unknown> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const options: Record<string, any> = {
       seed: cfg.seed || 'default',
     };
 
@@ -64,8 +49,41 @@ export default function AvatarPreview({
     if (cfg.hairColor) {
       options.hairColor = [cfg.hairColor.replace('#', '')];
     }
+    if (cfg.eyes) {
+      options.eyes = [cfg.eyes];
+    }
+    if (cfg.eyebrows) {
+      options.eyebrows = [cfg.eyebrows];
+    }
+    if (cfg.mouth) {
+      options.mouth = [cfg.mouth];
+    }
+    if (cfg.hair) {
+      options.hair = [cfg.hair];
+    }
 
-    const avatar = createAvatar(styleModule, options);
+    if (cfg.glasses) {
+      options.glasses = [cfg.glasses];
+      options.glassesProbability = 100;
+    } else {
+      options.glassesProbability = 0;
+    }
+
+    if (cfg.earrings) {
+      options.earrings = [cfg.earrings];
+      options.earringsProbability = 100;
+    } else {
+      options.earringsProbability = 0;
+    }
+
+    if (cfg.features && cfg.features.length > 0) {
+      options.features = cfg.features;
+      options.featuresProbability = 100;
+    } else {
+      options.featuresProbability = 0;
+    }
+
+    const avatar = createAvatar(adventurer, options);
     return avatar.toDataUri();
   }, [config]);
 

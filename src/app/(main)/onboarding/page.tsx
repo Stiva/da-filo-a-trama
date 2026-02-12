@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import {
   PREFERENCE_TAGS,
-  AVATAR_STYLES,
   type PreferenceTag,
   type AvatarConfig,
-  type AvatarStyle,
   DEFAULT_AVATAR_CONFIG,
 } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
+import AvatarCustomizer from '@/components/AvatarCustomizer';
 
 type OnboardingStep = 'info' | 'preferences' | 'avatar' | 'complete';
 
@@ -22,37 +21,6 @@ interface FormData {
   preferences: PreferenceTag[];
   avatar_config: AvatarConfig;
 }
-
-// Colori sfondo per avatar
-const BG_COLORS = [
-  { name: 'Verde chiaro', hex: '#E8F4E8' },
-  { name: 'Azzurro', hex: '#E3F2FD' },
-  { name: 'Giallo', hex: '#FFF9E6' },
-  { name: 'Rosa', hex: '#FCE4EC' },
-  { name: 'Lavanda', hex: '#F3E5F5' },
-  { name: 'Crema', hex: '#FDFAF0' },
-];
-
-// Colori pelle (per stili che lo supportano)
-const SKIN_COLORS = [
-  { name: 'Chiaro', hex: '#FFDBB4' },
-  { name: 'Medio chiaro', hex: '#EDB98A' },
-  { name: 'Medio', hex: '#D08B5B' },
-  { name: 'Olivastro', hex: '#AE8A63' },
-  { name: 'Medio scuro', hex: '#8D5524' },
-  { name: 'Scuro', hex: '#614335' },
-];
-
-// Colori capelli
-const HAIR_COLORS = [
-  { name: 'Nero', hex: '#1a1a1a' },
-  { name: 'Castano scuro', hex: '#3d2314' },
-  { name: 'Castano', hex: '#6B4423' },
-  { name: 'Biondo scuro', hex: '#8B7355' },
-  { name: 'Biondo', hex: '#D4A76A' },
-  { name: 'Rosso', hex: '#8B2500' },
-  { name: 'Grigio', hex: '#808080' },
-];
 
 const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
 
@@ -119,10 +87,6 @@ export default function OnboardingPage() {
       ...prev,
       avatar_config: { ...prev.avatar_config, ...updates },
     }));
-  };
-
-  const handleRandomize = () => {
-    updateAvatarConfig({ seed: generateRandomSeed() });
   };
 
   // Funzione per salvare con retry (gestisce race condition con webhook)
@@ -305,127 +269,16 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 3: Avatar (stile + personalizzazione) */}
+            {/* Step 3: Avatar */}
             {currentStep === 'avatar' && (
               <div>
                 <h2 className="text-xl font-display font-semibold text-agesci-blue mb-4">
                   Crea il tuo avatar
                 </h2>
-
-                {/* Avatar Preview + Randomize */}
-                <div className="flex flex-col items-center mb-6">
-                  <AvatarPreview config={formData.avatar_config} size="xl" />
-                  <button
-                    onClick={handleRandomize}
-                    className="mt-4 btn-outline px-6 py-2 text-sm"
-                    type="button"
-                    aria-label="Genera avatar casuale"
-                  >
-                    <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Randomizza
-                  </button>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Stile avatar */}
-                  <div>
-                    <label className="block text-sm font-medium text-agesci-blue mb-2">
-                      Stile
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {AVATAR_STYLES.map((s) => (
-                        <button
-                          key={s.value}
-                          onClick={() => updateAvatarConfig({ style: s.value as AvatarStyle })}
-                          className={`p-3 rounded-xl border-2 transition-all text-center ${
-                            formData.avatar_config.style === s.value
-                              ? 'border-agesci-blue bg-agesci-blue/5 shadow-playful-sm'
-                              : 'border-gray-200 hover:border-agesci-blue/30'
-                          }`}
-                        >
-                          <div className="flex justify-center mb-2">
-                            <AvatarPreview
-                              config={{ ...formData.avatar_config, style: s.value as AvatarStyle }}
-                              size="sm"
-                            />
-                          </div>
-                          <span className="text-xs font-medium text-agesci-blue">{s.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Colore sfondo */}
-                  <div>
-                    <label className="block text-sm font-medium text-agesci-blue mb-2">
-                      Sfondo
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {BG_COLORS.map((color) => (
-                        <button
-                          key={color.hex}
-                          onClick={() => updateAvatarConfig({ backgroundColor: color.hex })}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-110 ${
-                            formData.avatar_config.backgroundColor === color.hex
-                              ? 'border-agesci-blue ring-2 ring-agesci-yellow'
-                              : 'border-gray-200'
-                          }`}
-                          style={{ backgroundColor: color.hex }}
-                          title={color.name}
-                          aria-label={`Sfondo ${color.name}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Colore pelle */}
-                  <div>
-                    <label className="block text-sm font-medium text-agesci-blue mb-2">
-                      Colore pelle
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {SKIN_COLORS.map((color) => (
-                        <button
-                          key={color.hex}
-                          onClick={() => updateAvatarConfig({ skinColor: color.hex })}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-110 ${
-                            formData.avatar_config.skinColor === color.hex
-                              ? 'border-agesci-blue ring-2 ring-agesci-yellow'
-                              : 'border-gray-200'
-                          }`}
-                          style={{ backgroundColor: color.hex }}
-                          title={color.name}
-                          aria-label={`Pelle ${color.name}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Colore capelli */}
-                  <div>
-                    <label className="block text-sm font-medium text-agesci-blue mb-2">
-                      Colore capelli
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {HAIR_COLORS.map((color) => (
-                        <button
-                          key={color.hex}
-                          onClick={() => updateAvatarConfig({ hairColor: color.hex })}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-110 ${
-                            formData.avatar_config.hairColor === color.hex
-                              ? 'border-agesci-blue ring-2 ring-agesci-yellow'
-                              : 'border-gray-200'
-                          }`}
-                          style={{ backgroundColor: color.hex }}
-                          title={color.name}
-                          aria-label={`Capelli ${color.name}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <AvatarCustomizer
+                  config={formData.avatar_config}
+                  onChange={updateAvatarConfig}
+                />
               </div>
             )}
 
@@ -458,10 +311,6 @@ export default function OnboardingPage() {
                       {formData.preferences.length > 0
                         ? formData.preferences.join(', ')
                         : 'Nessuno selezionato'}
-                    </li>
-                    <li>
-                      <strong>Stile avatar:</strong>{' '}
-                      {AVATAR_STYLES.find((s) => s.value === formData.avatar_config.style)?.label || formData.avatar_config.style}
                     </li>
                   </ul>
                 </div>
