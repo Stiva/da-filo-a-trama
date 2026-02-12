@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord } from '@/types/database';
+
+const RichTextEditor = lazy(() => import('@/components/RichTextEditor'));
 
 interface EventFormProps {
   event?: Event;
@@ -148,13 +150,13 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Descrizione
             </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              rows={4}
-              className="input w-full resize-y"
-              placeholder="Descrizione dettagliata dell'evento"
-            />
+            <Suspense fallback={<div className="input w-full min-h-[120px] animate-pulse bg-gray-100" />}>
+              <RichTextEditor
+                initialHtml={event?.description || ''}
+                onChange={(html) => setFormData(prev => ({ ...prev, description: html }))}
+                placeholder="Descrizione dettagliata dell'evento"
+              />
+            </Suspense>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -267,13 +269,13 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Bio Speaker
             </label>
-            <textarea
-              value={formData.speaker_bio}
-              onChange={(e) => setFormData(prev => ({ ...prev, speaker_bio: e.target.value }))}
-              rows={3}
-              className="input w-full resize-y"
-              placeholder="Breve biografia dello speaker"
-            />
+            <Suspense fallback={<div className="input w-full min-h-[120px] animate-pulse bg-gray-100" />}>
+              <RichTextEditor
+                initialHtml={event?.speaker_bio || ''}
+                onChange={(html) => setFormData(prev => ({ ...prev, speaker_bio: html }))}
+                placeholder="Breve biografia dello speaker"
+              />
+            </Suspense>
           </div>
         </div>
       </div>

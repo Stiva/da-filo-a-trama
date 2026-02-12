@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
+
+const RichTextEditor = lazy(() => import('@/components/RichTextEditor'));
 
 const POI_TYPES: { value: PoiCategory; label: string }[] = Object.entries(POI_TYPE_LABELS).map(
   ([value, label]) => ({ value: value as PoiCategory, label })
@@ -122,13 +124,13 @@ export default function PoiForm({ poi, isEditing = false }: PoiFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Descrizione
             </label>
-            <textarea
-              value={formData.descrizione}
-              onChange={(e) => setFormData(prev => ({ ...prev, descrizione: e.target.value }))}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-              placeholder="Descrizione dettagliata del punto di interesse"
-            />
+            <Suspense fallback={<div className="w-full min-h-[120px] animate-pulse bg-gray-100 rounded-md" />}>
+              <RichTextEditor
+                initialHtml={poi?.descrizione || ''}
+                onChange={(html) => setFormData(prev => ({ ...prev, descrizione: html }))}
+                placeholder="Descrizione dettagliata del punto di interesse"
+              />
+            </Suspense>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

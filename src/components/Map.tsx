@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
+import { stripHtml } from '@/lib/stripHtml';
 
 // Fix per le icone di Leaflet in Next.js
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -178,7 +179,7 @@ export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
                 <h3 className="font-semibold">{poi.nome}</h3>
                 <p className="text-sm text-gray-500">{POI_TYPE_LABELS[poi.tipo]}</p>
                 {poi.descrizione && (
-                  <p className="text-sm mt-1">{poi.descrizione}</p>
+                  <p className="text-sm mt-1">{stripHtml(poi.descrizione)}</p>
                 )}
                 <a
                   href={`/events?poi=${poi.id}&poiName=${encodeURIComponent(poi.nome)}`}

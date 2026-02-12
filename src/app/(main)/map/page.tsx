@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
+import { stripHtml } from '@/lib/stripHtml';
 
 // Import dinamico per evitare errori SSR con Leaflet
 const MapComponent = dynamic(() => import('@/components/Map'), {
@@ -154,7 +155,7 @@ function MapPageContent() {
                           <p className="font-medium text-sm">{poi.nome}</p>
                           {poi.descrizione && (
                             <p className="text-xs text-gray-500 line-clamp-1">
-                              {poi.descrizione}
+                              {stripHtml(poi.descrizione)}
                             </p>
                           )}
                         </div>

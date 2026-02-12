@@ -55,7 +55,7 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`nav-link flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+                  className={`nav-link font-display flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
                     active
                       ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
                       : 'hover:bg-agesci-blue/5'
@@ -126,7 +126,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[44px] ${
+                className={`font-display flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[44px] ${
                   active
                     ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
                     : 'text-agesci-blue hover:bg-agesci-blue/5'

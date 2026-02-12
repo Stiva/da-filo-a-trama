@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { EventListItem, EventCategory, EventCategoryRecord, Poi } from '@/types/database';
+import { stripHtml } from '@/lib/stripHtml';
 
 function EventsPageContent() {
   const searchParams = useSearchParams();
@@ -333,7 +334,7 @@ function EventsPageContent() {
                       {/* Card Body */}
                       <div className="p-4 flex-1">
                         <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {event.description || 'Nessuna descrizione disponibile'}
+                          {stripHtml(event.description || '') || 'Nessuna descrizione disponibile'}
                         </p>
 
                         {/* Date, Location, Speaker */}

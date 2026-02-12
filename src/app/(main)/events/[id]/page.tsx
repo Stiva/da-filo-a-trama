@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { EventWithEnrollment, EventCategory } from '@/types/database';
 import EventAssets from '@/components/EventAssets';
 import UserEventAssets from '@/components/UserEventAssets';
+import RichTextContent from '@/components/RichTextContent';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -233,16 +234,17 @@ export default function EventDetailPage() {
               {/* Description */}
               <div>
                 <h2 className="text-lg font-semibold mb-2">Descrizione</h2>
-                <p className="text-gray-600 whitespace-pre-line">
-                  {event.description || 'Nessuna descrizione disponibile'}
-                </p>
+                <RichTextContent
+                  content={event.description || 'Nessuna descrizione disponibile'}
+                  className="text-gray-600"
+                />
               </div>
 
               {/* Speaker Bio */}
               {event.speaker_bio && (
                 <div>
                   <h2 className="text-lg font-semibold mb-2">Speaker</h2>
-                  <p className="text-gray-600">{event.speaker_bio}</p>
+                  <RichTextContent content={event.speaker_bio} className="text-gray-600" />
                 </div>
               )}
 

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Event } from '@/types/database';
 import Badge from './Badge';
+import { stripHtml } from '@/lib/stripHtml';
 
 interface EventCardProps {
   event: Event;
@@ -83,7 +84,7 @@ export default function EventCard({
         {/* Descrizione */}
         {event.description && (
           <p className="text-agesci-blue/70 text-sm mb-4 line-clamp-2">
-            {event.description}
+            {stripHtml(event.description)}
           </p>
         )}
 
