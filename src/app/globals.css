@@ -105,9 +105,14 @@ body {
    TIPOGRAFIA
    ======================================== */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-quicksand), system-ui, sans-serif;
   font-weight: 700;
   line-height: 1.2;
+}
+
+/* Font heading per sezione utente (Love You) */
+.main-content h1, .main-content h2, .main-content h3,
+.main-content h4, .main-content h5, .main-content h6 {
+  font-family: var(--font-loveyou), var(--font-quicksand), system-ui, sans-serif;
 }
 
 h1 { font-size: 2.5rem; }

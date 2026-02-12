@@ -50,7 +50,7 @@ const config: Config = {
       // Font families
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-quicksand)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-loveyou)', 'var(--font-quicksand)', 'system-ui', 'sans-serif'],
         brand: ['var(--font-dancing-script)', 'cursive'],
       },
       // Border radius arrotondati "playful"

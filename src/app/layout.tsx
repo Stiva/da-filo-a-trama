@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { itIT } from '@clerk/localizations';
 import { Inter, Quicksand, Dancing_Script } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
 // Font per il corpo del testo
@@ -27,6 +28,13 @@ const dancingScript = Dancing_Script({
   display: 'swap',
 });
 
+// Font custom "Love You" per titoli/display (sezione utente)
+const loveYou = localFont({
+  src: '../../public/Love You.ttf',
+  variable: '--font-loveyou',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Da Filo a Trama - Evento Scout 2026',
   description: 'Piattaforma digitale per l\'evento nazionale scout AGESCI 2026',
@@ -36,7 +44,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',
-    apple: '/favicon.png',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     title: 'Da Filo a Trama - Evento Scout 2026',
@@ -60,7 +68,7 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider localization={itIT}>
-      <html lang="it" className={`${inter.variable} ${quicksand.variable} ${dancingScript.variable}`}>
+      <html lang="it" className={`${inter.variable} ${quicksand.variable} ${dancingScript.variable} ${loveYou.variable}`}>
         <body className="min-h-screen bg-scout-cream font-sans antialiased">
           {children}
         </body>

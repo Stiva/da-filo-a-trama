@@ -7,7 +7,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-scout-cream">
+    <div className="min-h-screen bg-scout-cream main-content">
       {/* Navbar */}
       <Navbar />
 
@@ -20,16 +20,12 @@ export default function MainLayout({
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
               <Image
-                src="/favicon.png"
+                src="/Logo completo.png"
                 alt="Da Filo a Trama"
-                width={40}
-                height={40}
-                className="rounded-xl"
+                width={160}
+                height={63}
+                className="h-10 w-auto brightness-0 invert"
               />
-              <div>
-                <span className="font-display font-bold text-lg">Da Filo a Trama</span>
-                <span className="block text-xs text-white/60">Evento Scout AGESCI 2026</span>
-              </div>
             </div>
             <div className="text-sm text-white/60 text-center md:text-right">
               <p>&copy; 2026 AGESCI - Tutti i diritti riservati</p>

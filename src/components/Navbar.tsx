@@ -33,23 +33,16 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 group"
+              className="flex items-center group"
             >
               <Image
-                src="/favicon.png"
+                src="/Logo completo.png"
                 alt="Da Filo a Trama"
-                width={40}
-                height={40}
-                className="rounded-xl shadow-yellow-sm group-hover:shadow-yellow transition-shadow"
+                width={180}
+                height={70}
+                className="h-11 w-auto group-hover:scale-105 transition-transform"
+                priority
               />
-              <div className="hidden sm:block">
-                <span className="font-display font-bold text-agesci-blue text-lg">
-                  Da Filo a Trama
-                </span>
-                <span className="block text-xs text-agesci-blue/60">
-                  Scout 2026
-                </span>
-              </div>
             </Link>
           </div>
 
