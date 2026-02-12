@@ -344,7 +344,7 @@ export default function AdminUserDetailPage({
                   aria-checked={formData.onboarding_completed}
                   aria-label={`Onboarding ${formData.onboarding_completed ? 'completato' : 'in attesa'}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
                     formData.onboarding_completed ? 'translate-x-[18px]' : 'translate-x-0.5'
                   }`} />
                 </button>
@@ -362,7 +362,7 @@ export default function AdminUserDetailPage({
                   aria-checked={formData.avatar_completed}
                   aria-label={`Avatar ${formData.avatar_completed ? 'configurato' : 'default'}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
                     formData.avatar_completed ? 'translate-x-[18px]' : 'translate-x-0.5'
                   }`} />
                 </button>
@@ -380,7 +380,7 @@ export default function AdminUserDetailPage({
                   aria-checked={formData.preferences_set}
                   aria-label={`Preferenze ${formData.preferences_set ? 'impostate' : 'non impostate'}`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
                     formData.preferences_set ? 'translate-x-[18px]' : 'translate-x-0.5'
                   }`} />
                 </button>
