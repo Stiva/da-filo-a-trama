@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Poi, PoiCategory } from '@/types/database';
@@ -191,6 +191,22 @@ export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
           </Marker>
         );
       })}
+
+      {/* Marker posizione utente */}
+      {userPosition && (
+        <CircleMarker
+          center={userPosition}
+          radius={10}
+          pathOptions={{
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.3,
+            weight: 3,
+          }}
+        >
+          <Popup>La mia posizione</Popup>
+        </CircleMarker>
+      )}
     </MapContainer>
   );
 }
