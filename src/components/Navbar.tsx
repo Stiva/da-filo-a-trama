@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 
@@ -24,6 +25,7 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <nav className="bg-scout-cream border-b-3 border-agesci-blue sticky top-0 z-50">
       <div className="container-scout">
         <div className="flex justify-between h-16">
@@ -33,10 +35,13 @@ export default function Navbar() {
               href="/dashboard"
               className="flex items-center gap-3 group"
             >
-              {/* Logo SVG */}
-              <div className="w-10 h-10 bg-agesci-blue rounded-xl flex items-center justify-center shadow-yellow-sm group-hover:shadow-yellow transition-shadow">
-                <span className="text-white font-display font-bold text-lg">DF</span>
-              </div>
+              <Image
+                src="/favicon.png"
+                alt="Da Filo a Trama"
+                width={40}
+                height={40}
+                className="rounded-xl shadow-yellow-sm group-hover:shadow-yellow transition-shadow"
+              />
               <div className="hidden sm:block">
                 <span className="font-display font-bold text-agesci-blue text-lg">
                   Da Filo a Trama
@@ -99,13 +104,27 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
-        }`}
+    </nav>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 w-72 bg-scout-cream
+          transform transition-transform duration-300 ease-in-out
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:hidden pt-20 overflow-y-auto shadow-xl border-r border-agesci-blue/10
+        `}
       >
-        <div className="container-scout py-4 space-y-2 border-t border-agesci-blue/10">
+        <nav className="p-4 space-y-2" aria-label="Menu mobile">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = isActive(link.href);
@@ -114,7 +133,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[44px] ${
                   active
                     ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
                     : 'text-agesci-blue hover:bg-agesci-blue/5'
@@ -125,9 +144,9 @@ export default function Navbar() {
               </Link>
             );
           })}
-        </div>
-      </div>
-    </nav>
+        </nav>
+      </aside>
+    </>
   );
 }
 

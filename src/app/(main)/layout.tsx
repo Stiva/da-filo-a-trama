@@ -1,4 +1,5 @@
 import Navbar from '@/components/Navbar';
+import Image from 'next/image';
 
 export default function MainLayout({
   children,
@@ -18,9 +19,13 @@ export default function MainLayout({
         <div className="container-scout">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-agesci-yellow rounded-xl flex items-center justify-center">
-                <span className="text-agesci-blue font-display font-bold text-lg">DF</span>
-              </div>
+              <Image
+                src="/favicon.png"
+                alt="Da Filo a Trama"
+                width={40}
+                height={40}
+                className="rounded-xl"
+              />
               <div>
                 <span className="font-display font-bold text-lg">Da Filo a Trama</span>
                 <span className="block text-xs text-white/60">Evento Scout AGESCI 2026</span>

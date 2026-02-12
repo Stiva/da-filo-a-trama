@@ -26,24 +26,29 @@ export interface Profile {
   updated_at: string;
 }
 
+/** @deprecated Mantenuto per retrocompatibilita' con profili esistenti in DB */
 export interface NeckerchiefConfig {
   enabled: boolean;
   colorCount: 1 | 2 | 3;
-  color1: string;      // Colore principale
-  color2?: string;     // Secondo colore (bordo)
-  color3?: string;     // Terzo colore (punta/dettaglio)
+  color1: string;
+  color2?: string;
+  color3?: string;
 }
 
+export type AvatarStyle = 'adventurer' | 'avataaars' | 'lorelei' | 'openPeeps';
+
 export interface AvatarConfig {
-  gender: 'male' | 'female';
-  skinTone: string;
-  hairStyle: string;
-  hairColor: string;
-  eyeColor: string;
-  neckerchief: NeckerchiefConfig;
-  clothing: string;
-  background: string;
-  accessories?: string[];
+  style: AvatarStyle;
+  seed: string;
+  backgroundColor: string;
+  skinColor?: string;
+  hair?: string;
+  hairColor?: string;
+  eyes?: string;
+  mouth?: string;
+  // Campi legacy per retrocompatibilita' con profili esistenti
+  gender?: 'male' | 'female';
+  neckerchief?: NeckerchiefConfig;
 }
 
 export interface ProfileUpdate {
@@ -59,22 +64,19 @@ export interface ProfileUpdate {
   preferences_set?: boolean;
 }
 
-// Default avatar configuration
+// Default avatar configuration (DiceBear)
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
-  gender: 'male',
-  skinTone: '#DEB887',
-  hairStyle: 'short',
-  hairColor: '#4A3728',
-  eyeColor: '#5D4E37',
-  neckerchief: {
-    enabled: true,
-    colorCount: 2,
-    color1: '#1E6091',
-    color2: '#FFDE00',
-  },
-  clothing: '#2D5016',
-  background: '#E8F4E8',
+  style: 'adventurer',
+  seed: 'scout2026',
+  backgroundColor: '#E8F4E8',
 };
+
+export const AVATAR_STYLES: { value: AvatarStyle; label: string }[] = [
+  { value: 'adventurer', label: 'Avventuriero' },
+  { value: 'avataaars', label: 'Classico' },
+  { value: 'lorelei', label: 'Minimal' },
+  { value: 'openPeeps', label: 'Schizzo' },
+];
 
 // ============================================
 // EVENTS

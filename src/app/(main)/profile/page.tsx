@@ -2,8 +2,59 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { PREFERENCE_TAGS, DEFAULT_AVATAR_CONFIG, type PreferenceTag, type AvatarConfig, type Profile } from '@/types/database';
+import {
+  PREFERENCE_TAGS,
+  AVATAR_STYLES,
+  DEFAULT_AVATAR_CONFIG,
+  type PreferenceTag,
+  type AvatarConfig,
+  type AvatarStyle,
+  type Profile,
+} from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
+
+// Colori sfondo per avatar
+const BG_COLORS = [
+  { name: 'Verde chiaro', hex: '#E8F4E8' },
+  { name: 'Azzurro', hex: '#E3F2FD' },
+  { name: 'Giallo', hex: '#FFF9E6' },
+  { name: 'Rosa', hex: '#FCE4EC' },
+  { name: 'Lavanda', hex: '#F3E5F5' },
+  { name: 'Crema', hex: '#FDFAF0' },
+];
+
+// Colori pelle
+const SKIN_COLORS = [
+  { name: 'Chiaro', hex: '#FFDBB4' },
+  { name: 'Medio chiaro', hex: '#EDB98A' },
+  { name: 'Medio', hex: '#D08B5B' },
+  { name: 'Olivastro', hex: '#AE8A63' },
+  { name: 'Medio scuro', hex: '#8D5524' },
+  { name: 'Scuro', hex: '#614335' },
+];
+
+// Colori capelli
+const HAIR_COLORS = [
+  { name: 'Nero', hex: '#1a1a1a' },
+  { name: 'Castano scuro', hex: '#3d2314' },
+  { name: 'Castano', hex: '#6B4423' },
+  { name: 'Biondo scuro', hex: '#8B7355' },
+  { name: 'Biondo', hex: '#D4A76A' },
+  { name: 'Rosso', hex: '#8B2500' },
+  { name: 'Grigio', hex: '#808080' },
+];
+
+const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
+
+/** Converte un vecchio avatar_config (legacy) nel nuovo formato DiceBear */
+const migrateAvatarConfig = (config: Record<string, unknown>): AvatarConfig => {
+  // Se ha gia' il nuovo formato, restituiscilo
+  if (config && 'style' in config && 'seed' in config) {
+    return config as unknown as AvatarConfig;
+  }
+  // Config legacy → usa default DiceBear con seed casuale
+  return { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() };
+};
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -22,12 +73,7 @@ export default function ProfilePage() {
     surname: '',
     scout_group: '',
     preferences: [] as PreferenceTag[],
-    avatar_config: {
-      skinTone: '#f5d0c5',
-      hairStyle: 'short',
-      hairColor: '#3d2314',
-      background: '#e8f5e9',
-    } as AvatarConfig,
+    avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() } as AvatarConfig,
   });
 
   useEffect(() => {
@@ -52,7 +98,7 @@ export default function ProfilePage() {
         surname: result.data.surname || '',
         scout_group: result.data.scout_group || '',
         preferences: result.data.preferences || [],
-        avatar_config: result.data.avatar_config || formData.avatar_config,
+        avatar_config: migrateAvatarConfig(result.data.avatar_config || {}),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -98,6 +144,17 @@ export default function ProfilePage() {
     }));
   };
 
+  const updateAvatarConfig = (updates: Partial<AvatarConfig>) => {
+    setFormData(prev => ({
+      ...prev,
+      avatar_config: { ...prev.avatar_config, ...updates },
+    }));
+  };
+
+  const handleRandomize = () => {
+    updateAvatarConfig({ seed: generateRandomSeed() });
+  };
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -117,12 +174,12 @@ export default function ProfilePage() {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('photo', file);
+      const uploadData = new FormData();
+      uploadData.append('photo', file);
 
       const response = await fetch('/api/profiles/photo', {
         method: 'POST',
-        body: formData,
+        body: uploadData,
       });
 
       const result = await response.json();
@@ -185,7 +242,7 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="mb-8">
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--scout-green)' }}>
+          <h1 className="text-3xl font-bold text-agesci-blue">
             Il Tuo Profilo
           </h1>
           <p className="text-gray-600 mt-2">
@@ -211,6 +268,7 @@ export default function ProfilePage() {
           <div className="p-6 border-b border-gray-100 flex items-center gap-4">
             {profile?.profile_image_url ? (
               <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-green-500 shadow-md flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={profile.profile_image_url}
                   alt="Foto profilo"
@@ -222,7 +280,7 @@ export default function ProfilePage() {
             )}
 
             <div>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-xl font-semibold text-agesci-blue">
                 {formData.name || user?.firstName} {formData.surname || user?.lastName}
               </h2>
               <p className="text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -244,7 +302,7 @@ export default function ProfilePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
                   activeTab === tab.id
-                    ? 'border-green-500 text-green-600'
+                    ? 'border-agesci-blue text-agesci-blue'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -267,7 +325,7 @@ export default function ProfilePage() {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="input w-full"
                       placeholder="Il tuo nome"
                     />
                   </div>
@@ -280,7 +338,7 @@ export default function ProfilePage() {
                       type="text"
                       value={formData.surname}
                       onChange={(e) => setFormData(prev => ({ ...prev, surname: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="input w-full"
                       placeholder="Il tuo cognome"
                     />
                   </div>
@@ -294,7 +352,7 @@ export default function ProfilePage() {
                     type="text"
                     value={formData.scout_group}
                     onChange={(e) => setFormData(prev => ({ ...prev, scout_group: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="input w-full"
                     placeholder="es. Roma 123"
                   />
                 </div>
@@ -323,7 +381,7 @@ export default function ProfilePage() {
                       onClick={() => togglePreference(tag)}
                       className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                         formData.preferences.includes(tag)
-                          ? 'border-green-500 bg-green-50 text-green-700'
+                          ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -344,12 +402,12 @@ export default function ProfilePage() {
             {activeTab === 'avatar' && (
               <div>
                 <p className="text-gray-600 mb-6">
-                  Carica una foto o personalizza il tuo avatar scout.
+                  Carica una foto o personalizza il tuo avatar.
                 </p>
 
                 {/* Photo Upload Section */}
                 <div className="mb-8 p-6 border-2 border-dashed border-gray-200 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Foto Profilo</h3>
+                  <h3 className="text-lg font-semibold text-agesci-blue mb-4">Foto Profilo</h3>
 
                   {photoError && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
@@ -360,6 +418,7 @@ export default function ProfilePage() {
                   {profile?.profile_image_url ? (
                     <div className="flex items-center gap-4">
                       <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={profile.profile_image_url}
                           alt="Foto profilo"
@@ -391,7 +450,7 @@ export default function ProfilePage() {
                           className="hidden"
                           aria-label="Carica foto profilo"
                         />
-                        <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                        <span className="inline-flex items-center gap-2 px-4 py-2 btn-accent rounded-md">
                           {isUploadingPhoto ? (
                             <>
                               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -418,79 +477,72 @@ export default function ProfilePage() {
                   </span>
                 </div>
 
-                {/* Avatar Preview */}
-                <div className="flex justify-center mb-8">
+                {/* Avatar Preview + Randomize */}
+                <div className="flex flex-col items-center mb-8">
                   <AvatarPreview config={formData.avatar_config} size="xl" />
+                  <button
+                    onClick={handleRandomize}
+                    className="mt-4 btn-outline px-6 py-2 text-sm"
+                    type="button"
+                    aria-label="Genera avatar casuale"
+                  >
+                    <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Randomizza
+                  </button>
                 </div>
 
                 {/* Avatar Options */}
                 <div className="space-y-6">
-                  {/* Genere */}
+                  {/* Stile avatar */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Genere
+                      Stile
                     </label>
-                    <div className="flex gap-3">
-                      {[
-                        { value: 'male' as const, label: 'Maschile' },
-                        { value: 'female' as const, label: 'Femminile' },
-                      ].map((option) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {AVATAR_STYLES.map((s) => (
                         <button
-                          key={option.value}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: {
-                              ...prev.avatar_config,
-                              gender: option.value,
-                              hairStyle: option.value === 'female' ? 'long' : 'short',
-                            },
-                          }))}
-                          className={`flex-1 px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                            formData.avatar_config.gender === option.value
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-200 hover:border-gray-300'
+                          key={s.value}
+                          onClick={() => updateAvatarConfig({ style: s.value as AvatarStyle })}
+                          className={`p-3 rounded-xl border-2 transition-all text-center ${
+                            formData.avatar_config.style === s.value
+                              ? 'border-agesci-blue bg-agesci-blue/5 shadow-playful-sm'
+                              : 'border-gray-200 hover:border-agesci-blue/30'
                           }`}
                         >
-                          {option.label}
+                          <div className="flex justify-center mb-2">
+                            <AvatarPreview
+                              config={{ ...formData.avatar_config, style: s.value as AvatarStyle }}
+                              size="sm"
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-agesci-blue">{s.label}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Stile capelli */}
+                  {/* Colore sfondo */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Stile capelli
+                      Sfondo
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(formData.avatar_config.gender === 'female'
-                        ? [
-                            { value: 'long', label: 'Lunghi' },
-                            { value: 'short', label: 'Corti' },
-                            { value: 'ponytail', label: 'Coda' },
-                            { value: 'curly', label: 'Ricci' },
-                          ]
-                        : [
-                            { value: 'short', label: 'Corti' },
-                            { value: 'buzz', label: 'Rasati' },
-                            { value: 'spiky', label: 'Spettinati' },
-                            { value: 'wavy', label: 'Ondulati' },
-                          ]
-                      ).map((style) => (
+                    <div className="flex flex-wrap gap-3">
+                      {BG_COLORS.map((color) => (
                         <button
-                          key={style.value}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: { ...prev.avatar_config, hairStyle: style.value },
-                          }))}
-                          className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                            formData.avatar_config.hairStyle === style.value
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-200 hover:border-gray-300'
+                          key={color.hex}
+                          onClick={() => updateAvatarConfig({ backgroundColor: color.hex })}
+                          className={`w-12 h-12 rounded-full border-3 transition-transform hover:scale-110 ${
+                            formData.avatar_config.backgroundColor === color.hex
+                              ? 'border-agesci-blue ring-2 ring-agesci-yellow'
+                              : 'border-gray-200'
                           }`}
-                        >
-                          {style.label}
-                        </button>
+                          style={{ backgroundColor: color.hex }}
+                          title={color.name}
+                          aria-label={`Sfondo ${color.name}`}
+                          tabIndex={0}
+                        />
                       ))}
                     </div>
                   </div>
@@ -501,20 +553,18 @@ export default function ProfilePage() {
                       Colore pelle
                     </label>
                     <div className="flex flex-wrap gap-3">
-                      {['#f5d0c5', '#e8beac', '#DEB887', '#d4a574', '#a67c52', '#6b4423'].map((color) => (
+                      {SKIN_COLORS.map((color) => (
                         <button
-                          key={color}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: { ...prev.avatar_config, skinTone: color },
-                          }))}
+                          key={color.hex}
+                          onClick={() => updateAvatarConfig({ skinColor: color.hex })}
                           className={`w-12 h-12 rounded-full border-3 transition-transform hover:scale-110 ${
-                            formData.avatar_config.skinTone === color
-                              ? 'border-green-500 ring-2 ring-green-200'
+                            formData.avatar_config.skinColor === color.hex
+                              ? 'border-agesci-blue ring-2 ring-agesci-yellow'
                               : 'border-gray-200'
                           }`}
-                          style={{ backgroundColor: color }}
-                          aria-label={`Colore pelle ${color}`}
+                          style={{ backgroundColor: color.hex }}
+                          title={color.name}
+                          aria-label={`Pelle ${color.name}`}
                           tabIndex={0}
                         />
                       ))}
@@ -527,187 +577,18 @@ export default function ProfilePage() {
                       Colore capelli
                     </label>
                     <div className="flex flex-wrap gap-3">
-                      {['#3d2314', '#1a1a1a', '#4A3728', '#8b4513', '#daa520', '#a52a2a', '#d4d4d4'].map((color) => (
+                      {HAIR_COLORS.map((color) => (
                         <button
-                          key={color}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: { ...prev.avatar_config, hairColor: color },
-                          }))}
+                          key={color.hex}
+                          onClick={() => updateAvatarConfig({ hairColor: color.hex })}
                           className={`w-12 h-12 rounded-full border-3 transition-transform hover:scale-110 ${
-                            formData.avatar_config.hairColor === color
-                              ? 'border-green-500 ring-2 ring-green-200'
+                            formData.avatar_config.hairColor === color.hex
+                              ? 'border-agesci-blue ring-2 ring-agesci-yellow'
                               : 'border-gray-200'
                           }`}
-                          style={{ backgroundColor: color }}
-                          aria-label={`Colore capelli ${color}`}
-                          tabIndex={0}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Colore occhi */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Colore occhi
-                    </label>
-                    <div className="flex flex-wrap gap-3">
-                      {['#5D4E37', '#2E4057', '#8B7355', '#4A7C59', '#6B8E23'].map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: { ...prev.avatar_config, eyeColor: color },
-                          }))}
-                          className={`w-12 h-12 rounded-full border-3 transition-transform hover:scale-110 ${
-                            formData.avatar_config.eyeColor === color
-                              ? 'border-green-500 ring-2 ring-green-200'
-                              : 'border-gray-200'
-                          }`}
-                          style={{ backgroundColor: color }}
-                          aria-label={`Colore occhi ${color}`}
-                          tabIndex={0}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fazzolettone Scout */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Fazzolettone Scout
-                    </label>
-                    <div className="space-y-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.avatar_config.neckerchief?.enabled ?? true}
-                          onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: {
-                              ...prev.avatar_config,
-                              neckerchief: {
-                                ...(prev.avatar_config.neckerchief ?? DEFAULT_AVATAR_CONFIG.neckerchief),
-                                enabled: e.target.checked,
-                              },
-                            },
-                          }))}
-                          className="w-4 h-4 text-green-600 rounded"
-                        />
-                        <span className="text-sm">Mostra fazzolettone</span>
-                      </label>
-
-                      {(formData.avatar_config.neckerchief?.enabled ?? true) && (
-                        <>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-2">Colore principale</label>
-                            <div className="flex flex-wrap gap-2">
-                              {['#1E6091', '#8B0000', '#2E7D32', '#FFDE00', '#4B0082', '#FF6B35'].map((color) => (
-                                <button
-                                  key={color}
-                                  onClick={() => setFormData(prev => ({
-                                    ...prev,
-                                    avatar_config: {
-                                      ...prev.avatar_config,
-                                      neckerchief: {
-                                        ...(prev.avatar_config.neckerchief ?? DEFAULT_AVATAR_CONFIG.neckerchief),
-                                        color1: color,
-                                      },
-                                    },
-                                  }))}
-                                  className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 ${
-                                    formData.avatar_config.neckerchief?.color1 === color
-                                      ? 'border-green-500 ring-2 ring-green-200'
-                                      : 'border-gray-200'
-                                  }`}
-                                  style={{ backgroundColor: color }}
-                                  aria-label={`Colore fazzolettone ${color}`}
-                                  tabIndex={0}
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-2">Colore bordo</label>
-                            <div className="flex flex-wrap gap-2">
-                              {['#FFDE00', '#FFFFFF', '#1E6091', '#8B0000', '#2E7D32', '#4B0082'].map((color) => (
-                                <button
-                                  key={color}
-                                  onClick={() => setFormData(prev => ({
-                                    ...prev,
-                                    avatar_config: {
-                                      ...prev.avatar_config,
-                                      neckerchief: {
-                                        ...(prev.avatar_config.neckerchief ?? DEFAULT_AVATAR_CONFIG.neckerchief),
-                                        color2: color,
-                                      },
-                                    },
-                                  }))}
-                                  className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 ${
-                                    formData.avatar_config.neckerchief?.color2 === color
-                                      ? 'border-green-500 ring-2 ring-green-200'
-                                      : 'border-gray-200'
-                                  }`}
-                                  style={{ backgroundColor: color }}
-                                  aria-label={`Colore bordo fazzolettone ${color}`}
-                                  tabIndex={0}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Colore uniforme */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Colore uniforme
-                    </label>
-                    <div className="flex flex-wrap gap-3">
-                      {['#2D5016', '#1B4332', '#2F4538', '#4A5D23'].map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: { ...prev.avatar_config, clothing: color },
-                          }))}
-                          className={`w-12 h-12 rounded-full border-3 transition-transform hover:scale-110 ${
-                            formData.avatar_config.clothing === color
-                              ? 'border-green-500 ring-2 ring-green-200'
-                              : 'border-gray-200'
-                          }`}
-                          style={{ backgroundColor: color }}
-                          aria-label={`Colore uniforme ${color}`}
-                          tabIndex={0}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sfondo */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Sfondo
-                    </label>
-                    <div className="flex flex-wrap gap-3">
-                      {['#e8f5e9', '#E8F4E8', '#e3f2fd', '#fff3e0', '#fce4ec', '#f3e5f5', '#e0f7fa'].map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setFormData(prev => ({
-                            ...prev,
-                            avatar_config: { ...prev.avatar_config, background: color },
-                          }))}
-                          className={`w-12 h-12 rounded-full border-3 transition-transform hover:scale-110 ${
-                            formData.avatar_config.background === color
-                              ? 'border-green-500 ring-2 ring-green-200'
-                              : 'border-gray-200'
-                          }`}
-                          style={{ backgroundColor: color }}
-                          aria-label={`Colore sfondo ${color}`}
+                          style={{ backgroundColor: color.hex }}
+                          title={color.name}
+                          aria-label={`Capelli ${color.name}`}
                           tabIndex={0}
                         />
                       ))}
@@ -723,8 +604,7 @@ export default function ProfilePage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full md:w-auto px-6 py-2 rounded-md text-white font-medium disabled:opacity-50"
-              style={{ backgroundColor: 'var(--scout-green)' }}
+              className="w-full md:w-auto btn-primary px-6"
             >
               {isSaving ? 'Salvataggio...' : 'Salva modifiche'}
             </button>
