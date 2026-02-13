@@ -53,14 +53,24 @@ const AdminSupportInboxInner = () => {
     void refreshChannels();
   }, [client, session?.isAdmin]);
 
+  useEffect(() => {
+    if (!selectedChannel?.id) return;
+
+    const activateSelectedChannel = async () => {
+      await fetch('/api/chat/channel/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: selectedChannel.id }),
+      });
+
+      await refreshChannels();
+    };
+
+    void activateSelectedChannel();
+  }, [selectedChannel?.id]);
+
   const handleOpenChannel = async (channel: StreamChannel) => {
     setSelectedChannel(channel);
-    await fetch('/api/chat/channel/activate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channelId: channel.id }),
-    });
-    await refreshChannels();
   };
 
   if (!canUse) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import {
   Channel,
   Chat,
@@ -21,6 +22,7 @@ interface LocalNotification {
 const UserSupportChatWidgetInner = () => {
   const { client, session, loading, error, retry } = useStreamSupport();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [channel, setChannel] = useState<StreamChannel | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [localNotification, setLocalNotification] = useState<LocalNotification | null>(null);
@@ -67,10 +69,10 @@ const UserSupportChatWidgetInner = () => {
   }, [client, session]);
 
   useEffect(() => {
-    if (!isOpen || !channel) return;
+    if (!isOpen || isMinimized || !channel) return;
     void channel.markRead();
     setUnreadCount(0);
-  }, [isOpen, channel]);
+  }, [isOpen, isMinimized, channel]);
 
   useEffect(() => {
     if (!localNotification) return;
@@ -105,7 +107,10 @@ const UserSupportChatWidgetInner = () => {
       {!isOpen && (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setIsMinimized(false);
+          }}
           aria-label="Apri chat assistenza"
           className="fixed bottom-6 right-6 z-[70] relative w-14 h-14 rounded-full bg-agesci-blue text-white shadow-xl hover:bg-agesci-blue-light transition-colors"
           style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
@@ -115,16 +120,23 @@ const UserSupportChatWidgetInner = () => {
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
-          <svg className="w-7 h-7 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8M8 14h5m9 6l-3.464-3.464A9 9 0 1118 3a9 9 0 013.536 17z" />
-          </svg>
+          <Image
+            src="/chat-118.png"
+            alt="Apri chat"
+            width={32}
+            height={32}
+            className="mx-auto rounded-full"
+          />
         </button>
       )}
 
       {localNotification && !isOpen && (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setIsMinimized(false);
+          }}
           className="fixed bottom-24 right-6 z-[70] max-w-xs bg-white border border-agesci-blue/30 shadow-lg rounded-xl px-3 py-2 text-left"
           aria-label="Apri chat assistenza per leggere il nuovo messaggio"
           style={{ position: 'fixed', right: 24, bottom: 96, zIndex: 70 }}
@@ -134,23 +146,70 @@ const UserSupportChatWidgetInner = () => {
         </button>
       )}
 
-      {isOpen && (
+      {isOpen && isMinimized && (
+        <div
+          className="fixed bottom-6 right-6 z-[70] bg-white border border-agesci-blue/20 shadow-xl rounded-xl px-3 py-2 flex items-center gap-2"
+          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsMinimized(false)}
+            className="text-sm font-semibold text-agesci-blue"
+            aria-label="Ripristina chat"
+          >
+            Chat Assistenza
+          </button>
+          {unreadCount > 0 && (
+            <span className="min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold text-center">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              setIsMinimized(false);
+            }}
+            aria-label="Chiudi chat assistenza"
+            className="p-1 rounded hover:bg-gray-100 text-gray-500"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {isOpen && !isMinimized && (
         <div
           className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20"
           style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-agesci-blue text-white">
             <h3 className="font-semibold">Chat Assistenza</h3>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              aria-label="Chiudi chat"
-              className="p-1.5 rounded-lg hover:bg-white/20"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMinimized(true)}
+                aria-label="Minimizza chat"
+                className="px-2 py-1 text-xs rounded-lg bg-white/15 hover:bg-white/25"
+              >
+                Riduci
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsMinimized(false);
+                }}
+                aria-label="Chiudi chat"
+                className="p-1.5 rounded-lg hover:bg-white/20"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {!client || !channel ? (
