@@ -435,7 +435,7 @@ export default function EventsPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <header className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--scout-green)' }}>
+          <h1 className="text-3xl sm:text-4xl font-display font-bold" style={{ color: 'var(--scout-green)' }}>
             Programma Eventi
           </h1>
           <p className="text-gray-600 mt-2">

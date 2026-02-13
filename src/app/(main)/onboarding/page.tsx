@@ -152,7 +152,7 @@ export default function OnboardingPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-display font-bold text-agesci-blue">
+          <h1 className="text-4xl font-display font-bold text-agesci-blue">
             Completa il tuo profilo
           </h1>
           <p className="text-agesci-blue/60 mt-2">
@@ -196,7 +196,7 @@ export default function OnboardingPage() {
             {/* Step 1: Personal Info */}
             {currentStep === 'info' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-display font-semibold text-agesci-blue mb-4">
+                <h2 className="text-2xl font-display font-semibold text-agesci-blue mb-4">
                   Informazioni personali
                 </h2>
 
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
             {/* Step 2: Preferences */}
             {currentStep === 'preferences' && (
               <div>
-                <h2 className="text-xl font-display font-semibold text-agesci-blue mb-4">
+                <h2 className="text-2xl font-display font-semibold text-agesci-blue mb-4">
                   Le tue preferenze
                 </h2>
                 <p className="text-agesci-blue/60 mb-4">
@@ -272,7 +272,7 @@ export default function OnboardingPage() {
             {/* Step 3: Avatar */}
             {currentStep === 'avatar' && (
               <div>
-                <h2 className="text-xl font-display font-semibold text-agesci-blue mb-4">
+                <h2 className="text-2xl font-display font-semibold text-agesci-blue mb-4">
                   Crea il tuo avatar
                 </h2>
                 <AvatarCustomizer
@@ -289,7 +289,7 @@ export default function OnboardingPage() {
                   <AvatarPreview config={formData.avatar_config} size="xl" />
                 </div>
 
-                <h2 className="text-2xl font-display font-semibold text-agesci-blue mb-2">
+                <h2 className="text-3xl font-display font-semibold text-agesci-blue mb-2">
                   Tutto pronto!
                 </h2>
                 <p className="text-agesci-blue/60 mb-6">

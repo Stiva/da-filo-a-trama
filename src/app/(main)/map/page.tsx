@@ -242,7 +242,7 @@ export default function MapPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <header className="mb-6">
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--scout-green)' }}>
+          <h1 className="text-4xl font-display font-bold" style={{ color: 'var(--scout-green)' }}>
             Mappa Interattiva
           </h1>
           <p className="text-gray-600 mt-2">

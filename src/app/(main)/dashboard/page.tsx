@@ -109,7 +109,7 @@ export default async function DashboardPage() {
               <span className="text-2xl">👋</span>
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-display font-bold text-agesci-blue">
+              <h1 className="text-4xl md:text-5xl font-display font-bold text-agesci-blue">
                 Ciao, {firstName}!
               </h1>
               <p className="text-agesci-blue/60 mt-1">
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
 
         {/* Quick Actions Grid */}
         <section className="mb-10">
-          <h2 className="text-xl font-display font-bold text-agesci-blue mb-6">
+          <h2 className="text-2xl font-display font-bold text-agesci-blue mb-6">
             Azioni Rapide
           </h2>
           <div className="grid md:grid-cols-2 gap-6">

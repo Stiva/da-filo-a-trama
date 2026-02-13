@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
+import type { ChangeEvent } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
+import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { ListNode, ListItemNode } from '@lexical/list';
-import { LinkNode } from '@lexical/link';
+import { LinkNode, TOGGLE_LINK_COMMAND, $isLinkNode } from '@lexical/link';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 import { $patchStyleText, $getSelectionStyleValueForProperty } from '@lexical/selection';
 import {
@@ -29,6 +31,8 @@ import {
   TextNode,
   $isTextNode,
   $applyNodeReplacement,
+  FORMAT_ELEMENT_COMMAND,
+  type ElementFormatType,
   type DOMConversionMap,
   type DOMConversionOutput,
   type NodeKey,
@@ -39,10 +43,10 @@ import {
 import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
-  REMOVE_LIST_COMMAND,
 } from '@lexical/list';
 import { $setBlocksType } from '@lexical/selection';
 import { $createHeadingNode, $isHeadingNode } from '@lexical/rich-text';
+import { $createImageNode, ImageNode } from '@/components/editor/ImageNode';
 
 // ==========================================
 // ExtendedTextNode: preserves inline styles
@@ -150,6 +154,14 @@ const FONT_FAMILY_OPTIONS: { value: string; label: string }[] = [
   { value: 'monospace', label: 'Monospace' },
 ];
 
+const FONT_SIZE_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Default size' },
+  { value: '14px', label: '14px' },
+  { value: '16px', label: '16px' },
+  { value: '20px', label: '20px' },
+  { value: '24px', label: '24px' },
+];
+
 // ==========================================
 // Lexical Theme
 // ==========================================
@@ -168,6 +180,7 @@ const theme = {
     bold: 'lexical-bold',
     italic: 'lexical-italic',
     underline: 'lexical-underline',
+    strikethrough: 'lexical-strikethrough',
   },
 };
 
@@ -179,8 +192,14 @@ const ToolbarPlugin = () => {
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrikethrough, setIsStrikethrough] = useState(false);
+  const [isLink, setIsLink] = useState(false);
   const [blockType, setBlockType] = useState('paragraph');
   const [fontFamily, setFontFamily] = useState('');
+  const [fontSize, setFontSize] = useState('');
+  const [alignment, setAlignment] = useState<ElementFormatType>('left');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -189,11 +208,12 @@ const ToolbarPlugin = () => {
     setIsBold(selection.hasFormat('bold'));
     setIsItalic(selection.hasFormat('italic'));
     setIsUnderline(selection.hasFormat('underline'));
+    setIsStrikethrough(selection.hasFormat('strikethrough'));
 
     const anchorNode = selection.anchor.getNode();
-    const element = anchorNode.getKey() === 'root'
-      ? anchorNode
-      : anchorNode.getTopLevelElementOrThrow();
+    const parentNode = anchorNode.getParent();
+    const element =
+      anchorNode.getKey() === 'root' ? anchorNode : anchorNode.getTopLevelElementOrThrow();
 
     if ($isHeadingNode(element)) {
       setBlockType(element.getTag());
@@ -201,8 +221,19 @@ const ToolbarPlugin = () => {
       setBlockType(element.getType());
     }
 
+    const formatType =
+      'getFormatType' in element && typeof element.getFormatType === 'function'
+        ? element.getFormatType()
+        : 'left';
+    setAlignment((formatType || 'left') as ElementFormatType);
+
+    const linkActive = $isLinkNode(anchorNode) || $isLinkNode(parentNode);
+    setIsLink(linkActive);
+
     const currentFontFamily = $getSelectionStyleValueForProperty(selection, 'font-family', '');
+    const currentFontSize = $getSelectionStyleValueForProperty(selection, 'font-size', '');
     setFontFamily(currentFontFamily);
+    setFontSize(currentFontSize);
   }, []);
 
   useEffect(() => {
@@ -236,6 +267,10 @@ const ToolbarPlugin = () => {
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
   };
 
+  const handleFormatStrikethrough = () => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
+  };
+
   const handleBlockType = (type: string) => {
     if (type === 'paragraph') {
       editor.update(() => {
@@ -267,6 +302,83 @@ const ToolbarPlugin = () => {
     });
   };
 
+  const handleFontSize = (value: string) => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        $patchStyleText(selection, { 'font-size': value || null });
+      }
+    });
+  };
+
+  const handleAlignment = (value: ElementFormatType) => {
+    editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, value);
+  };
+
+  const handleToggleLink = () => {
+    if (isLink) {
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+      return;
+    }
+
+    const url = window.prompt('Inserisci URL del link (es: https://example.com)');
+    if (!url || !url.trim()) return;
+
+    editor.dispatchCommand(TOGGLE_LINK_COMMAND, url.trim());
+  };
+
+  const handleOpenImagePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      window.alert('Seleziona un file immagine valido.');
+      event.target.value = '';
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/admin/assets/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        const message = payload?.error || 'Errore durante il caricamento dell\'immagine';
+        throw new Error(message);
+      }
+
+      const imageUrl = payload?.data?.file_url as string | undefined;
+      if (!imageUrl) {
+        throw new Error('Upload completato ma URL immagine non disponibile');
+      }
+
+      editor.update(() => {
+        const imageNode = $createImageNode({
+          src: imageUrl,
+          altText: file.name,
+        });
+        const paragraph = $createParagraphNode();
+        $insertNodes([imageNode, paragraph]);
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Errore sconosciuto';
+      window.alert(message);
+    } finally {
+      setIsUploadingImage(false);
+      event.target.value = '';
+    }
+  };
+
   return (
     <div className="lexical-toolbar flex flex-wrap items-center gap-1 p-2 border-b-2 border-agesci-blue/20 bg-gray-50 rounded-t-lg">
       {/* Block type */}
@@ -293,6 +405,19 @@ const ToolbarPlugin = () => {
         aria-label="Font"
       >
         {FONT_FAMILY_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={fontSize}
+        onChange={(e) => handleFontSize(e.target.value)}
+        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px]"
+        aria-label="Dimensione testo"
+      >
+        {FONT_SIZE_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
@@ -343,6 +468,105 @@ const ToolbarPlugin = () => {
           <path d="M12 17c3.31 0 6-2.69 6-6V3h-2.5v8c0 1.93-1.57 3.5-3.5 3.5S8.5 12.93 8.5 11V3H6v8c0 3.31 2.69 6 6 6zm-7 2v2h14v-2H5z" />
         </svg>
       </button>
+
+      <button
+        type="button"
+        onClick={handleFormatStrikethrough}
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+          isStrikethrough ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
+        }`}
+        aria-label="Barrato"
+        title="Barrato"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M10 19h4v-2h-4v2zm-4-6h12v-2H6v2zm2-8v2h8V5H8z" />
+        </svg>
+      </button>
+
+      <div className="w-px h-6 bg-gray-300 mx-1" />
+
+      <button
+        type="button"
+        onClick={() => handleAlignment('left')}
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+          alignment === 'left' ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
+        }`}
+        aria-label="Allinea a sinistra"
+        title="Allinea a sinistra"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3 5h18v2H3V5zm0 4h12v2H3V9zm0 4h18v2H3v-2zm0 4h12v2H3v-2z" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handleAlignment('center')}
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+          alignment === 'center' ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
+        }`}
+        aria-label="Allinea al centro"
+        title="Allinea al centro"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3 5h18v2H3V5zm3 4h12v2H6V9zm-3 4h18v2H3v-2zm3 4h12v2H6v-2z" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handleAlignment('right')}
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+          alignment === 'right' ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
+        }`}
+        aria-label="Allinea a destra"
+        title="Allinea a destra"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3 5h18v2H3V5zm6 4h12v2H9V9zm-6 4h18v2H3v-2zm6 4h12v2H9v-2z" />
+        </svg>
+      </button>
+
+      <div className="w-px h-6 bg-gray-300 mx-1" />
+
+      <button
+        type="button"
+        onClick={handleToggleLink}
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+          isLink ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
+        }`}
+        aria-label="Aggiungi o rimuovi link"
+        title="Link"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3.9 12a5 5 0 0 1 5-5h3v2h-3a3 3 0 1 0 0 6h3v2h-3a5 5 0 0 1-5-5zm7.1 1h2v-2h-2v2zm4-6h-3v2h3a3 3 0 1 1 0 6h-3v2h3a5 5 0 0 0 0-10z" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        onClick={handleOpenImagePicker}
+        disabled={isUploadingImage}
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+          isUploadingImage
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'hover:bg-gray-200 text-gray-700'
+        }`}
+        aria-label="Carica immagine"
+        title="Carica immagine"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 11.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zM5 19l4.5-6 3.5 4.5 2.5-3L19 19H5z" />
+        </svg>
+      </button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageSelected}
+      />
     </div>
   );
 };
@@ -440,6 +664,7 @@ const RichTextEditor = ({ initialHtml, onChange, placeholder = 'Inizia a scriver
       ListNode,
       ListItemNode,
       LinkNode,
+      ImageNode,
       ExtendedTextNode,
       { replace: TextNode, with: (node: TextNode) => new ExtendedTextNode(node.__text) },
     ],
@@ -470,6 +695,7 @@ const RichTextEditor = ({ initialHtml, onChange, placeholder = 'Inizia a scriver
         </div>
         <HistoryPlugin />
         <ListPlugin />
+        <LinkPlugin />
         <InitialContentPlugin initialHtml={initialHtml} />
         <HtmlSerializerPlugin onChange={onChange} />
       </div>

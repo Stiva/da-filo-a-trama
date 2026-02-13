@@ -521,6 +521,22 @@ h4 { font-size: 1.5rem; }
   text-decoration: underline;
 }
 
+.lexical-strikethrough {
+  text-decoration: line-through;
+}
+
+.lexical-image-wrapper {
+  display: block;
+  margin: 0.75rem 0;
+}
+
+.lexical-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
 /* ========================================
    RICH TEXT CONTENT (viewer)
    ======================================== */
@@ -569,4 +585,12 @@ h4 { font-size: 1.5rem; }
 
 .rich-text-content em {
   font-style: italic;
+}
+
+.rich-text-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.75rem 0;
 }

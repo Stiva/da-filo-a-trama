@@ -218,7 +218,7 @@ export default function EventDetailPage() {
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-2">{event.title}</h1>
 
             {event.speaker_name && (
               <p className="text-base sm:text-lg text-gray-600">

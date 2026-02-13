@@ -204,7 +204,7 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-agesci-blue">
+          <h1 className="text-4xl font-display font-bold text-agesci-blue">
             Il Tuo Profilo
           </h1>
           <p className="text-gray-600 mt-2">

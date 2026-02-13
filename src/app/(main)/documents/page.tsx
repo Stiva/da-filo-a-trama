@@ -62,7 +62,7 @@ export default function DocumentsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-agesci-blue mb-2">Documenti</h1>
+        <h1 className="text-4xl font-display font-bold text-agesci-blue mb-2">Documenti</h1>
         <p className="text-gray-600">
           Materiali, guide e documenti utili per l&apos;evento
         </p>

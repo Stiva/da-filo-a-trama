@@ -1,5 +1,5 @@
 interface RichTextContentProps {
-  content: string;
+  content?: string | null;
   className?: string;
 }
 

@@ -82,7 +82,7 @@ export default function MyEventsPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="mb-8">
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--scout-green)' }}>
+          <h1 className="text-4xl font-display font-bold" style={{ color: 'var(--scout-green)' }}>
             Le Mie Iscrizioni
           </h1>
           <p className="text-gray-600 mt-2">
