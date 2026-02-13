@@ -182,34 +182,10 @@ const UserSupportChatWidgetInner = () => {
 
       {isOpen && !isMinimized && (
         <div
-          className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20"
+          className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20 flex flex-col"
           style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
         >
-          <div className="absolute top-3 right-3 z-[95] flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsMinimized(true)}
-              aria-label="Minimizza chat"
-              className="px-2 py-1 text-xs rounded-lg bg-white text-agesci-blue border border-agesci-blue/20 shadow-sm hover:bg-gray-50"
-            >
-              Riduci
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                setIsMinimized(false);
-              }}
-              aria-label="Chiudi chat"
-              className="p-1.5 rounded-lg bg-white text-gray-600 border border-gray-200 shadow-sm hover:bg-gray-50"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-agesci-blue text-white">
+          <div className="relative z-[90] flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-agesci-blue text-white flex-shrink-0">
             <h3 className="font-semibold">Chat Assistenza</h3>
             <div className="flex items-center gap-2">
               <button
@@ -237,7 +213,7 @@ const UserSupportChatWidgetInner = () => {
           </div>
 
           {!client || !channel ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6">
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center p-6">
               <p className="text-sm text-gray-700 mb-3">La chat non è disponibile in questo momento.</p>
               {error && (
                 <p className="text-xs text-red-600 mb-4 max-w-[280px] line-clamp-3">{error}</p>
@@ -251,15 +227,17 @@ const UserSupportChatWidgetInner = () => {
               </button>
             </div>
           ) : (
-            <Chat client={client}>
-              <Channel channel={channel}>
-                <Window>
-                  <MessageList />
-                  <MessageInput focus />
-                </Window>
-                <Thread />
-              </Channel>
-            </Chat>
+            <div className="flex-1 min-h-0">
+              <Chat client={client}>
+                <Channel channel={channel}>
+                  <Window>
+                    <MessageList />
+                    <MessageInput focus />
+                  </Window>
+                  <Thread />
+                </Channel>
+              </Chat>
+            </div>
           )}
         </div>
       )}
