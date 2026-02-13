@@ -61,9 +61,9 @@ export const ensureSupportChannel = async (params: {
   channelId: string;
   customerUserId: string;
   customerDisplayName: string;
-  adminUserIds: string[];
+  adminUserIds?: string[];
 }): Promise<void> => {
-  const { streamClient, channelId, customerUserId, customerDisplayName, adminUserIds } = params;
+  const { streamClient, channelId, customerUserId, customerDisplayName } = params;
 
   const existingChannels = await streamClient.queryChannels(
     {
@@ -74,12 +74,10 @@ export const ensureSupportChannel = async (params: {
     { limit: 1, watch: false, state: true }
   );
 
-  const members = Array.from(new Set([customerUserId, ...adminUserIds]));
-
   if (existingChannels.length === 0) {
     const channelData = {
       name: `Supporto · ${customerDisplayName}`,
-      members,
+      members: [customerUserId],
       support_chat: true,
       support_status: 'pending',
       created_by_id: customerUserId,
@@ -91,13 +89,6 @@ export const ensureSupportChannel = async (params: {
   }
 
   const channel = existingChannels[0];
-  const memberIds = Object.keys(channel.state?.members || {});
-  const missingMembers = members.filter((memberId) => !memberIds.includes(memberId));
-
-  if (missingMembers.length > 0) {
-    await channel.addMembers(missingMembers);
-  }
-
   const channelData = (channel.data || {}) as Record<string, unknown>;
   const currentStatus = (channelData.support_status as string | undefined) || '';
   if (!currentStatus) {

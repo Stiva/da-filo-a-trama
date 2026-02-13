@@ -33,7 +33,6 @@ const AdminSupportInboxInner = () => {
         type: 'messaging',
         support_chat: true,
         support_status: { $in: ['pending', 'active'] },
-        members: { $in: [session.user.id] },
       } as Record<string, unknown>;
 
       const result = await client.queryChannels(

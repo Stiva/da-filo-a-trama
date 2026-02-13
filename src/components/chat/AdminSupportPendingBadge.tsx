@@ -39,7 +39,6 @@ export default function AdminSupportPendingBadge() {
             type: 'messaging',
             support_chat: true,
             support_status: 'pending',
-            members: { $in: [session.user.id] },
           } as Record<string, unknown>,
           { last_message_at: -1 },
           { limit: 30, watch: true, state: true }

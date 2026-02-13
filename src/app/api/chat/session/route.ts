@@ -56,19 +56,6 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
     let supportChannelId: string | null = null;
 
     if (role === 'user') {
-      let adminUserIds: string[] = [];
-      try {
-        const adminUsers = await client.users.getUserList({ limit: 100 });
-        adminUserIds = adminUsers.data
-          .filter((u) => {
-            const uRole = getRoleFromPublicMetadata(u.publicMetadata);
-            return uRole === 'admin' || uRole === 'staff';
-          })
-          .map((u) => getChatUserIdFromClerkId(u.id));
-      } catch (lookupError) {
-        console.warn('Chat session: impossibile ottenere lista admin/staff, continuo senza assegnazione admin iniziale.', lookupError);
-      }
-
       supportChannelId = getSupportChannelIdFromClerkId(userId);
 
       await ensureSupportChannel({
@@ -76,7 +63,6 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
         channelId: supportChannelId,
         customerUserId: streamUserId,
         customerDisplayName: streamDisplayName,
-        adminUserIds,
       });
     }
 

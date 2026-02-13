@@ -108,6 +108,7 @@ const UserSupportChatWidgetInner = () => {
           onClick={() => setIsOpen(true)}
           aria-label="Apri chat assistenza"
           className="fixed bottom-6 right-6 z-[70] relative w-14 h-14 rounded-full bg-agesci-blue text-white shadow-xl hover:bg-agesci-blue-light transition-colors"
+          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
         >
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold">
@@ -126,6 +127,7 @@ const UserSupportChatWidgetInner = () => {
           onClick={() => setIsOpen(true)}
           className="fixed bottom-24 right-6 z-[70] max-w-xs bg-white border border-agesci-blue/30 shadow-lg rounded-xl px-3 py-2 text-left"
           aria-label="Apri chat assistenza per leggere il nuovo messaggio"
+          style={{ position: 'fixed', right: 24, bottom: 96, zIndex: 70 }}
         >
           <p className="text-xs font-semibold text-agesci-blue">Nuovo messaggio</p>
           <p className="text-sm text-gray-700 line-clamp-2">{localNotification.text}</p>
@@ -133,7 +135,10 @@ const UserSupportChatWidgetInner = () => {
       )}
 
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20">
+        <div
+          className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20"
+          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-agesci-blue text-white">
             <h3 className="font-semibold">Chat Assistenza</h3>
             <button
