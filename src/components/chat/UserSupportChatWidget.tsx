@@ -122,7 +122,7 @@ const UserSupportChatWidgetInner = () => {
             </span>
           )}
           <Image
-            src="/chat-118.png"
+            src="/chat-yw.png"
             alt="Apri chat"
             width={32}
             height={32}
