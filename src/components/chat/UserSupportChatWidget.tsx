@@ -19,7 +19,7 @@ interface LocalNotification {
 }
 
 const UserSupportChatWidgetInner = () => {
-  const { client, session, loading, error } = useStreamSupport();
+  const { client, session, loading, error, retry } = useStreamSupport();
   const [isOpen, setIsOpen] = useState(false);
   const [channel, setChannel] = useState<StreamChannel | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -91,13 +91,12 @@ const UserSupportChatWidgetInner = () => {
 
   const shouldRender = useMemo(() => {
     if (loading) return false;
-    if (error) return false;
-    if (!session) return false;
-    if (session.isAdmin) return false;
+    if (session?.isAdmin) return false;
+    if (!session && !error) return false;
     return true;
   }, [loading, error, session]);
 
-  if (!shouldRender || !client || !channel) {
+  if (!shouldRender) {
     return null;
   }
 
@@ -149,15 +148,31 @@ const UserSupportChatWidgetInner = () => {
             </button>
           </div>
 
-          <Chat client={client}>
-            <Channel channel={channel}>
-              <Window>
-                <MessageList />
-                <MessageInput focus />
-              </Window>
-              <Thread />
-            </Channel>
-          </Chat>
+          {!client || !channel ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6">
+              <p className="text-sm text-gray-700 mb-3">La chat non è disponibile in questo momento.</p>
+              {error && (
+                <p className="text-xs text-red-600 mb-4 max-w-[280px] line-clamp-3">{error}</p>
+              )}
+              <button
+                type="button"
+                onClick={retry}
+                className="px-4 py-2 rounded-lg bg-agesci-blue text-white hover:bg-agesci-blue-light"
+              >
+                Riprova
+              </button>
+            </div>
+          ) : (
+            <Chat client={client}>
+              <Channel channel={channel}>
+                <Window>
+                  <MessageList />
+                  <MessageInput focus />
+                </Window>
+                <Thread />
+              </Channel>
+            </Chat>
+          )}
         </div>
       )}
     </>

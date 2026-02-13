@@ -7,6 +7,7 @@ import {
   buildChatDisplayName,
   createStreamServerClient,
   getChatUserIdFromClerkId,
+  mapAppRoleToStreamRole,
   getRoleFromPublicMetadata,
 } from '@/lib/chat/streamServer';
 
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
             `${first_name || ''} ${last_name || ''}`.trim() ||
             primaryEmail ||
             `Utente ${id.slice(0, 8)}`,
-          role: getRoleFromPublicMetadata(public_metadata),
+          role: mapAppRoleToStreamRole(getRoleFromPublicMetadata(public_metadata)),
         });
 
         console.log('Profilo creato per:', id);
@@ -190,7 +191,7 @@ export async function POST(req: Request) {
             primaryEmail ||
             `Utente ${id.slice(0, 8)}`,
           image: image_url || undefined,
-          role: getRoleFromPublicMetadata(public_metadata),
+          role: mapAppRoleToStreamRole(getRoleFromPublicMetadata(public_metadata)),
         });
 
         console.log('Profilo aggiornato per:', id);

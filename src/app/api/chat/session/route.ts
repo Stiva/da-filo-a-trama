@@ -6,6 +6,7 @@ import {
   createStreamServerClient,
   ensureSupportChannel,
   getChatUserIdFromClerkId,
+  mapAppRoleToStreamRole,
   getRoleFromPublicMetadata,
   getStreamApiKey,
   getSupportChannelIdFromClerkId,
@@ -43,24 +44,30 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
     const streamClient = createStreamServerClient();
     const streamUserId = getChatUserIdFromClerkId(userId);
     const streamDisplayName = buildChatDisplayName(clerkUser);
+    const streamRole = mapAppRoleToStreamRole(role);
 
     await streamClient.upsertUser({
       id: streamUserId,
       name: streamDisplayName,
       image: clerkUser.imageUrl,
-      role,
+      role: streamRole,
     });
 
     let supportChannelId: string | null = null;
 
     if (role === 'user') {
-      const adminUsers = await client.users.getUserList({ limit: 100 });
-      const adminUserIds = adminUsers.data
-        .filter((u) => {
-          const uRole = getRoleFromPublicMetadata(u.publicMetadata);
-          return uRole === 'admin' || uRole === 'staff';
-        })
-        .map((u) => getChatUserIdFromClerkId(u.id));
+      let adminUserIds: string[] = [];
+      try {
+        const adminUsers = await client.users.getUserList({ limit: 100 });
+        adminUserIds = adminUsers.data
+          .filter((u) => {
+            const uRole = getRoleFromPublicMetadata(u.publicMetadata);
+            return uRole === 'admin' || uRole === 'staff';
+          })
+          .map((u) => getChatUserIdFromClerkId(u.id));
+      } catch (lookupError) {
+        console.warn('Chat session: impossibile ottenere lista admin/staff, continuo senza assegnazione admin iniziale.', lookupError);
+      }
 
       supportChannelId = getSupportChannelIdFromClerkId(userId);
 
@@ -91,8 +98,9 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
     });
   } catch (error) {
     console.error('Errore GET /api/chat/session:', error);
+    const details = error instanceof Error ? error.message : 'Errore sconosciuto';
     return NextResponse.json(
-      { error: 'Errore durante la creazione della sessione chat' },
+      { error: `Errore durante la creazione della sessione chat: ${details}` },
       { status: 500 }
     );
   }

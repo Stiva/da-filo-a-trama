@@ -2,6 +2,7 @@ import { StreamChat } from 'stream-chat';
 import type { User } from '@clerk/nextjs/server';
 
 export type AppRole = 'user' | 'staff' | 'admin';
+export type StreamUserRole = 'user' | 'admin';
 
 const getEnv = (keys: string[]): string => {
   for (const key of keys) {
@@ -35,6 +36,13 @@ export const getRoleFromPublicMetadata = (metadata: unknown): AppRole => {
   const role = (metadata as { role?: string } | null)?.role;
   if (role === 'admin' || role === 'staff') {
     return role;
+  }
+  return 'user';
+};
+
+export const mapAppRoleToStreamRole = (role: AppRole): StreamUserRole => {
+  if (role === 'admin' || role === 'staff') {
+    return 'admin';
   }
   return 'user';
 };

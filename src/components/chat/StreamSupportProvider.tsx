@@ -23,6 +23,7 @@ interface StreamSupportContextValue {
   session: ChatSession | null;
   loading: boolean;
   error: string | null;
+  retry: () => void;
 }
 
 const StreamSupportContext = createContext<StreamSupportContextValue>({
@@ -30,6 +31,7 @@ const StreamSupportContext = createContext<StreamSupportContextValue>({
   session: null,
   loading: true,
   error: null,
+  retry: () => {},
 });
 
 export const useStreamSupport = (): StreamSupportContextValue => useContext(StreamSupportContext);
@@ -39,6 +41,7 @@ export default function StreamSupportProvider({ children }: { children: React.Re
   const [session, setSession] = useState<ChatSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -47,6 +50,7 @@ export default function StreamSupportProvider({ children }: { children: React.Re
     const setup = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await fetch('/api/chat/session');
         const result = await response.json();
 
@@ -72,6 +76,8 @@ export default function StreamSupportProvider({ children }: { children: React.Re
         setClient(streamClient);
       } catch (err) {
         if (!mounted) return;
+        setClient(null);
+        setSession(null);
         setError(err instanceof Error ? err.message : 'Errore chat');
       } finally {
         if (!mounted) return;
@@ -87,7 +93,11 @@ export default function StreamSupportProvider({ children }: { children: React.Re
         void streamClient.disconnectUser();
       }
     };
-  }, []);
+  }, [reloadKey]);
+
+  const retry = () => {
+    setReloadKey((prev) => prev + 1);
+  };
 
   const value = useMemo(
     () => ({
@@ -95,6 +105,7 @@ export default function StreamSupportProvider({ children }: { children: React.Re
       session,
       loading,
       error,
+      retry,
     }),
     [client, session, loading, error]
   );
