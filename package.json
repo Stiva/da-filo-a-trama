@@ -28,6 +28,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
+    "stream-chat": "^9.32.0",
+    "stream-chat-react": "^13.13.6",
     "svix": "^1.84.1",
     "xlsx": "^0.18.5"
   },

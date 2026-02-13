@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 
 const navLinks = [
   { href: '/events', label: 'Eventi', icon: CalendarIcon },
@@ -17,7 +17,29 @@ const navLinks = [
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const pathname = usePathname();
+  const { user } = useUser();
+
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      try {
+        const response = await fetch('/api/profiles');
+        const result = await response.json();
+        if (response.ok) {
+          setProfileImageUrl(result?.data?.profile_image_url || null);
+        }
+      } catch {
+        setProfileImageUrl(null);
+      }
+    };
+
+    fetchProfileImage();
+  }, []);
+
+  const avatarImageUrl = profileImageUrl || user?.imageUrl || null;
+  const avatarFallbackText =
+    user?.firstName?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || 'U';
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -55,7 +77,7 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`nav-link font-display flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+                  className={`nav-link font-display text-[x-large] flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
                     active
                       ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
                       : 'hover:bg-agesci-blue/5'
@@ -70,16 +92,42 @@ export default function Navbar() {
 
           {/* Right side: User Menu + Mobile Toggle */}
           <div className="flex items-center gap-3">
-            {/* User Button */}
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox:
-                    'w-10 h-10 ring-2 ring-agesci-yellow ring-offset-2 ring-offset-scout-cream',
-                },
-              }}
-            />
+            {/* Profile Avatar - Desktop */}
+            <Link
+              href="/profile"
+              aria-label="Apri profilo utente"
+              className="hidden md:flex w-10 h-10 rounded-full overflow-hidden ring-2 ring-agesci-yellow ring-offset-2 ring-offset-scout-cream bg-agesci-blue/10 items-center justify-center hover:scale-105 transition-transform"
+            >
+              {avatarImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarImageUrl}
+                  alt="Avatar utente"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-sm font-semibold text-agesci-blue">{avatarFallbackText}</span>
+              )}
+            </Link>
+
+            {/* Profile Avatar - Mobile opens sidebar */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Apri menu profilo"
+              className="md:hidden w-10 h-10 rounded-full overflow-hidden ring-2 ring-agesci-yellow ring-offset-2 ring-offset-scout-cream bg-agesci-blue/10 flex items-center justify-center hover:scale-105 transition-transform"
+            >
+              {avatarImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarImageUrl}
+                  alt="Avatar utente"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-sm font-semibold text-agesci-blue">{avatarFallbackText}</span>
+              )}
+            </button>
 
             {/* Mobile Menu Toggle */}
             <button
@@ -126,7 +174,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`font-display flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[44px] ${
+                className={`font-display text-[x-large] flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[44px] ${
                   active
                     ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
                     : 'text-agesci-blue hover:bg-agesci-blue/5'

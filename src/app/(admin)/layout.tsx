@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import AdminSupportPendingBadge from '@/components/chat/AdminSupportPendingBadge';
 
 export default function AdminLayout({
   children,
@@ -76,6 +77,15 @@ export default function AdminLayout({
   ];
 
   const configLinks = [
+    {
+      href: '/admin/support',
+      label: 'Service Chat',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8M8 14h5m-9 6l-3-3V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H8z" />
+        </svg>
+      ),
+    },
     {
       href: '/admin/categories',
       label: 'Categorie',
@@ -243,6 +253,7 @@ export default function AdminLayout({
               >
                 {link.icon}
                 <span>{link.label}</span>
+                {link.href === '/admin/support' && <AdminSupportPendingBadge />}
               </Link>
             ))}
 

@@ -3,6 +3,12 @@ import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import {
+  buildChatDisplayName,
+  createStreamServerClient,
+  getChatUserIdFromClerkId,
+  getRoleFromPublicMetadata,
+} from '@/lib/chat/streamServer';
 
 async function enrollProfileToAutoEvents(
   supabase: ReturnType<typeof createServiceRoleClient>,
@@ -96,6 +102,7 @@ export async function POST(req: Request) {
   // Gestisci eventi
   const eventType = evt.type;
   const supabase = createServiceRoleClient();
+  const streamClient = createStreamServerClient();
 
   try {
     switch (eventType) {
@@ -146,12 +153,21 @@ export async function POST(req: Request) {
 
         await enrollProfileToAutoEvents(supabase, profile.id);
 
+        await streamClient.upsertUser({
+          id: getChatUserIdFromClerkId(id),
+          name:
+            `${first_name || ''} ${last_name || ''}`.trim() ||
+            primaryEmail ||
+            `Utente ${id.slice(0, 8)}`,
+          role: getRoleFromPublicMetadata(public_metadata),
+        });
+
         console.log('Profilo creato per:', id);
         break;
       }
 
       case 'user.updated': {
-        const { id, email_addresses, first_name, last_name, public_metadata } = evt.data;
+        const { id, email_addresses, first_name, last_name, public_metadata, image_url, username } = evt.data;
         const primaryEmail = email_addresses?.[0]?.email_address;
 
         const { error } = await supabase
@@ -165,6 +181,18 @@ export async function POST(req: Request) {
           .eq('clerk_id', id);
 
         if (error) throw error;
+
+        await streamClient.upsertUser({
+          id: getChatUserIdFromClerkId(id),
+          name:
+            `${first_name || ''} ${last_name || ''}`.trim() ||
+            username ||
+            primaryEmail ||
+            `Utente ${id.slice(0, 8)}`,
+          image: image_url || undefined,
+          role: getRoleFromPublicMetadata(public_metadata),
+        });
+
         console.log('Profilo aggiornato per:', id);
         break;
       }
@@ -182,6 +210,11 @@ export async function POST(req: Request) {
           .eq('clerk_id', id);
 
         if (error) throw error;
+
+        await streamClient.deleteUser(getChatUserIdFromClerkId(id), {
+          hard_delete: true,
+        });
+
         console.log('Profilo eliminato per:', id);
         break;
       }

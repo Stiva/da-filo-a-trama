@@ -1,5 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Image from 'next/image';
+import UserSupportChatWidget from '@/components/chat/UserSupportChatWidget';
 
 export default function MainLayout({
   children,
@@ -36,6 +37,8 @@ export default function MainLayout({
           </div>
         </div>
       </footer>
+
+      <UserSupportChatWidget />
     </div>
   );
 }
