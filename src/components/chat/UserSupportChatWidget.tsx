@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
   Channel,
+  ChannelHeader,
   Chat,
   MessageInput,
   MessageList,
@@ -185,31 +186,28 @@ const UserSupportChatWidgetInner = () => {
           className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20 flex flex-col"
           style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
         >
-          <div className="relative z-[90] flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-agesci-blue text-white flex-shrink-0">
-            <h3 className="font-semibold">Chat Assistenza</h3>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsMinimized(true)}
-                aria-label="Minimizza chat"
-                className="px-2 py-1 text-xs rounded-lg bg-white/15 hover:bg-white/25"
-              >
-                Riduci
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  setIsMinimized(false);
-                }}
-                aria-label="Chiudi chat"
-                className="p-1.5 rounded-lg hover:bg-white/20"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+          <div className="absolute top-2 right-2 z-[95] flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMinimized(true)}
+              aria-label="Minimizza chat"
+              className="px-2 py-1 text-xs rounded-lg bg-white/90 text-agesci-blue border border-agesci-blue/20 shadow-sm hover:bg-white"
+            >
+              Riduci
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setIsMinimized(false);
+              }}
+              aria-label="Chiudi chat"
+              className="p-1.5 rounded-lg bg-white/90 text-gray-600 border border-gray-200 shadow-sm hover:bg-white"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
           {!client || !channel ? (
@@ -231,6 +229,7 @@ const UserSupportChatWidgetInner = () => {
               <Chat client={client}>
                 <Channel channel={channel}>
                   <Window>
+                    <ChannelHeader />
                     <MessageList />
                     <MessageInput focus />
                   </Window>
