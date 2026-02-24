@@ -5,6 +5,7 @@ import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import AdminSupportPendingBadge from '@/components/chat/AdminSupportPendingBadge';
+import UserDropdownMenu from '@/components/UserDropdownMenu';
 
 export default function AdminLayout({
   children,
@@ -152,14 +153,7 @@ export default function AdminLayout({
               >
                 Torna al sito
               </Link>
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-10 h-10',
-                  },
-                }}
-              />
+              <UserDropdownMenu />
             </div>
           </div>
         </div>

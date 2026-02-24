@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import AvatarPreview from '@/components/AvatarPreview';
+import UserDropdownMenu from '@/components/UserDropdownMenu';
 
 // Profilo removed — accessible via avatar dropdown
 const navLinks = [
@@ -171,50 +172,8 @@ export default function Navbar() {
             <div className="flex items-center gap-3">
 
               {/* Avatar + Dropdown — desktop */}
-              <div className="relative hidden lg:block" ref={avatarMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsAvatarMenuOpen((o) => !o)}
-                  aria-label="Menu utente"
-                  aria-expanded={isAvatarMenuOpen}
-                  className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-agesci-yellow ring-offset-2 ring-offset-scout-cream bg-agesci-blue/10 flex items-center justify-center hover:scale-105 transition-transform focus:outline-none focus:ring-4"
-                >
-                  <AvatarCircle />
-                </button>
-
-                {isAvatarMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-agesci-blue/10 overflow-hidden z-50">
-                    {/* User info header */}
-                    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-                      <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-agesci-yellow flex-shrink-0 bg-agesci-blue/10 flex items-center justify-center">
-                        <AvatarCircle size="sm" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 truncate">{displayName}</p>
-                      </div>
-                    </div>
-
-                    {/* Menu items */}
-                    <div className="py-1">
-                      <Link
-                        href="/profile"
-                        onClick={() => setIsAvatarMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-agesci-yellow/20 transition-colors"
-                      >
-                        <UserIcon className="w-4 h-4 text-agesci-blue flex-shrink-0" />
-                        Profilo
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <LogoutIcon className="w-4 h-4 flex-shrink-0" />
-                        Disconnettiti
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="hidden lg:block">
+                <UserDropdownMenu />
               </div>
 
               {/* Avatar — mobile (opens sidebar) */}

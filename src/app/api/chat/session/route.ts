@@ -1,6 +1,8 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { ApiResponse } from '@/types/database';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { generateAvatarDataUri } from '@/lib/avatar';
 import {
   buildChatDisplayName,
   createStreamServerClient,
@@ -41,15 +43,27 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
     const clerkUser = await client.users.getUser(userId);
     const role = getRoleFromPublicMetadata(clerkUser.publicMetadata);
 
+    const supabase = await createServerSupabaseClient();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('profile_image_url, avatar_config')
+      .eq('clerk_id', userId)
+      .single();
+
     const streamClient = createStreamServerClient();
     const streamUserId = getChatUserIdFromClerkId(userId);
     const streamDisplayName = buildChatDisplayName(clerkUser);
     const streamRole = mapAppRoleToStreamRole(role);
 
+    const appAvatar =
+      profile?.profile_image_url ||
+      (profile?.avatar_config ? generateAvatarDataUri(profile?.avatar_config) : undefined) ||
+      clerkUser.imageUrl;
+
     await streamClient.upsertUser({
       id: streamUserId,
       name: streamDisplayName,
-      image: clerkUser.imageUrl,
+      image: appAvatar,
       role: streamRole,
     });
 
