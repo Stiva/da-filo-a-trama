@@ -104,9 +104,12 @@ export default function Navbar() {
     }
     if (hasAvatarConfig) {
       return (
-        <div className={`${dim} rounded-full overflow-hidden`}>
-          <AvatarPreview config={profile!.avatar_config} size="xs" />
-        </div>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <AvatarPreview
+          config={profile!.avatar_config as any}
+          size="full"
+          className="border-none !shadow-none w-full h-full"
+        />
       );
     }
     return (
@@ -153,8 +156,8 @@ export default function Navbar() {
                     key={link.href}
                     href={link.href}
                     className={`nav-link font-display text-[x-large] flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${active
-                        ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
-                        : 'hover:bg-agesci-blue/5'
+                      ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
+                      : 'hover:bg-agesci-blue/5'
                       }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -267,8 +270,8 @@ export default function Navbar() {
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`font-display text-[x-large] flex items-center gap-3 px-4 py-3 rounded-xl transition-colors min-h-[44px] ${active
-                    ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
-                    : 'text-agesci-blue hover:bg-agesci-blue/5'
+                  ? 'bg-agesci-yellow text-agesci-blue font-semibold shadow-playful-sm'
+                  : 'text-agesci-blue hover:bg-agesci-blue/5'
                   }`}
               >
                 <Icon className="w-5 h-5" />

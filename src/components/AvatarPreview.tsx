@@ -8,7 +8,7 @@ import { DEFAULT_AVATAR_CONFIG } from '@/types/database';
 
 interface AvatarPreviewProps {
   config?: Partial<AvatarConfig>;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
   className?: string;
 }
 
@@ -87,21 +87,23 @@ export default function AvatarPreview({
     return avatar.toDataUri();
   }, [config]);
 
+  const isFull = size === 'full';
   const px = sizeMap[size] || 96;
 
   return (
     <div
-      className={`rounded-full overflow-hidden shadow-playful border-3 border-agesci-blue ${className}`}
-      style={{ width: px, height: px }}
+      className={`rounded-full overflow-hidden shadow-playful border-3 border-agesci-blue shrink-0 ${className}`}
+      style={isFull ? { width: '100%', height: '100%' } : { width: px, height: px }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={dataUri}
         alt="Avatar"
-        width={px}
-        height={px}
+        width={isFull ? undefined : px}
+        height={isFull ? undefined : px}
         className="w-full h-full object-cover"
       />
     </div>
   );
 }
+
