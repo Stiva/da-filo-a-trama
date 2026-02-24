@@ -27,6 +27,7 @@ function EventsPageContent() {
   const [showRecommended, setShowRecommended] = useState(false);
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Debounce search input
   const handleSearchChange = useCallback((value: string) => {
@@ -152,129 +153,167 @@ function EventsPageContent() {
     return 'bg-green-500';
   };
 
+  const activeFilterCount = [category, poiFilter, debouncedSearch, dateFilter, showAvailable, showRecommended].filter(Boolean).length;
+
   return (
     <>
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6 space-y-4">
-        {/* Row 1: Search + Category + POI */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        {/* Mobile toggle */}
+        <div className="flex items-center justify-between sm:hidden">
+          <button
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700"
+            aria-expanded={filtersOpen}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Cerca per nome evento..."
-              className="input w-full pl-10"
-              aria-label="Cerca eventi per nome"
-            />
-          </div>
-
-          {/* Category */}
-          <div className="sm:w-48">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="input w-full"
-              aria-label="Filtra per categoria"
+            Filtri
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-500 rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
+            <svg
+              className={`w-4 h-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
-              <option value="">Tutte le categorie</option>
-              {categories.map((cat) => (
-                <option key={cat.slug} value={cat.slug}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* POI / Location */}
-          <div className="sm:w-48">
-            <select
-              value={poiFilter}
-              onChange={(e) => handlePoiSelect(e.target.value)}
-              className="input w-full"
-              aria-label="Filtra per luogo"
-            >
-              <option value="">Tutti i luoghi</option>
-              {pois.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Row 2: Date + Checkboxes */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-          {/* Date */}
-          <div className="sm:w-48">
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="input w-full"
-              aria-label="Filtra per data"
-            />
-          </div>
-
-          {/* Available spots */}
-          <label className="flex items-center gap-2 cursor-pointer p-2 -m-1 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]">
-            <input
-              type="checkbox"
-              checked={showAvailable}
-              onChange={(e) => setShowAvailable(e.target.checked)}
-              className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
-            />
-            <span className="text-sm text-gray-700">Posti disponibili</span>
-          </label>
-
-          {/* Recommended */}
-          <label className="flex items-center gap-2 cursor-pointer p-2 -m-1 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]">
-            <input
-              type="checkbox"
-              checked={showRecommended}
-              onChange={(e) => setShowRecommended(e.target.checked)}
-              className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
-            />
-            <span className="text-sm text-gray-700">Consigliati per me</span>
-          </label>
-
-          {/* Clear all filters */}
-          {hasActiveFilters && (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {activeFilterCount > 0 && (
             <button
               onClick={handleClearAllFilters}
-              className="text-sm text-red-600 hover:text-red-700 font-medium ml-auto"
-              aria-label="Rimuovi tutti i filtri"
+              className="text-xs text-red-600 hover:text-red-700 font-medium"
             >
-              Rimuovi filtri
+              Rimuovi tutti
             </button>
           )}
         </div>
 
-        {/* Active POI filter chip (when coming from map) */}
-        {poiFilter && poiName && (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        {/* Filter content — always visible on sm+, collapsible on mobile */}
+        <div className={`space-y-4 ${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+          {/* Row 1: Search + Category + POI */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              {poiName}
-              <button
-                onClick={handleClearPoiFilter}
-                className="ml-1 hover:text-green-900"
-                aria-label="Rimuovi filtro luogo"
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Cerca per nome evento..."
+                className="input w-full pl-10"
+                aria-label="Cerca eventi per nome"
+              />
+            </div>
+
+            {/* Category */}
+            <div className="sm:w-48">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="input w-full"
+                aria-label="Filtra per categoria"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </span>
+                <option value="">Tutte le categorie</option>
+                {categories.map((cat) => (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* POI / Location */}
+            <div className="sm:w-48">
+              <select
+                value={poiFilter}
+                onChange={(e) => handlePoiSelect(e.target.value)}
+                className="input w-full"
+                aria-label="Filtra per luogo"
+              >
+                <option value="">Tutti i luoghi</option>
+                {pois.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        )}
+
+          {/* Row 2: Date + Checkboxes */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            {/* Date */}
+            <div className="sm:w-48">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="input w-full"
+                aria-label="Filtra per data"
+              />
+            </div>
+
+            {/* Available spots */}
+            <label className="flex items-center gap-2 cursor-pointer p-2 -m-1 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={showAvailable}
+                onChange={(e) => setShowAvailable(e.target.checked)}
+                className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+              />
+              <span className="text-sm text-gray-700">Posti disponibili</span>
+            </label>
+
+            {/* Recommended */}
+            <label className="flex items-center gap-2 cursor-pointer p-2 -m-1 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={showRecommended}
+                onChange={(e) => setShowRecommended(e.target.checked)}
+                className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+              />
+              <span className="text-sm text-gray-700">Consigliati per me</span>
+            </label>
+
+            {/* Clear all filters — desktop */}
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearAllFilters}
+                className="hidden sm:block text-sm text-red-600 hover:text-red-700 font-medium ml-auto"
+                aria-label="Rimuovi tutti i filtri"
+              >
+                Rimuovi filtri
+              </button>
+            )}
+          </div>
+
+          {/* Active POI filter chip (when coming from map) */}
+          {poiFilter && poiName && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                </svg>
+                {poiName}
+                <button
+                  onClick={handleClearPoiFilter}
+                  className="ml-1 hover:text-green-900"
+                  aria-label="Rimuovi filtro luogo"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Error */}

@@ -12,7 +12,7 @@ import { stripHtml } from '@/lib/stripHtml';
 const MapComponent = dynamic(() => import('@/components/Map'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">
+    <div className="w-full h-[70vh] bg-gray-100 rounded-lg flex items-center justify-center">
       <div className="text-center">
         <div className="inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
         <p className="mt-2 text-gray-600">Caricamento mappa...</p>
@@ -47,6 +47,7 @@ function MapPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     fetchPois();
@@ -104,7 +105,12 @@ function MapPageContent() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-4 gap-6">
+      {/* Fullscreen map overlay backdrop */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setIsFullscreen(false)} />
+      )}
+
+      <div className={`grid lg:grid-cols-4 gap-6 ${isFullscreen ? 'hidden' : ''}`}>
         {/* Sidebar - POI List */}
         <div className="lg:col-span-1 order-2 lg:order-1">
           {/* Type Filter */}
@@ -115,11 +121,10 @@ function MapPageContent() {
                 <button
                   key={type.value}
                   onClick={() => setSelectedCategory(type.value)}
-                  className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                    selectedCategory === type.value
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1.5 text-sm rounded-full transition-colors ${selectedCategory === type.value
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                 >
                   {type.icon} {type.label}
                 </button>
@@ -143,11 +148,10 @@ function MapPageContent() {
                   <li key={poi.id}>
                     <button
                       onClick={() => setSelectedPoi(poi)}
-                      className={`w-full text-left p-2 rounded-lg transition-colors ${
-                        selectedPoi?.id === poi.id
-                          ? 'bg-green-50 border border-green-200'
-                          : 'hover:bg-gray-50'
-                      }`}
+                      className={`w-full text-left p-2 rounded-lg transition-colors ${selectedPoi?.id === poi.id
+                        ? 'bg-green-50 border border-green-200'
+                        : 'hover:bg-gray-50'
+                        }`}
                     >
                       <div className="flex items-start gap-2">
                         <span className="text-lg">{getTypeIcon(poi.tipo)}</span>
@@ -170,7 +174,28 @@ function MapPageContent() {
 
         {/* Map */}
         <div className="lg:col-span-3 order-1 lg:order-2">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div
+            className={`overflow-hidden relative transition-all duration-300 ${isFullscreen
+                ? 'fixed inset-0 z-50 rounded-none shadow-none'
+                : 'bg-white rounded-lg shadow-md'
+              }`}
+          >
+            {/* Fullscreen toggle button */}
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              aria-label={isFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
+              className="absolute top-2 right-2 z-[1000] bg-white rounded-md p-1.5 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              {isFullscreen ? (
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                </svg>
+              )}
+            </button>
             <MapComponent
               pois={filteredPois}
               selectedPoi={selectedPoi}
