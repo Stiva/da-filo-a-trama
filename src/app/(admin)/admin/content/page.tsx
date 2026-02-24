@@ -107,14 +107,14 @@ export default function AdminContentPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestione Contenuti</h1>
-          <p className="text-gray-500 mt-1">Modifica i contenuti della dashboard utente</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestione Contenuti</h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">Modifica i contenuti della dashboard utente</p>
         </div>
         <Link
           href="/admin/content/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light transition-colors min-h-[44px] w-full sm:w-auto"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -125,7 +125,7 @@ export default function AdminContentPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[
             { value: 'all' as const, label: 'Tutti' },
             { value: 'active' as const, label: 'Attivi' },
@@ -134,11 +134,10 @@ export default function AdminContentPage() {
             <button
               key={option.value}
               onClick={() => setFilter(option.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === option.value
-                  ? 'bg-agesci-blue text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${filter === option.value
+                ? 'bg-agesci-blue text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               {option.label}
             </button>
@@ -181,9 +180,8 @@ export default function AdminContentPage() {
             filteredContents.map((content) => (
               <div
                 key={content.id}
-                className={`bg-white rounded-lg shadow-md p-6 ${
-                  !content.is_active ? 'opacity-60' : ''
-                }`}
+                className={`bg-white rounded-lg shadow-md p-6 ${!content.is_active ? 'opacity-60' : ''
+                  }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -197,11 +195,10 @@ export default function AdminContentPage() {
                         {getTargetStateLabel(content.target_state)}
                       </span>
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          content.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${content.is_active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-500'
+                          }`}
                       >
                         {content.is_active ? 'Attivo' : 'Inattivo'}
                       </span>
@@ -236,11 +233,10 @@ export default function AdminContentPage() {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => handleToggleActive(content.id, content.is_active)}
-                      className={`p-2 rounded transition-colors ${
-                        content.is_active
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-100'
-                      }`}
+                      className={`p-2 rounded transition-colors ${content.is_active
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-100'
+                        }`}
                       title={content.is_active ? 'Disattiva' : 'Attiva'}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

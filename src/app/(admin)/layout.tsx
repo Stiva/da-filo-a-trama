@@ -124,7 +124,7 @@ export default function AdminLayout({
               {/* Hamburger - visible on mobile */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-800 active:bg-gray-700 transition-colors touch-target"
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-800 active:bg-gray-700 transition-colors touch-target"
                 aria-label={isSidebarOpen ? 'Chiudi menu' : 'Apri menu'}
               >
                 {isSidebarOpen ? (
@@ -148,7 +148,7 @@ export default function AdminLayout({
             <div className="flex items-center gap-2 sm:gap-4">
               <Link
                 href="/dashboard"
-                className="hidden sm:flex items-center text-gray-300 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-gray-800 active:bg-gray-700 transition-colors"
+                className="hidden lg:flex items-center text-gray-300 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-gray-800 active:bg-gray-700 transition-colors"
               >
                 Torna al sito
               </Link>
@@ -169,7 +169,7 @@ export default function AdminLayout({
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={closeSidebar}
             aria-hidden="true"
           />
@@ -178,12 +178,12 @@ export default function AdminLayout({
         {/* Sidebar */}
         <aside
           className={`
-            fixed md:static inset-y-0 left-0 z-50
+            fixed lg:static inset-y-0 left-0 z-50
             w-64 bg-gray-800 min-h-[calc(100vh-4rem)] text-white
             transform transition-transform duration-300 ease-in-out
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            md:translate-x-0
-            pt-16 md:pt-0
+            lg:translate-x-0
+            pt-16 lg:pt-0
           `}
         >
           <nav className="p-4 space-y-2">
@@ -258,7 +258,7 @@ export default function AdminLayout({
             ))}
 
             {/* Mobile-only: Torna al sito */}
-            <div className="md:hidden pt-6 mt-6 border-t border-gray-700">
+            <div className="lg:hidden pt-6 mt-6 border-t border-gray-700">
               <Link
                 href="/dashboard"
                 onClick={closeSidebar}

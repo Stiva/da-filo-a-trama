@@ -113,21 +113,23 @@ const UserSupportChatWidgetInner = () => {
             setIsMinimized(false);
           }}
           aria-label="Apri chat assistenza"
-          className="fixed bottom-6 right-6 z-[70] relative w-14 h-14 rounded-full bg-agesci-blue text-white shadow-xl hover:bg-agesci-blue-light transition-colors"
+          className="fixed bottom-6 right-6 z-[70] w-14 h-14 rounded-full bg-agesci-blue text-white shadow-xl hover:bg-agesci-blue-light transition-colors flex items-center justify-center"
           style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
         >
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-          <Image
-            src="/chat-yw.png"
-            alt="Apri chat"
-            width={32}
-            height={32}
-            className="mx-auto rounded-full"
-          />
+          <span className="relative flex items-center justify-center w-full h-full">
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+            <Image
+              src="/chat-yw.png"
+              alt="Apri chat"
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+          </span>
         </button>
       )}
 
