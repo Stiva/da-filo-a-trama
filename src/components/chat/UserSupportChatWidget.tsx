@@ -23,13 +23,14 @@ interface LocalNotification {
 const UserSupportChatWidgetInner = () => {
   const { client, session, loading, error, retry } = useStreamSupport();
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [channel, setChannel] = useState<StreamChannel | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [localNotification, setLocalNotification] = useState<LocalNotification | null>(null);
 
   useEffect(() => {
-    if (!client || !session?.supportChannelId || session.isAdmin) return;
+    // Note: We no longer restrict admins from seeing the chat widget on the frontend.
+    // Admins can use the chat here or in the admin panel.
+    if (!client || !session?.supportChannelId) return;
 
     const nextChannel = client.channel('messaging', session.supportChannelId);
     void nextChannel.watch().then(() => {
@@ -70,10 +71,10 @@ const UserSupportChatWidgetInner = () => {
   }, [client, session]);
 
   useEffect(() => {
-    if (!isOpen || isMinimized || !channel) return;
+    if (!isOpen || !channel) return;
     void channel.markRead();
     setUnreadCount(0);
-  }, [isOpen, isMinimized, channel]);
+  }, [isOpen, channel]);
 
   useEffect(() => {
     if (!localNotification) return;
@@ -94,7 +95,6 @@ const UserSupportChatWidgetInner = () => {
 
   const shouldRender = useMemo(() => {
     if (loading) return false;
-    if (session?.isAdmin) return false;
     if (!session && !error) return false;
     return true;
   }, [loading, error, session]);
@@ -105,108 +105,64 @@ const UserSupportChatWidgetInner = () => {
 
   return (
     <>
+      {/* Floating Action Button (Bubble) */}
       {!isOpen && (
         <button
           type="button"
-          onClick={() => {
-            setIsOpen(true);
-            setIsMinimized(false);
-          }}
+          onClick={() => setIsOpen(true)}
           aria-label="Apri chat assistenza"
-          className="fixed bottom-6 right-6 z-[70] w-14 h-14 rounded-full bg-agesci-blue text-white shadow-xl hover:bg-agesci-blue-light transition-colors flex items-center justify-center"
-          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-[70] w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-agesci-blue text-white shadow-xl hover:bg-agesci-blue-light hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0 border-0"
         >
           <span className="relative flex items-center justify-center w-full h-full">
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold">
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold shadow-sm">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
             <Image
               src="/chat-yw.png"
               alt="Apri chat"
-              width={32}
-              height={32}
-              className="rounded-full"
+              width={36}
+              height={36}
+              className="rounded-full w-9 h-9 sm:w-10 sm:h-10 object-contain"
             />
           </span>
         </button>
       )}
 
+      {/* Local Notification Toast */}
       {localNotification && !isOpen && (
         <button
           type="button"
-          onClick={() => {
-            setIsOpen(true);
-            setIsMinimized(false);
-          }}
-          className="fixed bottom-24 right-6 z-[70] max-w-xs bg-white border border-agesci-blue/30 shadow-lg rounded-xl px-3 py-2 text-left"
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-24 right-6 sm:bottom-28 sm:right-8 z-[70] max-w-[calc(100vw-3rem)] sm:max-w-xs bg-white border border-agesci-blue/30 shadow-lg rounded-xl px-4 py-3 text-left hover:shadow-xl transition-shadow"
           aria-label="Apri chat assistenza per leggere il nuovo messaggio"
-          style={{ position: 'fixed', right: 24, bottom: 96, zIndex: 70 }}
         >
-          <p className="text-xs font-semibold text-agesci-blue">Nuovo messaggio</p>
+          <p className="text-xs font-semibold text-agesci-blue mb-1">Nuovo messaggio</p>
           <p className="text-sm text-gray-700 line-clamp-2">{localNotification.text}</p>
         </button>
       )}
 
-      {isOpen && isMinimized && (
+      {/* Chat Window */}
+      {isOpen && (
         <div
-          className="fixed bottom-6 right-6 z-[70] bg-white border border-agesci-blue/20 shadow-xl rounded-xl px-3 py-2 flex items-center gap-2"
-          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
+          className={`
+            fixed z-[70] bg-white overflow-hidden flex flex-col shadow-2xl
+            /* Mobile layout: almost full screen to prevent keyboard issues, curved top */
+            inset-x-0 bottom-0 top-[10vh] rounded-t-2xl sm:inset-auto
+            /* Desktop/Tablet layout: fixed window in bottom right */
+            sm:bottom-8 sm:right-8 sm:w-[400px] sm:h-[650px] sm:max-h-[85vh] sm:rounded-2xl sm:border sm:border-agesci-blue/20
+          `}
         >
-          <button
-            type="button"
-            onClick={() => setIsMinimized(false)}
-            className="text-sm font-semibold text-agesci-blue"
-            aria-label="Ripristina chat"
-          >
-            Chat Assistenza
-          </button>
-          {unreadCount > 0 && (
-            <span className="min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[11px] leading-5 font-semibold text-center">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setIsOpen(false);
-              setIsMinimized(false);
-            }}
-            aria-label="Chiudi chat assistenza"
-            className="p-1 rounded hover:bg-gray-100 text-gray-500"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {isOpen && !isMinimized && (
-        <div
-          className="fixed bottom-6 right-6 z-[70] w-[92vw] max-w-md h-[72vh] max-h-[620px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-agesci-blue/20 flex flex-col"
-          style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 70 }}
-        >
+          {/* Custom Header injected over Stream UI to provide close button */}
           <div className="absolute top-2 right-2 z-[95] flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsMinimized(true)}
-              aria-label="Minimizza chat"
-              className="px-2 py-1 text-xs rounded-lg bg-white/90 text-agesci-blue border border-agesci-blue/20 shadow-sm hover:bg-white"
-            >
-              Riduci
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                setIsMinimized(false);
-              }}
+              onClick={() => setIsOpen(false)}
               aria-label="Chiudi chat"
-              className="p-1.5 rounded-lg bg-white/90 text-gray-600 border border-gray-200 shadow-sm hover:bg-white"
+              className="p-2 sm:p-1.5 rounded-full bg-white/90 text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 active:scale-95 transition-all touch-target"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -221,13 +177,13 @@ const UserSupportChatWidgetInner = () => {
               <button
                 type="button"
                 onClick={retry}
-                className="px-4 py-2 rounded-lg bg-agesci-blue text-white hover:bg-agesci-blue-light"
+                className="btn btn-primary btn-sm"
               >
                 Riprova
               </button>
             </div>
           ) : (
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 relative bg-white">
               <Chat client={client}>
                 <Channel channel={channel}>
                   <Window>
