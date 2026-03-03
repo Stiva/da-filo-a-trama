@@ -20,6 +20,7 @@ export default function CategoriesPage() {
     color: 'bg-gray-100 text-gray-800',
     icon: '',
     display_order: 0,
+    has_groups: false,
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -120,7 +121,7 @@ export default function CategoriesPage() {
       }
 
       setShowForm(false);
-      setFormData({ slug: '', name: '', color: 'bg-gray-100 text-gray-800', icon: '', display_order: 0 });
+      setFormData({ slug: '', name: '', color: 'bg-gray-100 text-gray-800', icon: '', display_order: 0, has_groups: false });
       fetchCategories();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -230,6 +231,18 @@ export default function CategoriesPage() {
                 className="input w-full"
               />
             </div>
+            <div className="flex items-center gap-2 col-span-2">
+              <input
+                type="checkbox"
+                id="has_groups"
+                checked={formData.has_groups}
+                onChange={(e) => setFormData({ ...formData, has_groups: e.target.checked })}
+                className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5"
+              />
+              <label htmlFor="has_groups" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Supporta Gruppi di Lavoro
+              </label>
+            </div>
           </div>
           <div className="flex justify-end gap-3 mt-4">
             <button
@@ -262,8 +275,8 @@ export default function CategoriesPage() {
               key={option.value}
               onClick={() => setFilterActive(option.value as typeof filterActive)}
               className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${filterActive === option.value
-                  ? 'bg-agesci-blue text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
+                ? 'bg-agesci-blue text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
                 }`}
             >
               {option.label}
@@ -335,6 +348,11 @@ export default function CategoriesPage() {
                       Disattiva
                     </span>
                   )}
+                  {category.has_groups && (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+                      Gruppi ✓
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-500">
                   Slug: <code className="bg-gray-100 px-1 rounded">{category.slug}</code>
@@ -346,8 +364,8 @@ export default function CategoriesPage() {
                 <button
                   onClick={() => handleToggleActive(category)}
                   className={`p-3 rounded-lg min-h-[44px] transition-colors ${category.is_active
-                      ? 'text-yellow-600 hover:bg-yellow-50'
-                      : 'text-green-600 hover:bg-green-50'
+                    ? 'text-yellow-600 hover:bg-yellow-50'
+                    : 'text-green-600 hover:bg-green-50'
                     }`}
                   title={category.is_active ? 'Disattiva' : 'Attiva'}
                 >

@@ -83,9 +83,13 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
         setCategories(categoriesData.data || []);
         setTags(tagsData.data || []);
 
-        // Dagli eventi estratti, teniamo solo i workshop (che non siano questo stesso evento)
         const wEvents = (eventsData.data || [])
-          .filter((e: any) => e.category === 'workshop' && e.id !== event?.id)
+          .filter((e: any) => {
+            {
+              const cat = (categoriesData.data || []).find((c: any) => c.slug === e.category);
+              return cat?.has_groups && e.id !== event?.id;
+            }
+          })
           .sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
         setWorkshopEvents(wEvents);
       } catch (error) {
@@ -219,9 +223,10 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             </div>
           </div>
 
-          {formData.category === 'workshop' && (
+          {/* Sezione gruppi, abilitata dinamicamente per categorie con has_groups=true */}
+          {categories.find(c => c.slug === formData.category)?.has_groups && (
             <div className="space-y-4 pt-4 border-t border-gray-100">
-              <h3 className="font-semibold text-gray-800">Impostazioni Gruppi (Workshop)</h3>
+              <h3 className="font-semibold text-gray-800">Impostazioni Gruppi di Lavoro</h3>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -275,7 +280,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                     required={formData.group_creation_mode === 'copy'}
                     className="input w-full"
                   >
-                    <option value="" disabled>Seleziona un workshop passato</option>
+                    <option value="" disabled>Seleziona un evento passato</option>
                     {workshopEvents.map(we => (
                       <option key={we.id} value={we.id}>
                         {we.title} ({new Date(we.start_time).toLocaleDateString('it-IT')})
@@ -531,6 +536,6 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           {isSaving ? 'Salvataggio...' : isEditing ? 'Salva Modifiche' : 'Crea Evento'}
         </button>
       </div>
-    </form>
+    </form >
   );
 }

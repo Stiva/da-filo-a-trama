@@ -8,8 +8,7 @@ import {
   type PreferenceTag,
   type AvatarConfig,
   DEFAULT_AVATAR_CONFIG,
-  type ServiceRole,
-  SERVICE_ROLE_LABELS,
+  type ServiceRoleRecord,
 } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
@@ -20,7 +19,7 @@ interface FormData {
   name: string;
   surname: string;
   scout_group: string;
-  service_role: ServiceRole | '';
+  service_role: string;
   preferences: PreferenceTag[];
   avatar_config: AvatarConfig;
 }
@@ -33,6 +32,7 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('info');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serviceRoles, setServiceRoles] = useState<ServiceRoleRecord[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -53,6 +53,14 @@ export default function OnboardingPage() {
       }));
     }
   }, [isLoaded, user]);
+
+  // Carica ruoli di servizio dinamicamente
+  useEffect(() => {
+    fetch('/api/service-roles')
+      .then(res => res.json())
+      .then(result => { if (result.data) setServiceRoles(result.data); })
+      .catch(console.error);
+  }, []);
 
   const steps: { id: OnboardingStep; label: string }[] = [
     { id: 'info', label: 'Info' },
@@ -176,8 +184,8 @@ export default function OnboardingPage() {
             <div key={step.id} className="flex flex-col items-center flex-1 min-w-[60px]">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${index <= currentStepIndex
-                    ? 'bg-agesci-blue text-white'
-                    : 'bg-gray-200 text-gray-500'
+                  ? 'bg-agesci-blue text-white'
+                  : 'bg-gray-200 text-gray-500'
                   }`}
               >
                 {index < currentStepIndex ? (
@@ -235,14 +243,14 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-agesci-blue mb-1">Ruolo di Servizio *</label>
                   <select
                     value={formData.service_role}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, service_role: e.target.value as ServiceRole | '' }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, service_role: e.target.value }))}
                     className="input w-full"
                     required
                   >
                     <option value="" disabled>Seleziona il tuo ruolo di servizio</option>
-                    {Object.entries(SERVICE_ROLE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
+                    {serviceRoles.map((r) => (
+                      <option key={r.id} value={r.name}>
+                        {r.name}
                       </option>
                     ))}
                   </select>
@@ -277,8 +285,8 @@ export default function OnboardingPage() {
                       key={tag}
                       onClick={() => togglePreference(tag)}
                       className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${formData.preferences.includes(tag)
-                          ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
-                          : 'border-gray-200 hover:border-agesci-blue/30 text-gray-600'
+                        ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
+                        : 'border-gray-200 hover:border-agesci-blue/30 text-gray-600'
                         }`}
                     >
                       {tag.charAt(0).toUpperCase() + tag.slice(1)}
@@ -329,7 +337,7 @@ export default function OnboardingPage() {
                       <strong>Nome:</strong> {formData.name} {formData.surname}
                     </li>
                     <li>
-                      <strong>Ruolo:</strong> {formData.service_role ? SERVICE_ROLE_LABELS[formData.service_role as ServiceRole] : 'Non specificato'}
+                      <strong>Ruolo:</strong> {formData.service_role || 'Non specificato'}
                     </li>
                     <li>
                       <strong>Gruppo:</strong> {formData.scout_group || 'Non specificato'}
@@ -351,8 +359,8 @@ export default function OnboardingPage() {
                 onClick={handleBack}
                 disabled={currentStep === 'info'}
                 className={`px-6 py-2 rounded-xl font-medium ${currentStep === 'info'
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'btn-outline'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'btn-outline'
                   }`}
               >
                 Indietro

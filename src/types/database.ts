@@ -433,6 +433,19 @@ export interface EventCategoryRecord {
   icon: string | null;
   display_order: number;
   is_active: boolean;
+  has_groups: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// SERVICE ROLES (database-driven)
+// ============================================
+export interface ServiceRoleRecord {
+  id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

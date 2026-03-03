@@ -83,6 +83,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       icon: body.icon || null,
       display_order: body.display_order || 0,
       is_active: body.is_active !== false,
+      has_groups: body.has_groups === true,
     };
 
     const { data, error } = await supabase

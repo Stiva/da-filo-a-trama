@@ -97,6 +97,15 @@ export default function AdminLayout({
       ),
     },
     {
+      href: '/admin/service-roles',
+      label: 'Ruoli di Servizio',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4H2v16h5m10 0v-5H7v5m10 0H7" />
+        </svg>
+      ),
+    },
+    {
       href: '/admin/tags',
       label: 'Tags',
       icon: (

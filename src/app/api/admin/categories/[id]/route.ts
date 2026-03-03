@@ -90,6 +90,7 @@ export async function PUT(
     if (body.icon !== undefined) updateData.icon = body.icon;
     if (body.display_order !== undefined) updateData.display_order = body.display_order;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.has_groups !== undefined) updateData.has_groups = body.has_groups;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
