@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import EventForm from '@/components/EventForm';
 import CloneGroupsButton from '@/components/CloneGroupsButton';
 import CheckinQRCodeDialog from '@/components/CheckinQRCodeDialog';
+import GenerateGroupsButton from '@/components/GenerateGroupsButton';
 import type { Event } from '@/types/database';
 
 // Force dynamic rendering
@@ -55,6 +56,9 @@ export default async function EditEventPage({ params }: PageProps) {
                   targetEventId={event.id}
                   sourceEventId={event.source_event_id}
                 />
+              )}
+              {event.group_creation_mode === 'mix_roles' && (
+                <GenerateGroupsButton eventId={event.id} />
               )}
               <a
                 href={`/admin/events/${event.id}/groups`}

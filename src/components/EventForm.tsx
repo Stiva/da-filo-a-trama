@@ -237,7 +237,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                       onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'random', source_event_id: '' }))}
                       className="text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-800">Random al check-in (Bilancia il numero di persone)</span>
+                    <span className="text-sm text-gray-800">Random al check-in</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -248,7 +248,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                       onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'mix_roles', source_event_id: '' }))}
                       className="text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-800">Mischia i ruoli al check-in (Bilancia i ruoli di servizio nei gruppi)</span>
+                    <span className="text-sm text-gray-800">Sulla base degli iscritti all'evento (distribuzione per ruoli)</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -259,7 +259,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                       onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'copy' }))}
                       className="text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-800">Copia da evento passato</span>
+                    <span className="text-sm text-gray-800">Copiando i gruppi creati da un evento precedente</span>
                   </label>
                 </div>
               </div>
