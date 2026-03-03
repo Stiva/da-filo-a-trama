@@ -126,7 +126,7 @@ export type EventCategory =
 // Event visibility - public = everyone, registered = only authenticated users
 export type EventVisibility = 'public' | 'registered';
 
-export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy';
+export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous';
 
 export interface Event {
   id: string;
@@ -151,6 +151,7 @@ export interface Event {
   group_creation_mode: EventGroupCreationMode;
   source_event_id: string | null;
   group_eligible_roles: string[];
+  max_group_size: number;
   visibility: EventVisibility;
   created_by: string | null;
   created_at: string;

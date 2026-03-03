@@ -53,6 +53,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     group_creation_mode: event?.group_creation_mode || 'random' as EventGroupCreationMode,
     source_event_id: event?.source_event_id || '',
     group_eligible_roles: event?.group_eligible_roles || [],
+    max_group_size: event?.max_group_size || 10,
     visibility: event?.visibility || 'public' as EventVisibility,
   });
 
@@ -271,8 +272,38 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                     />
                     <span className="text-sm text-gray-800">Copiando i gruppi creati da un evento precedente</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer mt-2 pt-2 border-t border-gray-100">
+                    <input
+                      type="radio"
+                      name="group_creation_mode"
+                      value="homogeneous"
+                      checked={formData.group_creation_mode === 'homogeneous'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'homogeneous', source_event_id: '' }))}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800 font-medium">Raggruppa ruoli omogenei nello stesso gruppo</span>
+                  </label>
                 </div>
               </div>
+
+              {formData.group_creation_mode === 'homogeneous' && (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                  <label className="block text-sm font-medium text-blue-900 mb-1">
+                    Dimensione massima dei gruppi omogenei *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.max_group_size}
+                    onChange={(e) => setFormData(prev => ({ ...prev, max_group_size: parseInt(e.target.value) || 1 }))}
+                    min={1}
+                    required={formData.group_creation_mode === 'homogeneous'}
+                    className="input w-full border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-blue-700 mt-1">
+                    Verranno formati gruppi con persone aventi lo stesso ruolo. Se il numero di persone con un certo ruolo supera questo limite, verranno creati più gruppi per quel ruolo.
+                  </p>
+                </div>
+              )}
 
               {formData.group_creation_mode === 'copy' && (
                 <div>

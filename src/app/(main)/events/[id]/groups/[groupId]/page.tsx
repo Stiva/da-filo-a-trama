@@ -31,9 +31,11 @@ interface GroupData {
     event: {
         title: string;
         checkin_enabled: boolean;
-        location_name?: string;
-        latitude?: number;
-        longitude?: number;
+        poi?: {
+            nome: string;
+            latitude: number;
+            longitude: number;
+        } | null;
     };
     poi?: {
         nome: string;
@@ -236,7 +238,7 @@ export default function GroupWorkspacePage() {
                     {/* Sidebar Area (Members & Moderators & Location) */}
                     <div className="space-y-6">
                         {/* Event Location Component */}
-                        {(group.poi?.latitude && group.poi?.longitude) || (group.event?.latitude && group.event?.longitude) ? (
+                        {(group.poi?.latitude && group.poi?.longitude) || (group.event?.poi?.latitude && group.event?.poi?.longitude) ? (
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                                 <h3 className="px-6 pt-6 pb-2 text-lg font-bold text-gray-800 flex items-center gap-2">
                                     <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,9 +249,9 @@ export default function GroupWorkspacePage() {
                                 </h3>
                                 <div className="px-6 pb-6">
                                     <EventLocationMap
-                                        latitude={group.poi?.latitude ?? group.event.latitude!}
-                                        longitude={group.poi?.longitude ?? group.event.longitude!}
-                                        name={group.poi?.nome ?? group.event.location_name ?? 'Location'}
+                                        latitude={group.poi?.latitude ?? group.event.poi!.latitude}
+                                        longitude={group.poi?.longitude ?? group.event.poi!.longitude}
+                                        name={group.poi?.nome ?? group.event.poi!.nome}
                                     />
                                     {(group.poi?.maps_url) && (
                                         <a

@@ -127,6 +127,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       group_creation_mode: body.group_creation_mode || 'random',
       source_event_id: body.group_creation_mode === 'copy' ? (body.source_event_id || null) : null,
       group_eligible_roles: body.group_eligible_roles || [],
+      max_group_size: body.max_group_size || 10,
     };
 
     const { data, error } = await supabase

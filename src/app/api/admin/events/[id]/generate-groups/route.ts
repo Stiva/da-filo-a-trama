@@ -39,7 +39,7 @@ export async function POST(
         // 1. Fetch Event
         const { data: event, error: eventError } = await supabase
             .from('events')
-            .select('id, category, group_creation_mode, group_eligible_roles')
+            .select('id, category, group_creation_mode, group_eligible_roles, max_group_size')
             .eq('id', eventId)
             .single();
 
@@ -47,8 +47,8 @@ export async function POST(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        if (event.group_creation_mode !== 'mix_roles') {
-            return NextResponse.json({ error: 'Operazione non valida per questo evento' }, { status: 400 });
+        if (event.group_creation_mode !== 'mix_roles' && event.group_creation_mode !== 'homogeneous') {
+            return NextResponse.json({ error: 'Operazione non valida per questo evento (modalità non supportata)' }, { status: 400 });
         }
 
         // 2. Fetch Groups for this event
@@ -117,27 +117,76 @@ export async function POST(
             }
         });
 
-        // 7. Distribute round-robin
         const inserts: { group_id: string; user_id: string }[] = [];
         let currentGroupIndex = 0;
 
-        // A helper to push and cycle group index
-        const assignUser = (userId: string) => {
+        // Helper to push and cycle group index
+        const assignUser = (userId: string, groupIndex?: number) => {
+            const idx = groupIndex !== undefined ? groupIndex : currentGroupIndex;
             inserts.push({
-                group_id: groups[currentGroupIndex].id,
+                group_id: groups[idx].id,
                 user_id: userId
             });
-            currentGroupIndex = (currentGroupIndex + 1) % groups.length;
+            if (groupIndex === undefined) {
+                currentGroupIndex = (currentGroupIndex + 1) % groups.length;
+            }
         };
 
-        // Process roles sorted by size (largest pool first, or just arbitrarily)
-        const roles = Object.keys(roleMap).sort((a, b) => roleMap[b].length - roleMap[a].length);
-        roles.forEach(role => {
-            roleMap[role].forEach(userId => assignUser(userId));
-        });
+        if (event.group_creation_mode === 'homogeneous') {
+            // Homogeneous logic: keep same roles together, up to max_group_size per group
+            const maxGroupSize = event.max_group_size || 10;
+            const roles = Object.keys(roleMap);
 
-        // Process users without a role
-        unassignedRoleUsers.forEach(userId => assignUser(userId));
+            // To keep track of how many users are currently assigned to each group
+            const groupFills = new Array(groups.length).fill(0);
+
+            // For each role, we find an available group (or multiple if the role list is larger than maxGroupSize)
+            roles.forEach(role => {
+                const users = roleMap[role];
+                // Process users for this role in chunks of maxGroupSize
+                for (let i = 0; i < users.length; i += maxGroupSize) {
+                    const chunk = users.slice(i, i + maxGroupSize);
+
+                    // Find the group with the most available space (or least filled)
+                    let bestGroupIdx = 0;
+                    for (let g = 1; g < groups.length; g++) {
+                        if (groupFills[g] < groupFills[bestGroupIdx]) {
+                            bestGroupIdx = g;
+                        }
+                    }
+
+                    // Assign all users in the chunk to this best group
+                    chunk.forEach(userId => {
+                        assignUser(userId, bestGroupIdx);
+                    });
+
+                    // Update the fill count for this group
+                    groupFills[bestGroupIdx] += chunk.length;
+                }
+            });
+
+            // Distribute unassigned users evenly among the least filled groups
+            unassignedRoleUsers.forEach(userId => {
+                let bestGroupIdx = 0;
+                for (let g = 1; g < groups.length; g++) {
+                    if (groupFills[g] < groupFills[bestGroupIdx]) {
+                        bestGroupIdx = g;
+                    }
+                }
+                assignUser(userId, bestGroupIdx);
+                groupFills[bestGroupIdx] += 1;
+            });
+
+        } else {
+            // Original 'mix_roles' logic: round-robin to distribute roles evenly across ALL groups
+            const roles = Object.keys(roleMap).sort((a, b) => roleMap[b].length - roleMap[a].length);
+            roles.forEach(role => {
+                roleMap[role].forEach(userId => assignUser(userId));
+            });
+
+            // Process users without a role
+            unassignedRoleUsers.forEach(userId => assignUser(userId));
+        }
 
         // 8. Bulk insert
         if (inserts.length > 0) {
