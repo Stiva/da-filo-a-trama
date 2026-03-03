@@ -9,6 +9,8 @@ export default function CategoriesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // New category form
   const [showForm, setShowForm] = useState(false);
@@ -59,6 +61,44 @@ export default function CategoriesPage() {
       fetchCategories();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredCategories.map(c => c.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Sei sicuro di voler eliminare ${selectedIds.length} categorie? Questa azione non può essere annullata.`)) {
+      return;
+    }
+
+    setIsDeletingBulk(true);
+    try {
+      await Promise.all(
+        selectedIds.map(id =>
+          fetch(`/api/admin/categories/${id}`, { method: 'DELETE' }).then(res => {
+            if (!res.ok) throw new Error('Errore durante l\'eliminazione');
+          })
+        )
+      );
+      setSelectedIds([]);
+      fetchCategories();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione massiva');
+    } finally {
+      setIsDeletingBulk(false);
     }
   };
 
@@ -221,17 +261,48 @@ export default function CategoriesPage() {
             <button
               key={option.value}
               onClick={() => setFilterActive(option.value as typeof filterActive)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                filterActive === option.value
+              className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${filterActive === option.value
                   ? 'bg-agesci-blue text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
-              }`}
+                }`}
             >
               {option.label}
             </button>
           ))}
+          <div className="flex items-center ml-auto border-l pl-4 border-gray-200">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                onChange={handleSelectAll}
+                checked={filteredCategories.length > 0 && selectedIds.length === filteredCategories.length}
+                className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5 focus:ring-offset-0"
+              />
+              Seleziona tutte
+            </label>
+          </div>
         </div>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-indigo-800 font-medium">{selectedIds.length} categorie selezionate</span>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex-1 sm:flex-none"
+            >
+              {isDeletingBulk ? 'Eliminazione...' : 'Elimina Selezionate'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Categories List */}
       {filteredCategories.length === 0 ? (
@@ -243,10 +314,17 @@ export default function CategoriesPage() {
           {filteredCategories.map((category) => (
             <div
               key={category.id}
-              className={`bg-white rounded-lg shadow-md p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${
-                !category.is_active ? 'opacity-60' : ''
-              }`}
+              className={`bg-white rounded-lg shadow-md p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${!category.is_active ? 'opacity-60' : ''
+                } ${selectedIds.includes(category.id) ? 'ring-1 ring-agesci-blue border-agesci-blue' : ''}`}
             >
+              <div className="mt-1 sm:mt-0 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(category.id)}
+                  onChange={() => handleSelectOne(category.id)}
+                  className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5"
+                />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${category.color}`}>
@@ -267,11 +345,10 @@ export default function CategoriesPage() {
               <div className="flex gap-3 sm:flex-shrink-0">
                 <button
                   onClick={() => handleToggleActive(category)}
-                  className={`p-3 rounded-lg min-h-[44px] transition-colors ${
-                    category.is_active
+                  className={`p-3 rounded-lg min-h-[44px] transition-colors ${category.is_active
                       ? 'text-yellow-600 hover:bg-yellow-50'
                       : 'text-green-600 hover:bg-green-50'
-                  }`}
+                    }`}
                   title={category.is_active ? 'Disattiva' : 'Attiva'}
                 >
                   {category.is_active ? (

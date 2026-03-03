@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Event, EventCategory } from '@/types/database';
+import DailyCalendarView from '@/components/admin/DailyCalendarView';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   useEffect(() => {
     fetchEvents();
@@ -52,6 +56,44 @@ export default function AdminEventsPage() {
       fetchEvents();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredEvents.map(p => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Sei sicuro di voler eliminare ${selectedIds.length} eventi? Questa azione non può essere annullata.`)) {
+      return;
+    }
+
+    setIsDeletingBulk(true);
+    try {
+      await Promise.all(
+        selectedIds.map(id =>
+          fetch(`/api/admin/events/${id}`, { method: 'DELETE' }).then(res => {
+            if (!res.ok) throw new Error('Errore durante l\'eliminazione');
+          })
+        )
+      );
+      setSelectedIds([]);
+      fetchEvents();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione massiva');
+    } finally {
+      setIsDeletingBulk(false);
     }
   };
 
@@ -136,13 +178,37 @@ export default function AdminEventsPage() {
               key={option.value}
               onClick={() => setFilter(option.value)}
               className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-none ${filter === option.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
                 }`}
             >
               {option.label}
             </button>
           ))}
+          <div className="flex items-center ml-auto border-l pl-4 border-gray-200">
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                Lista
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${viewMode === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Calendario
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -150,6 +216,27 @@ export default function AdminEventsPage() {
       {error && (
         <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
           {error}
+        </div>
+      )}
+
+      {selectedIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-indigo-800 font-medium">{selectedIds.length} eventi selezionati</span>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex-1 sm:flex-none"
+            >
+              {isDeletingBulk ? 'Eliminazione...' : 'Elimina Selezionati'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -177,6 +264,8 @@ export default function AdminEventsPage() {
                 Crea il primo evento
               </Link>
             </div>
+          ) : viewMode === 'calendar' ? (
+            <DailyCalendarView events={filteredEvents} />
           ) : (
             <>
               {/* Desktop Table View */}
@@ -185,6 +274,14 @@ export default function AdminEventsPage() {
                   <table className="w-full min-w-[700px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
+                        <th className="px-6 py-3 text-left w-12">
+                          <input
+                            type="checkbox"
+                            checked={filteredEvents.length > 0 && selectedIds.length === filteredEvents.length}
+                            onChange={handleSelectAll}
+                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Evento
                         </th>
@@ -207,7 +304,15 @@ export default function AdminEventsPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredEvents.map((event) => (
-                        <tr key={event.id} className="hover:bg-gray-50">
+                        <tr key={event.id} className={`hover:bg-gray-50 ${selectedIds.includes(event.id) ? 'bg-indigo-50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(event.id)}
+                              onChange={() => handleSelectOne(event.id)}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <div>
                               <p className="font-medium text-gray-900">{event.title}</p>
@@ -231,8 +336,8 @@ export default function AdminEventsPage() {
                             <button
                               onClick={() => handleTogglePublish(event.id, event.is_published)}
                               className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${event.is_published
-                                  ? 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300'
-                                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 active:bg-yellow-300'
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300'
+                                : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 active:bg-yellow-300'
                                 }`}
                             >
                               {event.is_published ? 'Pubblicato' : 'Bozza'}
@@ -292,24 +397,34 @@ export default function AdminEventsPage() {
               {/* Mobile Card View */}
               <div className="md:hidden space-y-4">
                 {filteredEvents.map((event) => (
-                  <div key={event.id} className="data-card">
+                  <div key={event.id} className={`data-card ${selectedIds.includes(event.id) ? 'border-indigo-500 ring-1 ring-indigo-500' : ''}`}>
                     {/* Header */}
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(event.id)}
+                          onChange={() => handleSelectOne(event.id)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5"
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">{event.title}</h3>
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-medium text-gray-900 truncate">{event.title}</h3>
+                          <button
+                            onClick={() => handleTogglePublish(event.id, event.is_published)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-full flex-shrink-0 ${event.is_published
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                              }`}
+                          >
+                            {event.is_published ? 'Pubblicato' : 'Bozza'}
+                          </button>
+                        </div>
                         {event.speaker_name && (
                           <p className="text-sm text-gray-500">con {event.speaker_name}</p>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleTogglePublish(event.id, event.is_published)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full flex-shrink-0 ${event.is_published
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                      >
-                        {event.is_published ? 'Pubblicato' : 'Bozza'}
-                      </button>
                     </div>
 
                     {/* Details */}

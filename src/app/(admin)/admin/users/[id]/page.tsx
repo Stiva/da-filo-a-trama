@@ -313,8 +313,8 @@ export default function AdminUserDetailPage({
                     </div>
                     <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusBadgeColor(event.status)}`}>
                       {event.status === 'confirmed' ? 'Confermato' :
-                       event.status === 'waitlist' ? 'Lista attesa' :
-                       event.status === 'cancelled' ? 'Cancellato' : event.status}
+                        event.status === 'waitlist' ? 'Lista attesa' :
+                          event.status === 'cancelled' ? 'Cancellato' : event.status}
                     </span>
                   </div>
                 ))}
@@ -334,63 +334,32 @@ export default function AdminUserDetailPage({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Onboarding</span>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, onboarding_completed: !prev.onboarding_completed }))}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${
-                    formData.onboarding_completed ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                  role="switch"
-                  aria-checked={formData.onboarding_completed}
-                  aria-label={`Onboarding ${formData.onboarding_completed ? 'completato' : 'in attesa'}`}
-                >
-                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                    formData.onboarding_completed ? 'translate-x-[18px]' : 'translate-x-0.5'
-                  }`} />
-                </button>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.onboarding_completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                  {user.onboarding_completed ? 'Si' : 'No'}
+                </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Avatar</span>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, avatar_completed: !prev.avatar_completed }))}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${
-                    formData.avatar_completed ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                  role="switch"
-                  aria-checked={formData.avatar_completed}
-                  aria-label={`Avatar ${formData.avatar_completed ? 'configurato' : 'default'}`}
-                >
-                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                    formData.avatar_completed ? 'translate-x-[18px]' : 'translate-x-0.5'
-                  }`} />
-                </button>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.avatar_completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                  {user.avatar_completed ? 'Si' : 'No'}
+                </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Preferenze</span>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, preferences_set: !prev.preferences_set }))}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${
-                    formData.preferences_set ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                  role="switch"
-                  aria-checked={formData.preferences_set}
-                  aria-label={`Preferenze ${formData.preferences_set ? 'impostate' : 'non impostate'}`}
-                >
-                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                    formData.preferences_set ? 'translate-x-[18px]' : 'translate-x-0.5'
-                  }`} />
-                </button>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.preferences_set ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                  {user.preferences_set ? 'Si' : 'No'}
+                </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Profilo Completo</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  user.profile_setup_complete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                }`}>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.profile_setup_complete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
                   {user.profile_setup_complete ? 'Si' : 'No'}
                 </span>
               </div>

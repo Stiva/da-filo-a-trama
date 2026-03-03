@@ -21,6 +21,7 @@
     "@lexical/selection": "^0.40.0",
     "@lexical/utils": "^0.40.0",
     "@supabase/supabase-js": "^2.94.0",
+    "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
     "lexical": "^0.40.0",
     "next": "^15.3.0",

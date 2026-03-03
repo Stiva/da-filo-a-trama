@@ -84,21 +84,15 @@ export async function GET(
     const profileWithEnrollments: ProfileWithEnrollments = {
       ...(profile as Profile),
       enrollments_count: enrollments?.length || 0,
-      events_enrolled: enrollments?.map((e) => {
-        // Despite the many-to-one relationship, the build process infers `e.events` as an array.
-        // We'll treat it as an array and take the first element to be safe.
-        const event = (
-          e.events as unknown as {
-            id: string;
-            title: string;
-            start_time: string;
-          }[]
-        )?.[0];
+      events_enrolled: enrollments?.map((e: any) => {
+        // Since supabase join with `events ( ... )` usually returns a single object for many-to-one
+        // but Typescript might type it as an array if it doesn't know. We check if it's an array or object.
+        const eventItem = Array.isArray(e.events) ? e.events[0] : e.events;
 
         return {
-          id: event?.id,
-          title: event?.title,
-          start_time: event?.start_time,
+          id: eventItem?.id,
+          title: eventItem?.title,
+          start_time: eventItem?.start_time,
           status: e.status,
         };
       }),

@@ -28,6 +28,8 @@ export default function AdminAssetsPage() {
   const [filterType, setFilterType] = useState<AssetType | ''>('');
   const [filterVisibility, setFilterVisibility] = useState<AssetVisibility | ''>('');
   const [filterEventId, setFilterEventId] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   useEffect(() => {
     fetchAssets();
@@ -143,6 +145,44 @@ export default function AdminAssetsPage() {
     }
   };
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(assets.map(a => a.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Sei sicuro di voler eliminare ${selectedIds.length} asset? Questa azione non può essere annullata ed eliminerà anche i file dallo storage.`)) {
+      return;
+    }
+
+    setIsDeletingBulk(true);
+    try {
+      await Promise.all(
+        selectedIds.map(id =>
+          fetch(`/api/admin/assets/${id}`, { method: 'DELETE' }).then(res => {
+            if (!res.ok) throw new Error('Errore durante l\'eliminazione');
+          })
+        )
+      );
+      setSelectedIds([]);
+      fetchAssets();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione massiva');
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
   return (
     <div>
       {/* Header - Responsive */}
@@ -239,6 +279,27 @@ export default function AdminAssetsPage() {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-indigo-800 font-medium">{selectedIds.length} asset selezionati</span>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex-1 sm:flex-none"
+            >
+              {isDeletingBulk ? 'Eliminazione...' : 'Elimina Selezionati'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <div className="text-center py-12">
@@ -270,6 +331,14 @@ export default function AdminAssetsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-6 py-3 text-left w-12">
+                      <input
+                        type="checkbox"
+                        checked={assets.length > 0 && selectedIds.length === assets.length}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nome
                     </th>
@@ -292,7 +361,15 @@ export default function AdminAssetsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {assets.map((asset) => (
-                    <tr key={asset.id} className="hover:bg-gray-50">
+                    <tr key={asset.id} className={`hover:bg-gray-50 ${selectedIds.includes(asset.id) ? 'bg-indigo-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(asset.id)}
+                          onChange={() => handleSelectOne(asset.id)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span className="text-xl">{getFileTypeIcon(asset.tipo)}</span>
@@ -370,9 +447,17 @@ export default function AdminAssetsPage() {
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
             {assets.map((asset) => (
-              <div key={asset.id} className="data-card">
+              <div key={asset.id} className={`data-card ${selectedIds.includes(asset.id) ? 'border-indigo-500 ring-1 ring-indigo-500' : ''}`}>
                 {/* Header */}
                 <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(asset.id)}
+                      onChange={() => handleSelectOne(asset.id)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5"
+                    />
+                  </div>
                   <span className="text-2xl flex-shrink-0">{getFileTypeIcon(asset.tipo)}</span>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-900 truncate">

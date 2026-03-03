@@ -8,6 +8,8 @@ export default function TagsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // New tag form
   const [showForm, setShowForm] = useState(false);
@@ -58,6 +60,44 @@ export default function TagsPage() {
       fetchTags();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredTags.map(t => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Sei sicuro di voler eliminare ${selectedIds.length} tag? Questa azione non può essere annullata.`)) {
+      return;
+    }
+
+    setIsDeletingBulk(true);
+    try {
+      await Promise.all(
+        selectedIds.map(id =>
+          fetch(`/api/admin/tags/${id}`, { method: 'DELETE' }).then(res => {
+            if (!res.ok) throw new Error('Errore durante l\'eliminazione');
+          })
+        )
+      );
+      setSelectedIds([]);
+      fetchTags();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione massiva');
+    } finally {
+      setIsDeletingBulk(false);
     }
   };
 
@@ -215,17 +255,48 @@ export default function TagsPage() {
             <button
               key={option.value}
               onClick={() => setFilterActive(option.value as typeof filterActive)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                filterActive === option.value
+              className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${filterActive === option.value
                   ? 'bg-agesci-blue text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
-              }`}
+                }`}
             >
               {option.label}
             </button>
           ))}
+          <div className="flex items-center ml-auto border-l pl-4 border-gray-200">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                onChange={handleSelectAll}
+                checked={filteredTags.length > 0 && selectedIds.length === filteredTags.length}
+                className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5 focus:ring-offset-0"
+              />
+              Seleziona tutti
+            </label>
+          </div>
         </div>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-indigo-800 font-medium">{selectedIds.length} tag selezionati</span>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex-1 sm:flex-none"
+            >
+              {isDeletingBulk ? 'Eliminazione...' : 'Elimina Selezionati'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tags List */}
       {filteredTags.length === 0 ? (
@@ -237,54 +308,62 @@ export default function TagsPage() {
           {filteredTags.map((tag) => (
             <div
               key={tag.id}
-              className={`bg-white rounded-lg shadow-md p-4 ${
-                !tag.is_active ? 'opacity-60' : ''
-              }`}
+              className={`bg-white rounded-lg shadow-md p-4 flex flex-col sm:flex-row sm:items-start gap-3 ${!tag.is_active ? 'opacity-60' : ''
+                } ${selectedIds.includes(tag.id) ? 'ring-1 ring-agesci-blue border-agesci-blue' : ''}`}
             >
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-3 py-1 bg-agesci-blue/10 text-agesci-blue rounded-full text-sm font-medium">
-                      {tag.name}
-                    </span>
-                    {!tag.is_active && (
-                      <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">
-                        Disattivo
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    <code className="bg-gray-100 px-1 rounded">{tag.slug}</code>
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleToggleActive(tag)}
-                  className={`p-2 rounded-lg min-h-[40px] min-w-[40px] transition-colors ${
-                    tag.is_active
-                      ? 'text-yellow-600 hover:bg-yellow-50'
-                      : 'text-green-600 hover:bg-green-50'
-                  }`}
-                  title={tag.is_active ? 'Disattiva' : 'Attiva'}
-                >
-                  {tag.is_active ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
+              <div className="mt-1 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(tag.id)}
+                  onChange={() => handleSelectOne(tag.id)}
+                  className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5"
+                />
               </div>
-              {tag.description && (
-                <p className="text-sm text-gray-600 mb-2">{tag.description}</p>
-              )}
-              <div className="flex items-center gap-3 text-xs text-gray-400">
-                {tag.category && (
-                  <span>Categoria: {tag.category}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-3 py-1 bg-agesci-blue/10 text-agesci-blue rounded-full text-sm font-medium">
+                        {tag.name}
+                      </span>
+                      {!tag.is_active && (
+                        <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">
+                          Disattivo
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      <code className="bg-gray-100 px-1 rounded">{tag.slug}</code>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleActive(tag)}
+                    className={`p-2 rounded-lg min-h-[40px] min-w-[40px] transition-colors ${tag.is_active
+                        ? 'text-yellow-600 hover:bg-yellow-50'
+                        : 'text-green-600 hover:bg-green-50'
+                      }`}
+                    title={tag.is_active ? 'Disattiva' : 'Attiva'}
+                  >
+                    {tag.is_active ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {tag.description && (
+                  <p className="text-sm text-gray-600 mb-2">{tag.description}</p>
                 )}
-                <span>Ordine: {tag.display_order}</span>
+                <div className="flex items-center gap-3 text-xs text-gray-400">
+                  {tag.category && (
+                    <span>Categoria: {tag.category}</span>
+                  )}
+                  <span>Ordine: {tag.display_order}</span>
+                </div>
               </div>
             </div>
           ))}

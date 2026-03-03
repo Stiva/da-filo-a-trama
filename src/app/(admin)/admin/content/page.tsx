@@ -9,6 +9,8 @@ export default function AdminContentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   useEffect(() => {
     fetchContents();
@@ -71,6 +73,44 @@ export default function AdminContentPage() {
       fetchContents();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredContents.map(c => c.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Sei sicuro di voler eliminare ${selectedIds.length} contenuti? Questa azione non può essere annullata.`)) {
+      return;
+    }
+
+    setIsDeletingBulk(true);
+    try {
+      await Promise.all(
+        selectedIds.map(id =>
+          fetch(`/api/admin/content/${id}`, { method: 'DELETE' }).then(res => {
+            if (!res.ok) throw new Error('Errore durante l\'eliminazione');
+          })
+        )
+      );
+      setSelectedIds([]);
+      fetchContents();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione massiva');
+    } finally {
+      setIsDeletingBulk(false);
     }
   };
 
@@ -142,8 +182,40 @@ export default function AdminContentPage() {
               {option.label}
             </button>
           ))}
+          <div className="flex items-center ml-auto border-l pl-4 border-gray-200">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                onChange={handleSelectAll}
+                checked={filteredContents.length > 0 && selectedIds.length === filteredContents.length}
+                className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5 focus:ring-offset-0"
+              />
+              Seleziona tutti
+            </label>
+          </div>
         </div>
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-indigo-800 font-medium">{selectedIds.length} contenuti selezionati</span>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex-1 sm:flex-none"
+            >
+              {isDeletingBulk ? 'Eliminazione...' : 'Elimina Selezionati'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -180,13 +252,21 @@ export default function AdminContentPage() {
             filteredContents.map((content) => (
               <div
                 key={content.id}
-                className={`bg-white rounded-lg shadow-md p-6 ${!content.is_active ? 'opacity-60' : ''
-                  }`}
+                className={`bg-white rounded-lg shadow-md p-6 flex items-start gap-4 ${!content.is_active ? 'opacity-60' : ''
+                  } ${selectedIds.includes(content.id) ? 'ring-1 ring-agesci-blue border-agesci-blue' : ''}`}
               >
-                <div className="flex items-start justify-between">
+                <div className="mt-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(content.id)}
+                    onChange={() => handleSelectOne(content.id)}
+                    className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-5 h-5"
+                  />
+                </div>
+                <div className="flex items-start justify-between flex-1 min-w-0">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">
                         {content.title || content.key}
                       </h3>
                       <span
