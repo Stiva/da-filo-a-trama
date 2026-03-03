@@ -56,14 +56,21 @@ export async function GET(
         }
 
         // 1. Dati Gruppo e Evento
+        // Usiamo i nomi delle colonne per le relazioni per essere piu' espliciti (PostgREST)
         const { data: groupData, error: groupError } = await supabase
             .from('event_groups')
-            .select('*, event:events(title, checkin_enabled, location_name, latitude, longitude), poi:poi(nome, latitude, longitude, maps_url)')
+            .select('*, event:event_id(title, checkin_enabled, location_name, latitude, longitude), poi:location_poi_id(nome, latitude, longitude, maps_url)')
             .eq('id', groupId)
             .eq('event_id', eventId)
             .single();
 
         if (groupError || !groupData) {
+            console.error('Errore recupero gruppo workspace:', {
+                error: groupError,
+                eventId,
+                groupId,
+                userId
+            });
             return NextResponse.json({ error: 'Gruppo non trovato' }, { status: 404 });
         }
 
