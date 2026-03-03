@@ -61,12 +61,18 @@ export async function GET(
           profile:profiles(id, name, surname, scout_group)
         )
       `)
-            .eq('event_id', eventId)
-            .order('name');
+            .eq('event_id', eventId);
 
         if (groupsError) {
             throw groupsError;
         }
+
+        // Ordina i gruppi numericamente
+        const sortedGroups = (groups || []).sort((a, b) => {
+            const numA = parseInt(a.name.replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(b.name.replace(/\D/g, ''), 10) || 0;
+            return numA - numB;
+        });
 
         // 3. Fetch all Staff/Admin users for dropdown
         const { data: staffUsers, error: staffError } = await supabase
@@ -82,7 +88,7 @@ export async function GET(
         return NextResponse.json({
             data: {
                 event,
-                groups: groups || [],
+                groups: sortedGroups,
                 staffUsers: staffUsers || [],
             }
         });

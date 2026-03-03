@@ -39,12 +39,13 @@ export async function GET(
       throw eventError;
     }
 
-    // Conta iscrizioni confermate
+    // Conta iscrizioni confermate (escludendo admin e staff)
     const { count: enrollmentCount } = await supabase
       .from('enrollments')
-      .select('*', { count: 'exact', head: true })
+      .select('*, profiles!inner(role)', { count: 'exact', head: true })
       .eq('event_id', id)
-      .eq('status', 'confirmed');
+      .eq('status', 'confirmed')
+      .eq('profiles.role', 'user');
 
     // Verifica se l'utente e' iscritto
     let isEnrolled = false;
@@ -70,8 +71,9 @@ export async function GET(
           .select('status, waitlist_position, checked_in_at')
           .eq('event_id', id)
           .eq('user_id', profile.id)
-          .neq('status', 'cancelled')
-          .single();
+          .in('status', ['confirmed', 'waitlist'])
+          .limit(1)
+          .maybeSingle();
 
         if (enrollment) {
           isEnrolled = true;

@@ -32,7 +32,7 @@ export default function EventDetailPage() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/events/${eventId}`);
+      const response = await fetch(`/api/events/${eventId}`, { cache: 'no-store' });
       const result = await response.json();
 
       if (!response.ok) {
@@ -207,8 +207,8 @@ export default function EventDetailPage() {
               </span>
               {event.is_enrolled && (
                 <span className={`px-3 py-1 text-sm font-medium rounded-full ${event.enrollment_status === 'confirmed'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-yellow-100 text-yellow-800'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-yellow-100 text-yellow-800'
                   }`}>
                   {event.enrollment_status === 'confirmed'
                     ? 'Iscritto'
@@ -344,8 +344,8 @@ export default function EventDetailPage() {
               {/* Enrollment Message */}
               {enrollMessage && (
                 <div className={`p-3 rounded-lg text-sm ${enrollMessage.includes('Errore') || enrollMessage.includes('cancellata')
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-green-100 text-green-700'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-green-100 text-green-700'
                   }`}>
                   {enrollMessage}
                 </div>
@@ -362,7 +362,7 @@ export default function EventDetailPage() {
                   >
                     {isEnrolling ? 'Iscrizione in corso...' : isFull ? 'Iscriviti alla lista d\'attesa' : 'Iscriviti'}
                   </button>
-                ) : (
+                ) : (!event.checkin_enabled || !isCheckinAvailable(event.start_time)) ? (
                   <button
                     onClick={handleCancelEnrollment}
                     disabled={isEnrolling}
@@ -370,7 +370,7 @@ export default function EventDetailPage() {
                   >
                     {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
                   </button>
-                )}
+                ) : null}
 
                 {event.enrollment_status === 'waitlist' && event.waitlist_position && (
                   <div className="text-sm text-gray-600 text-center">
