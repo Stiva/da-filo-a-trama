@@ -14,6 +14,7 @@ export default function ServiceRolesPage() {
         name: '',
         display_order: 0,
     });
+    const [editingRole, setEditingRole] = useState<ServiceRoleRecord | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -57,13 +58,28 @@ export default function ServiceRolesPage() {
         }
     };
 
+    const handleEdit = (role: ServiceRoleRecord) => {
+        setEditingRole(role);
+        setFormData({
+            name: role.name,
+            display_order: role.display_order,
+        });
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
 
         try {
-            const response = await fetch('/api/admin/service-roles', {
-                method: 'POST',
+            const url = editingRole
+                ? `/api/admin/service-roles/${editingRole.id}`
+                : '/api/admin/service-roles';
+            const method = editingRole ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
@@ -71,10 +87,11 @@ export default function ServiceRolesPage() {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || 'Errore nella creazione');
+                throw new Error(result.error || `Errore nella ${editingRole ? 'modifica' : 'creazione'}`);
             }
 
             setShowForm(false);
+            setEditingRole(null);
             setFormData({ name: '', display_order: 0 });
             fetchRoles();
         } catch (err) {
@@ -102,13 +119,20 @@ export default function ServiceRolesPage() {
                     <p className="text-gray-500 mt-1">Gestisci i ruoli di servizio disponibili per gli iscritti</p>
                 </div>
                 <button
-                    onClick={() => setShowForm(!showForm)}
+                    onClick={() => {
+                        if (showForm && editingRole) {
+                            setEditingRole(null);
+                            setFormData({ name: '', display_order: 0 });
+                        } else {
+                            setShowForm(!showForm);
+                        }
+                    }}
                     className="px-4 py-2.5 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light active:scale-95 transition-all inline-flex items-center justify-center gap-2 min-h-[44px]"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Nuovo Ruolo
+                    {editingRole ? 'Annulla Modifica' : showForm ? 'Annulla' : 'Nuovo Ruolo'}
                 </button>
             </div>
 
@@ -118,10 +142,10 @@ export default function ServiceRolesPage() {
                 </div>
             )}
 
-            {/* New Role Form */}
+            {/* Role Form */}
             {showForm && (
                 <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
-                    <h2 className="text-lg font-semibold mb-4">Nuovo Ruolo</h2>
+                    <h2 className="text-lg font-semibold mb-4">{editingRole ? 'Modifica Ruolo' : 'Nuovo Ruolo'}</h2>
                     <div className="grid sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
@@ -147,7 +171,11 @@ export default function ServiceRolesPage() {
                     <div className="flex justify-end gap-3 mt-4">
                         <button
                             type="button"
-                            onClick={() => setShowForm(false)}
+                            onClick={() => {
+                                setShowForm(false);
+                                setEditingRole(null);
+                                setFormData({ name: '', display_order: 0 });
+                            }}
                             className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 min-h-[44px]"
                         >
                             Annulla
@@ -157,7 +185,7 @@ export default function ServiceRolesPage() {
                             disabled={isSaving}
                             className="px-4 py-2.5 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light disabled:opacity-50 min-h-[44px]"
                         >
-                            {isSaving ? 'Salvataggio...' : 'Crea Ruolo'}
+                            {isSaving ? 'Salvataggio...' : editingRole ? 'Salva Modifiche' : 'Crea Ruolo'}
                         </button>
                     </div>
                 </form>
@@ -191,6 +219,15 @@ export default function ServiceRolesPage() {
                                 </p>
                             </div>
                             <div className="flex gap-3 sm:flex-shrink-0">
+                                <button
+                                    onClick={() => handleEdit(role)}
+                                    className="p-3 text-agesci-blue hover:bg-blue-50 rounded-lg min-h-[44px] transition-colors"
+                                    title="Modifica"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
                                 <button
                                     onClick={() => handleToggleActive(role)}
                                     className={`p-3 rounded-lg min-h-[44px] transition-colors ${role.is_active
