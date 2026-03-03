@@ -206,11 +206,10 @@ export default function EventDetailPage() {
                 {event.category}
               </span>
               {event.is_enrolled && (
-                <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                  event.enrollment_status === 'confirmed'
+                <span className={`px-3 py-1 text-sm font-medium rounded-full ${event.enrollment_status === 'confirmed'
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'
-                }`}>
+                  }`}>
                   {event.enrollment_status === 'confirmed'
                     ? 'Iscritto'
                     : `In lista d'attesa${event.waitlist_position ? ` #${event.waitlist_position}` : ''}`}
@@ -224,6 +223,29 @@ export default function EventDetailPage() {
               <p className="text-base sm:text-lg text-gray-600">
                 con <span className="font-medium">{event.speaker_name}</span>
               </p>
+            )}
+
+            {/* Workspace Link for Group Members/Moderators */}
+            {event.user_group_id && (
+              <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h3 className="text-indigo-900 font-semibold text-lg flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Area Gruppo di Lavoro
+                  </h3>
+                  <p className="text-indigo-700 text-sm mt-1">
+                    {event.is_group_moderator ? 'Sei moderatore di questo gruppo.' : 'Sei stato assegnato a un gruppo di lavoro.'} Accedi per collaborare.
+                  </p>
+                </div>
+                <Link
+                  href={`/events/${eventId}/groups/${event.user_group_id}`}
+                  className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Vai all'Area Gruppo
+                </Link>
+              </div>
             )}
           </div>
 
@@ -321,11 +343,10 @@ export default function EventDetailPage() {
 
               {/* Enrollment Message */}
               {enrollMessage && (
-                <div className={`p-3 rounded-lg text-sm ${
-                  enrollMessage.includes('Errore') || enrollMessage.includes('cancellata')
+                <div className={`p-3 rounded-lg text-sm ${enrollMessage.includes('Errore') || enrollMessage.includes('cancellata')
                     ? 'bg-red-100 text-red-700'
                     : 'bg-green-100 text-green-700'
-                }`}>
+                  }`}>
                   {enrollMessage}
                 </div>
               )}
@@ -400,9 +421,8 @@ export default function EventDetailPage() {
                         {isCheckingIn ? 'Check-in in corso...' : 'Fai il Check-in'}
                       </button>
                       {checkinMessage && (
-                        <p className={`text-sm text-center ${
-                          checkinMessage.includes('Errore') ? 'text-red-600' : 'text-green-600'
-                        }`}>
+                        <p className={`text-sm text-center ${checkinMessage.includes('Errore') ? 'text-red-600' : 'text-green-600'
+                          }`}>
                           {checkinMessage}
                         </p>
                       )}

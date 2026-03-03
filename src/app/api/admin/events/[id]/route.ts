@@ -272,6 +272,7 @@ export async function PUT(
       checkin_enabled: body.checkin_enabled ?? false,
       user_can_upload_assets: body.user_can_upload_assets ?? false,
       visibility: body.visibility || 'public',
+      workshop_groups_count: body.category === 'workshop' ? (body.workshop_groups_count || 0) : 0,
       updated_at: new Date().toISOString(),
     };
 
@@ -287,6 +288,23 @@ export async function PUT(
         return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
       }
       throw error;
+    }
+
+    // Gestione creazione gruppi se il numero e' aumentato
+    if (eventData.workshop_groups_count > 0) {
+      const { data: existingGroups } = await supabase
+        .from('event_groups')
+        .select('id')
+        .eq('event_id', data.id);
+
+      const currentCount = existingGroups?.length || 0;
+      if (currentCount < eventData.workshop_groups_count) {
+        const groupsToCreate = Array.from({ length: eventData.workshop_groups_count - currentCount }).map((_, i) => ({
+          event_id: data.id,
+          name: `Gruppo ${currentCount + i + 1}`,
+        }));
+        await supabase.from('event_groups').insert(groupsToCreate);
+      }
     }
 
     if (!existingEvent.auto_enroll_all && eventData.auto_enroll_all) {
@@ -350,7 +368,7 @@ export async function PATCH(
 
     const { data: existingEvent, error: existingError } = await supabase
       .from('events')
-      .select('auto_enroll_all, max_posti')
+      .select('auto_enroll_all, max_posti, category')
       .eq('id', id)
       .single();
 
@@ -381,6 +399,9 @@ export async function PATCH(
     if (body.auto_enroll_all !== undefined) updateData.auto_enroll_all = body.auto_enroll_all;
     if (body.checkin_enabled !== undefined) updateData.checkin_enabled = body.checkin_enabled;
     if (body.user_can_upload_assets !== undefined) updateData.user_can_upload_assets = body.user_can_upload_assets;
+    if (body.workshop_groups_count !== undefined) {
+      updateData.workshop_groups_count = body.category === 'workshop' || body.category === undefined && existingEvent.category === 'workshop' ? body.workshop_groups_count : 0;
+    }
 
     const { data, error } = await supabase
       .from('events')
@@ -394,6 +415,24 @@ export async function PATCH(
         return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
       }
       throw error;
+    }
+
+    // Gestione creazione gruppi se il numero e' aumentato
+    if (updateData.workshop_groups_count && (updateData.workshop_groups_count as number) > 0) {
+      const { data: existingGroups } = await supabase
+        .from('event_groups')
+        .select('id')
+        .eq('event_id', data.id);
+
+      const currentCount = existingGroups?.length || 0;
+      const targetCount = updateData.workshop_groups_count as number;
+      if (currentCount < targetCount) {
+        const groupsToCreate = Array.from({ length: targetCount - currentCount }).map((_, i) => ({
+          event_id: data.id,
+          name: `Gruppo ${currentCount + i + 1}`,
+        }));
+        await supabase.from('event_groups').insert(groupsToCreate);
+      }
     }
 
     if (!existingEvent.auto_enroll_all && body.auto_enroll_all === true) {

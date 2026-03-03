@@ -38,6 +38,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     auto_enroll_all: event?.auto_enroll_all || false,
     checkin_enabled: event?.checkin_enabled || false,
     user_can_upload_assets: event?.user_can_upload_assets || false,
+    workshop_groups_count: event?.workshop_groups_count || 0,
     visibility: event?.visibility || 'public' as EventVisibility,
   });
 
@@ -194,6 +195,24 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             </div>
           </div>
 
+          {formData.category === 'workshop' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Numero di gruppi di lavoro
+              </label>
+              <input
+                type="number"
+                value={formData.workshop_groups_count}
+                onChange={(e) => setFormData(prev => ({ ...prev, workshop_groups_count: parseInt(e.target.value) || 0 }))}
+                min={0}
+                className="input w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                I partecipanti verificati (no admin) verranno assegnati in modo bilanciato ai gruppi creati al momento del check-in.
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Luogo (POI) *
@@ -293,11 +312,10 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               key={tag.slug}
               type="button"
               onClick={() => toggleTag(tag.slug)}
-              className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] active:scale-95 ${
-                formData.tags.includes(tag.slug)
+              className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] active:scale-95 ${formData.tags.includes(tag.slug)
                   ? 'bg-blue-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
-              }`}
+                }`}
             >
               {tag.name}
             </button>

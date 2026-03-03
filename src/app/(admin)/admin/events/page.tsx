@@ -135,11 +135,10 @@ export default function AdminEventsPage() {
             <button
               key={option.value}
               onClick={() => setFilter(option.value)}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-none ${
-                filter === option.value
+              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-none ${filter === option.value
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
-              }`}
+                }`}
             >
               {option.label}
             </button>
@@ -231,11 +230,10 @@ export default function AdminEventsPage() {
                           <td className="px-6 py-4">
                             <button
                               onClick={() => handleTogglePublish(event.id, event.is_published)}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${
-                                event.is_published
+                              className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${event.is_published
                                   ? 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300'
                                   : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 active:bg-yellow-300'
-                              }`}
+                                }`}
                             >
                               {event.is_published ? 'Pubblicato' : 'Bozza'}
                             </button>
@@ -252,6 +250,18 @@ export default function AdminEventsPage() {
                                 </svg>
                                 <span className="text-xs font-medium">Iscrizioni</span>
                               </Link>
+                              {event.category === 'workshop' && (
+                                <Link
+                                  href={`/admin/events/${event.id}/groups`}
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-colors"
+                                  title="Gestisci gruppi"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                  </svg>
+                                  <span className="text-xs font-medium">Gruppi</span>
+                                </Link>
+                              )}
                               <Link
                                 href={`/admin/events/${event.id}`}
                                 className="action-btn-primary"
@@ -293,11 +303,10 @@ export default function AdminEventsPage() {
                       </div>
                       <button
                         onClick={() => handleTogglePublish(event.id, event.is_published)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full flex-shrink-0 ${
-                          event.is_published
+                        className={`px-3 py-1.5 text-xs font-medium rounded-full flex-shrink-0 ${event.is_published
                             ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'
-                        }`}
+                          }`}
                       >
                         {event.is_published ? 'Pubblicato' : 'Bozza'}
                       </button>
@@ -333,6 +342,18 @@ export default function AdminEventsPage() {
                         </svg>
                         <span className="text-xs font-medium">Iscrizioni</span>
                       </Link>
+                      {event.category === 'workshop' && (
+                        <Link
+                          href={`/admin/events/${event.id}/groups`}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-colors"
+                          title="Gestisci gruppi"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span className="text-xs font-medium">Gruppi</span>
+                        </Link>
+                      )}
                       <Link
                         href={`/admin/events/${event.id}`}
                         className="action-btn-primary"

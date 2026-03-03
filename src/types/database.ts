@@ -126,10 +126,12 @@ export interface Event {
   auto_enroll_all: boolean;
   checkin_enabled: boolean;
   user_can_upload_assets: boolean;
+  workshop_groups_count: number;
   visibility: EventVisibility;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  groups?: EventGroup[]; // Loaded via join
 }
 
 export interface EventListItem extends Event {
@@ -142,6 +144,56 @@ export interface EventWithEnrollment extends Event {
   enrollment_status: EnrollmentStatus | null;
   waitlist_position?: number | null;
   checked_in_at?: string | null;
+  user_group_id?: string;
+  is_group_moderator?: boolean;
+}
+
+// ============================================
+// EVENT GROUPS (WORKSHOP)
+// ============================================
+export interface EventGroup {
+  id: string;
+  event_id: string;
+  name: string;
+  created_at: string;
+  moderators?: EventGroupModerator[];
+  members?: EventGroupMember[];
+  notes?: EventGroupNote[];
+  attachments?: EventGroupAttachment[];
+}
+
+export interface EventGroupModerator {
+  group_id: string;
+  user_id: string;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface EventGroupMember {
+  group_id: string;
+  user_id: string;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface EventGroupNote {
+  id: string;
+  group_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  profile?: Profile;
+}
+
+export interface EventGroupAttachment {
+  id: string;
+  group_id: string;
+  user_id: string;
+  file_name: string;
+  file_url: string;
+  created_at: string;
+  profile?: Profile;
 }
 
 // ============================================

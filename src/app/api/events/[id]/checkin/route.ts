@@ -34,7 +34,7 @@ export async function POST(
     // Recupera profilo utente
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, role')
       .eq('clerk_id', userId)
       .single();
 
@@ -48,7 +48,7 @@ export async function POST(
     // Recupera evento
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, start_time, checkin_enabled')
+      .select('id, start_time, checkin_enabled, workshop_groups_count')
       .eq('id', eventId)
       .eq('is_published', true)
       .single();
@@ -120,6 +120,52 @@ export async function POST(
 
     if (updateError) {
       throw updateError;
+    }
+
+    // Assegnazione automatica ai gruppi di lavoro per gli utenti (non admin/staff)
+    if (event.workshop_groups_count > 0 && profile.role === 'user') {
+      const { data: groups, error: groupsError } = await supabase
+        .from('event_groups')
+        .select('id')
+        .eq('event_id', eventId);
+
+      if (!groupsError && groups && groups.length > 0) {
+        // Find which group has the least members
+        // To be safe, we query all members for these groups and count them
+        const { data: members, error: membersError } = await supabase
+          .from('event_group_members')
+          .select('group_id')
+          .in('group_id', groups.map(g => g.id));
+
+        let targetGroupId = groups[0].id; // Fallback to first group
+
+        if (!membersError && members) {
+          const counts: Record<string, number> = {};
+          groups.forEach((g) => { counts[g.id] = 0; });
+
+          members.forEach((m) => {
+            if (counts[m.group_id] !== undefined) {
+              counts[m.group_id]++;
+            }
+          });
+
+          let minCount = Infinity;
+          for (const groupId in counts) {
+            if (counts[groupId] < minCount) {
+              minCount = counts[groupId];
+              targetGroupId = groupId;
+            }
+          }
+        }
+
+        // Assign the user to the target group
+        await supabase
+          .from('event_group_members')
+          .insert({
+            group_id: targetGroupId,
+            user_id: profile.id
+          });
+      }
     }
 
     return NextResponse.json({

@@ -51,6 +51,8 @@ export async function GET(
     let enrollmentStatus = null;
     let waitlistPosition = null;
     let checkedInAt = null;
+    let userGroupId = undefined;
+    let isGroupModerator = false;
 
     if (userId) {
       const supabaseAuth = await createServerSupabaseClient();
@@ -77,6 +79,34 @@ export async function GET(
           waitlistPosition = enrollment.waitlist_position;
           checkedInAt = enrollment.checked_in_at;
         }
+
+        // Se l'evento è diviso in gruppi, cerca se l'utente vi appartiene
+        if (event.workshop_groups_count > 0) {
+          // Controlla se è moderatore
+          const { data: modGroup } = await supabase
+            .from('event_group_moderators')
+            .select('group_id, event_groups!inner(event_id)')
+            .eq('user_id', profile.id)
+            .eq('event_groups.event_id', id)
+            .maybeSingle();
+
+          if (modGroup) {
+            userGroupId = modGroup.group_id;
+            isGroupModerator = true;
+          } else {
+            // Controlla se è membro
+            const { data: memberGroup } = await supabase
+              .from('event_group_members')
+              .select('group_id, event_groups!inner(event_id)')
+              .eq('user_id', profile.id)
+              .eq('event_groups.event_id', id)
+              .maybeSingle();
+
+            if (memberGroup) {
+              userGroupId = memberGroup.group_id;
+            }
+          }
+        }
       }
     }
 
@@ -87,6 +117,8 @@ export async function GET(
       enrollment_status: enrollmentStatus,
       waitlist_position: waitlistPosition,
       checked_in_at: checkedInAt,
+      user_group_id: userGroupId,
+      is_group_moderator: isGroupModerator,
     };
 
     return NextResponse.json({ data: eventWithEnrollment });
