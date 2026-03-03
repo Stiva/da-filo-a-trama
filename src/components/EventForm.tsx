@@ -19,6 +19,17 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
   const [pois, setPois] = useState<{ id: string; nome: string }[]>([]);
   const [categories, setCategories] = useState<EventCategoryRecord[]>([]);
   const [tags, setTags] = useState<PreferenceTagRecord[]>([]);
+  // Helper: formatta una data ISO in formato datetime-local (fuso locale)
+  const toLocalDatetimeString = (isoStr: string) => {
+    const d = new Date(isoStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState({
     title: event?.title || '',
     description: event?.description || '',
@@ -26,10 +37,10 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     tags: event?.tags || [],
     location_poi_id: event?.location_poi_id || '',
     start_time: event?.start_time
-      ? new Date(event.start_time).toISOString().slice(0, 16)
+      ? toLocalDatetimeString(event.start_time)
       : '',
     end_time: event?.end_time
-      ? new Date(event.end_time).toISOString().slice(0, 16)
+      ? toLocalDatetimeString(event.end_time)
       : '',
     max_posti: event?.max_posti || 50,
     speaker_name: event?.speaker_name || '',
@@ -313,8 +324,8 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               type="button"
               onClick={() => toggleTag(tag.slug)}
               className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] active:scale-95 ${formData.tags.includes(tag.slug)
-                  ? 'bg-blue-500 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
+                ? 'bg-blue-500 text-white shadow-sm'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
                 }`}
             >
               {tag.name}
