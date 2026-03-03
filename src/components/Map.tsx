@@ -1,6 +1,4 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -82,9 +80,13 @@ const getTypeEmoji = (tipo: PoiCategory) => {
 function MapController({
   selectedPoi,
   userPosition,
+  forceCenterOnUser,
+  onUserCentered
 }: {
   selectedPoi: Poi | null;
   userPosition: [number, number] | null;
+  forceCenterOnUser: number;
+  onUserCentered: () => void;
 }) {
   const map = useMap();
   const hasFlownToUser = useRef(false);
@@ -97,11 +99,18 @@ function MapController({
       return;
     }
 
-    if (userPosition && !hasFlownToUser.current) {
-      map.flyTo(userPosition, 15, { duration: 0.5 });
+    // Centratura forzata (quando si clicca il bottone)
+    if (forceCenterOnUser > 0 && userPosition) {
+      map.flyTo(userPosition, 17, { duration: 0.5 });
+      onUserCentered();
+      return;
+    }
+
+    if (userPosition && !hasFlownToUser.current && !selectedPoi) {
+      map.flyTo(userPosition, 16, { duration: 0.5 });
       hasFlownToUser.current = true;
     }
-  }, [selectedPoi, userPosition, map]);
+  }, [selectedPoi, userPosition, map, forceCenterOnUser, onUserCentered]);
 
   return null;
 }
@@ -118,22 +127,25 @@ const EVENT_CENTER: [number, number] = [44.58218434389957, 11.132567610213458];
 export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
   const mapRef = useRef<L.Map>(null);
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
+  const [forceCenterOnUser, setForceCenterOnUser] = useState(0);
 
   const defaultZoom = 15;
 
-  // Richiedi geolocalizzazione utente
+  // Richiedi geolocalizzazione utente in tempo reale
   useEffect(() => {
     if (!navigator.geolocation) return;
 
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (position) => {
         setUserPosition([position.coords.latitude, position.coords.longitude]);
       },
-      () => {
-        // Geolocalizzazione negata o non disponibile — usa default
+      (error) => {
+        console.warn('Geolocation error:', error.message);
       },
-      { enableHighAccuracy: false, timeout: 5000 }
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
     );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   // Calcola il centro basato sui POI se presenti
@@ -147,67 +159,102 @@ export default function Map({ pois, selectedPoi, onPoiSelect }: MapProps) {
     return [avgLat, avgLng];
   };
 
+  const handleCenterOnMe = useCallback(() => {
+    if (userPosition) {
+      setForceCenterOnUser(Date.now());
+      onPoiSelect(null); // Deseleziona eventuale POI 
+    } else {
+      alert("Attendo la tua posizione. Assicurati di aver concesso i permessi di geolocalizzazione.");
+    }
+  }, [userPosition, onPoiSelect]);
+
   return (
-    <MapContainer
-      ref={mapRef}
-      center={getCenter()}
-      zoom={defaultZoom}
-      style={{ height: '500px', width: '100%' }}
-      scrollWheelZoom={true}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div className="relative w-full h-full">
+      <MapContainer
+        ref={mapRef}
+        center={getCenter()}
+        zoom={defaultZoom}
+        style={{ height: '500px', width: '100%', borderRadius: 'inherit' }}
+        scrollWheelZoom={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      <MapController selectedPoi={selectedPoi} userPosition={userPosition} />
+        <MapController
+          selectedPoi={selectedPoi}
+          userPosition={userPosition}
+          forceCenterOnUser={forceCenterOnUser}
+          onUserCentered={() => setForceCenterOnUser(0)}
+        />
 
-      {pois.map((poi) => {
-        if (!poi.latitude || !poi.longitude) return null;
+        {pois.map((poi) => {
+          if (!poi.latitude || !poi.longitude) return null;
 
-        return (
-          <Marker
-            key={poi.id}
-            position={[poi.latitude, poi.longitude]}
-            icon={createIcon(poi.tipo)}
-            eventHandlers={{
-              click: () => onPoiSelect(poi),
+          return (
+            <Marker
+              key={poi.id}
+              position={[poi.latitude, poi.longitude]}
+              icon={createIcon(poi.tipo)}
+              eventHandlers={{
+                click: () => onPoiSelect(poi),
+              }}
+            >
+              <Popup>
+                <div className="min-w-[150px]">
+                  <h3 className="font-semibold">{poi.nome}</h3>
+                  <p className="text-sm text-gray-500">{POI_TYPE_LABELS[poi.tipo]}</p>
+                  {poi.descrizione && (
+                    <p className="text-sm mt-1">{stripHtml(poi.descrizione)}</p>
+                  )}
+                  <a
+                    href={`/events?poi=${poi.id}&poiName=${encodeURIComponent(poi.nome)}`}
+                    className="inline-block mt-2 text-sm font-medium text-green-700 hover:text-green-800"
+                  >
+                    Vedi eventi qui &rarr;
+                  </a>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Marker posizione utente */}
+        {userPosition && (
+          <CircleMarker
+            center={userPosition}
+            radius={8}
+            pathOptions={{
+              color: 'white',
+              fillColor: '#3b82f6',
+              fillOpacity: 1,
+              weight: 3,
             }}
           >
-            <Popup>
-              <div className="min-w-[150px]">
-                <h3 className="font-semibold">{poi.nome}</h3>
-                <p className="text-sm text-gray-500">{POI_TYPE_LABELS[poi.tipo]}</p>
-                {poi.descrizione && (
-                  <p className="text-sm mt-1">{stripHtml(poi.descrizione)}</p>
-                )}
-                <a
-                  href={`/events?poi=${poi.id}&poiName=${encodeURIComponent(poi.nome)}`}
-                  className="inline-block mt-2 text-sm font-medium text-green-700 hover:text-green-800"
-                >
-                  Vedi eventi qui &rarr;
-                </a>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
+            <Popup>Tu sei qui</Popup>
+          </CircleMarker>
+        )}
+      </MapContainer>
 
-      {/* Marker posizione utente */}
-      {userPosition && (
-        <CircleMarker
-          center={userPosition}
-          radius={10}
-          pathOptions={{
-            color: '#3b82f6',
-            fillColor: '#3b82f6',
-            fillOpacity: 0.3,
-            weight: 3,
-          }}
+      {/* Pulsante "Centra su di me" customizzato sopra la mappa */}
+      <div className="absolute bottom-6 right-4 z-[1000]">
+        <button
+          onClick={handleCenterOnMe}
+          className="bg-white text-gray-700 shadow-lg hover:bg-gray-50 p-3 rounded-full flex items-center justify-center border border-gray-200 transition-all active:scale-95 group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          aria-label="Centra sulla mia posizione"
         >
-          <Popup>La mia posizione</Popup>
-        </CircleMarker>
-      )}
-    </MapContainer>
+          <svg
+            className="w-6 h-6 text-blue-500 group-hover:text-blue-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v2m0 8v2M6 12h2m8 0h2" />
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+    </div>
   );
 }

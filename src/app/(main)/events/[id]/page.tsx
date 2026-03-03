@@ -3,10 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import type { EventWithEnrollment, EventCategory } from '@/types/database';
 import EventAssets from '@/components/EventAssets';
 import UserEventAssets from '@/components/UserEventAssets';
 import RichTextContent from '@/components/RichTextContent';
+
+const EventLocationMap = dynamic(() => import('@/components/EventLocationMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[200px] bg-gray-100 rounded-lg animate-pulse" />
+  ),
+});
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -321,7 +329,17 @@ export default function EventDetailPage() {
                       </svg>
                       <span className="text-sm font-medium">Luogo</span>
                     </div>
-                    <p className="text-gray-700 ml-7">{event.poi.nome}</p>
+                    {event.poi.latitude && event.poi.longitude ? (
+                      <div className="mt-2">
+                        <EventLocationMap
+                          latitude={event.poi.latitude}
+                          longitude={event.poi.longitude}
+                          name={event.poi.nome}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-gray-700 ml-7">{event.poi.nome}</p>
+                    )}
                   </div>
                 )}
 
@@ -443,16 +461,7 @@ export default function EventDetailPage() {
                   </div>
                 )}
 
-                {/* 3. Global Actions (Map) */}
-                {event.location_poi_id && (
-                  <Link
-                    href={`/map?poi=${event.location_poi_id}`}
-                    className="block w-full py-3 px-4 rounded-lg text-center border-2 font-medium min-h-[48px] active:scale-[0.98] transition-transform flex items-center justify-center mt-4"
-                    style={{ borderColor: 'var(--scout-green)', color: 'var(--scout-green)' }}
-                  >
-                    Vedi sulla mappa
-                  </Link>
-                )}
+                {/* Map is now embedded inline in the sidebar via EventLocationMap */}
               </div>
             </div>
           </div>
