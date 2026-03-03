@@ -3,9 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import RichTextEditor from '@/components/RichTextEditor';
 import RichTextContent from '@/components/RichTextContent';
 import GroupEventAssets from '@/components/GroupEventAssets';
+
+const EventLocationMap = dynamic(() => import('@/components/EventLocationMap'), {
+    ssr: false,
+    loading: () => <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 animate-pulse border border-gray-200 shadow-sm">Caricamento mappa...</div>
+});
 
 interface Profile {
     id: string;
@@ -22,7 +28,19 @@ interface GroupMember {
 interface GroupData {
     id: string;
     name: string;
-    event: { title: string; checkin_enabled: boolean };
+    event: {
+        title: string;
+        checkin_enabled: boolean;
+        location_name?: string;
+        latitude?: number;
+        longitude?: number;
+    };
+    poi?: {
+        nome: string;
+        latitude: number;
+        longitude: number;
+        maps_url?: string;
+    } | null;
 }
 
 interface NoteData {
@@ -215,8 +233,41 @@ export default function GroupWorkspacePage() {
                         <GroupEventAssets eventId={eventId} groupId={groupId} />
                     </div>
 
-                    {/* Sidebar Area (Members & Moderators) */}
+                    {/* Sidebar Area (Members & Moderators & Location) */}
                     <div className="space-y-6">
+                        {/* Event Location Component */}
+                        {(group.poi?.latitude && group.poi?.longitude) || (group.event?.latitude && group.event?.longitude) ? (
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                <h3 className="px-6 pt-6 pb-2 text-lg font-bold text-gray-800 flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Luogo del {group.poi ? 'Gruppo' : 'Evento'}
+                                </h3>
+                                <div className="px-6 pb-6">
+                                    <EventLocationMap
+                                        latitude={group.poi?.latitude ?? group.event.latitude!}
+                                        longitude={group.poi?.longitude ?? group.event.longitude!}
+                                        name={group.poi?.nome ?? group.event.location_name ?? 'Location'}
+                                    />
+                                    {(group.poi?.maps_url) && (
+                                        <a
+                                            href={group.poi.maps_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                            Apri in Google Maps
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
+
                         {/* Moderators List */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                             <h3 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">

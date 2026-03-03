@@ -12,6 +12,7 @@ interface Profile {
   surname: string | null;
   email: string;
   scout_group: string | null;
+  service_role: string | null;
 }
 
 interface Enrollment {
@@ -22,6 +23,7 @@ interface Enrollment {
   registration_time: string;
   checked_in_at: string | null;
   profiles: Profile | null;
+  group_name?: string | null;
 }
 
 interface EventInfo {
@@ -91,7 +93,7 @@ export default function EventEnrollmentsPage() {
   const downloadCSV = () => {
     if (!enrollments.length) return;
 
-    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Stato', 'Data Iscrizione'];
+    const headers = ['Nome', 'Cognome', 'Email', 'Ruolo', 'Gruppo Scout', 'Gruppo Lavoro', 'Stato', 'Data Iscrizione'];
     if (event?.checkin_enabled) headers.push('Check-in');
     const csvRows = [headers.join(',')];
 
@@ -101,7 +103,9 @@ export default function EventEnrollmentsPage() {
         profile?.name || '',
         profile?.surname || '',
         profile?.email || '',
+        profile?.service_role || '',
         profile?.scout_group || '',
+        enrollment.group_name || '',
         getStatusLabel(enrollment.status),
         new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
       ];
@@ -136,7 +140,9 @@ export default function EventEnrollmentsPage() {
           Nome: enrollment.profiles?.name || '',
           Cognome: enrollment.profiles?.surname || '',
           Email: enrollment.profiles?.email || '',
+          Ruolo: enrollment.profiles?.service_role || '',
           'Gruppo Scout': enrollment.profiles?.scout_group || '',
+          'Gruppo Lavoro': enrollment.group_name || '',
           Stato: getStatusLabel(enrollment.status),
           'Data Iscrizione': new Date(enrollment.registration_time).toLocaleDateString('it-IT'),
         };
@@ -290,11 +296,10 @@ export default function EventEnrollmentsPage() {
             <button
               key={option.value}
               onClick={() => setFilterStatus(option.value)}
-              className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                filterStatus === option.value
+              className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${filterStatus === option.value
                   ? 'bg-agesci-blue text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
-              }`}
+                }`}
             >
               {option.label}
             </button>
@@ -325,7 +330,13 @@ export default function EventEnrollmentsPage() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ruolo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Gruppo Scout
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Gruppo Lavoro
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Stato
@@ -351,13 +362,25 @@ export default function EventEnrollmentsPage() {
                     return (
                       <tr key={enrollment.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">{fullName}</div>
+                          <Link href={`/admin/users/${profile?.id}`} className="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">
+                            {fullName}
+                          </Link>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {profile?.email || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {profile?.service_role || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {profile?.scout_group || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {enrollment.group_name ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                              {enrollment.group_name}
+                            </span>
+                          ) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(enrollment.status)}`}>
@@ -423,7 +446,7 @@ export default function EventEnrollmentsPage() {
                   {/* Enrollment Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900">{fullName}</h3>
+                      <Link href={`/admin/users/${profile?.id}`} className="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">{fullName}</Link>
                       <p className="text-sm text-gray-500 truncate">{profile?.email || '-'}</p>
                     </div>
                     <span className={`flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(enrollment.status)}`}>
@@ -437,9 +460,19 @@ export default function EventEnrollmentsPage() {
                   {/* Enrollment Details */}
                   <div className="space-y-2 text-sm pt-3 border-t border-gray-100">
                     <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Ruolo</span>
+                      <span className="text-gray-900">{profile?.service_role || '-'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
                       <span className="text-gray-500">Gruppo Scout</span>
                       <span className="text-gray-900">{profile?.scout_group || '-'}</span>
                     </div>
+                    {enrollment.group_name && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Gruppo Lavoro</span>
+                        <span className="text-gray-900 font-medium">{enrollment.group_name}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500">Data Iscrizione</span>
                       <span className="text-gray-900">

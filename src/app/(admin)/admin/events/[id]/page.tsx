@@ -1,6 +1,8 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import EventForm from '@/components/EventForm';
+import CloneGroupsButton from '@/components/CloneGroupsButton';
+import CheckinQRCodeDialog from '@/components/CheckinQRCodeDialog';
 import type { Event } from '@/types/database';
 
 // Force dynamic rendering
@@ -42,14 +44,27 @@ export default async function EditEventPage({ params }: PageProps) {
           <h1 className="text-3xl font-bold text-gray-900">Modifica Evento</h1>
           <p className="text-gray-500 mt-1">{event.title}</p>
         </div>
-        {event.category === 'workshop' && (
-          <a
-            href={`/admin/events/${event.id}/groups`}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            Gestisci Gruppi
-          </a>
-        )}
+        <div className="flex gap-2 items-center flex-wrap justify-end">
+          {event.checkin_enabled && (
+            <CheckinQRCodeDialog eventId={event.id} eventTitle={event.title} />
+          )}
+          {event.category === 'workshop' && (
+            <div className="flex gap-2">
+              {event.group_creation_mode === 'copy' && (
+                <CloneGroupsButton
+                  targetEventId={event.id}
+                  sourceEventId={event.source_event_id}
+                />
+              )}
+              <a
+                href={`/admin/events/${event.id}/groups`}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                Gestisci Gruppi
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       <EventForm event={event} isEditing />

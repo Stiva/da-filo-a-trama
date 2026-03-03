@@ -2,7 +2,7 @@
 
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord } from '@/types/database';
+import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord, EventGroupCreationMode } from '@/types/database';
 
 const RichTextEditor = lazy(() => import('@/components/RichTextEditor'));
 
@@ -50,31 +50,44 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     checkin_enabled: event?.checkin_enabled || false,
     user_can_upload_assets: event?.user_can_upload_assets || false,
     workshop_groups_count: event?.workshop_groups_count || 0,
+    group_creation_mode: event?.group_creation_mode || 'random' as EventGroupCreationMode,
+    source_event_id: event?.source_event_id || '',
     visibility: event?.visibility || 'public' as EventVisibility,
   });
+
+  const [workshopEvents, setWorkshopEvents] = useState<{ id: string; title: string; start_time: string }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [poisRes, categoriesRes, tagsRes] = await Promise.all([
+        const [poisRes, categoriesRes, tagsRes, eventsRes] = await Promise.all([
           fetch('/api/admin/poi'),
           fetch('/api/categories'),
           fetch('/api/tags'),
+          fetch('/api/admin/events'),
         ]);
 
         if (!poisRes.ok) throw new Error('Failed to fetch POIs');
         if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
         if (!tagsRes.ok) throw new Error('Failed to fetch tags');
+        if (!eventsRes.ok) throw new Error('Failed to fetch events');
 
-        const [poisData, categoriesData, tagsData] = await Promise.all([
+        const [poisData, categoriesData, tagsData, eventsData] = await Promise.all([
           poisRes.json(),
           categoriesRes.json(),
           tagsRes.json(),
+          eventsRes.json(),
         ]);
 
         setPois(poisData.data || []);
         setCategories(categoriesData.data || []);
         setTags(tagsData.data || []);
+
+        // Dagli eventi estratti, teniamo solo i workshop (che non siano questo stesso evento)
+        const wEvents = (eventsData.data || [])
+          .filter((e: any) => e.category === 'workshop' && e.id !== event?.id)
+          .sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+        setWorkshopEvents(wEvents);
       } catch (error) {
         console.error(error);
         setError('Impossibile caricare i dati del form.');
@@ -207,20 +220,88 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           </div>
 
           {formData.category === 'workshop' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Numero di gruppi di lavoro
-              </label>
-              <input
-                type="number"
-                value={formData.workshop_groups_count}
-                onChange={(e) => setFormData(prev => ({ ...prev, workshop_groups_count: parseInt(e.target.value) || 0 }))}
-                min={0}
-                className="input w-full"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                I partecipanti verificati (no admin) verranno assegnati in modo bilanciato ai gruppi creati al momento del check-in.
-              </p>
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <h3 className="font-semibold text-gray-800">Impostazioni Gruppi (Workshop)</h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Modalità Generazione Gruppi *
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="group_creation_mode"
+                      value="random"
+                      checked={formData.group_creation_mode === 'random'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'random', source_event_id: '' }))}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800">Random al check-in (Bilancia il numero di persone)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="group_creation_mode"
+                      value="mix_roles"
+                      checked={formData.group_creation_mode === 'mix_roles'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'mix_roles', source_event_id: '' }))}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800">Mischia i ruoli al check-in (Bilancia i ruoli di servizio nei gruppi)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="group_creation_mode"
+                      value="copy"
+                      checked={formData.group_creation_mode === 'copy'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, group_creation_mode: 'copy' }))}
+                      className="text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800">Copia da evento passato</span>
+                  </label>
+                </div>
+              </div>
+
+              {formData.group_creation_mode === 'copy' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Evento di origine *
+                  </label>
+                  <select
+                    value={formData.source_event_id}
+                    onChange={(e) => setFormData(prev => ({ ...prev, source_event_id: e.target.value }))}
+                    required={formData.group_creation_mode === 'copy'}
+                    className="input w-full"
+                  >
+                    <option value="" disabled>Seleziona un workshop passato</option>
+                    {workshopEvents.map(we => (
+                      <option key={we.id} value={we.id}>
+                        {we.title} ({new Date(we.start_time).toLocaleDateString('it-IT')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {formData.group_creation_mode !== 'copy' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Numero di gruppi di lavoro da creare (0 per non crearli)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.workshop_groups_count}
+                    onChange={(e) => setFormData(prev => ({ ...prev, workshop_groups_count: parseInt(e.target.value) || 0 }))}
+                    min={0}
+                    className="input w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    I partecipanti verranno assegnati in modo bilanciato ai gruppi in base alla modalità scelta.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

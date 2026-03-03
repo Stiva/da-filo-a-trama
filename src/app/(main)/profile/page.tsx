@@ -8,6 +8,8 @@ import {
   type PreferenceTag,
   type AvatarConfig,
   type Profile,
+  type ServiceRole,
+  SERVICE_ROLE_LABELS,
 } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
@@ -38,6 +40,7 @@ export default function ProfilePage() {
     name: '',
     surname: '',
     scout_group: '',
+    service_role: '' as ServiceRole | '',
     preferences: [] as PreferenceTag[],
     avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() } as AvatarConfig,
   });
@@ -63,6 +66,7 @@ export default function ProfilePage() {
         name: result.data.name || '',
         surname: result.data.surname || '',
         scout_group: result.data.scout_group || '',
+        service_role: result.data.service_role || '',
         preferences: result.data.preferences || [],
         avatar_config: migrateAvatarConfig(result.data.avatar_config || {}),
       });
@@ -82,7 +86,10 @@ export default function ProfilePage() {
       const response = await fetch('/api/profiles', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          service_role: formData.service_role || null, // convert empty to null
+        }),
       });
 
       const result = await response.json();
@@ -246,8 +253,13 @@ export default function ProfilePage() {
                 {formData.name || user?.firstName} {formData.surname || user?.lastName}
               </h2>
               <p className="text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
+              {formData.service_role && (
+                <p className="text-sm font-medium text-agesci-blue mt-1 border border-agesci-blue/20 bg-agesci-blue/5 inline-block px-2 py-0.5 rounded-md">
+                  {SERVICE_ROLE_LABELS[formData.service_role as ServiceRole] || formData.service_role}
+                </p>
+              )}
               {formData.scout_group && (
-                <p className="text-sm text-gray-400">Gruppo: {formData.scout_group}</p>
+                <p className="text-sm text-gray-400 mt-0.5">Gruppo: {formData.scout_group}</p>
               )}
             </div>
           </div>
@@ -262,11 +274,10 @@ export default function ProfilePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                  activeTab === tab.id
+                className={`flex-1 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === tab.id
                     ? 'border-agesci-blue text-agesci-blue'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -306,17 +317,37 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gruppo Scout
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.scout_group}
-                    onChange={(e) => setFormData(prev => ({ ...prev, scout_group: e.target.value }))}
-                    className="input w-full"
-                    placeholder="es. Roma 123"
-                  />
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ruolo di Servizio
+                    </label>
+                    <select
+                      value={formData.service_role}
+                      onChange={(e) => setFormData(prev => ({ ...prev, service_role: e.target.value as ServiceRole | '' }))}
+                      className="input w-full"
+                    >
+                      <option value="">Nessun ruolo specificato</option>
+                      {Object.entries(SERVICE_ROLE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gruppo Scout
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.scout_group}
+                      onChange={(e) => setFormData(prev => ({ ...prev, scout_group: e.target.value }))}
+                      className="input w-full"
+                      placeholder="es. Roma 123"
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-gray-100">
@@ -341,11 +372,10 @@ export default function ProfilePage() {
                     <button
                       key={tag}
                       onClick={() => togglePreference(tag)}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                        formData.preferences.includes(tag)
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${formData.preferences.includes(tag)
                           ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       {tag.charAt(0).toUpperCase() + tag.slice(1)}
                     </button>

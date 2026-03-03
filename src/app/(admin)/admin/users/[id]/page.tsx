@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Profile } from '@/types/database';
+import type { Profile, ServiceRole } from '@/types/database';
+import { SERVICE_ROLE_LABELS } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 
 interface ProfileWithEnrollments extends Profile {
@@ -260,6 +261,15 @@ export default function AdminUserDetailPage({
                     placeholder="Es. Roma 123"
                   />
                 </div>
+
+                {user.service_role && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo di Servizio</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 font-medium inline-block">
+                      {SERVICE_ROLE_LABELS[user.service_role as ServiceRole] || user.service_role}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>

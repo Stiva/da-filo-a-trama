@@ -51,7 +51,7 @@ export async function GET(
         const { data: groups, error: groupsError } = await supabase
             .from('event_groups')
             .select(`
-        id, event_id, name, created_at,
+        id, event_id, name, location_poi_id, created_at,
         moderators:event_group_moderators(
           group_id, user_id, created_at,
           profile:profiles(id, name, surname, scout_group)
@@ -59,6 +59,14 @@ export async function GET(
         members:event_group_members(
           group_id, user_id, created_at,
           profile:profiles(id, name, surname, scout_group)
+        ),
+        notes:event_group_notes(
+          id, content, created_at,
+          profile:profiles(id, name, surname)
+        ),
+        attachments:event_group_attachments(
+          id, file_url, file_name, created_at,
+          profile:profiles(id, name, surname)
         )
       `)
             .eq('event_id', eventId);
@@ -85,11 +93,23 @@ export async function GET(
             throw staffError;
         }
 
+        // 4. Fetch all active POIs for location selection
+        const { data: pois, error: poisError } = await supabase
+            .from('poi')
+            .select('id, nome, tipo')
+            .eq('is_active', true)
+            .order('nome');
+
+        if (poisError) {
+            console.warn('Errore nel recupero POI', poisError);
+        }
+
         return NextResponse.json({
             data: {
                 event,
                 groups: sortedGroups,
                 staffUsers: staffUsers || [],
+                pois: pois || [],
             }
         });
     } catch (error) {

@@ -20,7 +20,9 @@ interface EnrollmentWithProfile {
     surname: string | null;
     email: string;
     scout_group: string | null;
+    service_role: string | null;
   } | null;
+  group_name?: string | null;
 }
 
 interface EnrollmentsResponse {
@@ -124,7 +126,7 @@ export async function GET(
     // Fetch event info
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, max_posti, checkin_enabled')
+      .select('id, title, max_posti, checkin_enabled, category')
       .eq('id', eventId)
       .single();
 
@@ -151,7 +153,8 @@ export async function GET(
           name,
           surname,
           email,
-          scout_group
+          scout_group,
+          service_role
         )
       `)
       .eq('event_id', eventId)
@@ -162,16 +165,50 @@ export async function GET(
     }
 
     // Transform profiles from array to single object (Supabase returns array for joins)
-    const transformedEnrollments: EnrollmentWithProfile[] = (enrollments ?? []).map((enrollment) => ({
-      id: enrollment.id,
-      user_id: enrollment.user_id,
-      status: enrollment.status,
-      waitlist_position: enrollment.waitlist_position,
-      registration_time: enrollment.registration_time,
-      profiles: Array.isArray(enrollment.profiles)
+    const transformedEnrollments: EnrollmentWithProfile[] = (enrollments ?? []).map((enrollment) => {
+      const profile = Array.isArray(enrollment.profiles)
         ? enrollment.profiles[0] ?? null
-        : enrollment.profiles,
-    }));
+        : enrollment.profiles;
+
+      return {
+        id: enrollment.id,
+        user_id: enrollment.user_id,
+        status: enrollment.status,
+        waitlist_position: enrollment.waitlist_position,
+        registration_time: enrollment.registration_time,
+        checked_in_at: enrollment.checked_in_at,
+        profiles: profile,
+        group_name: null, // Will be populated below if workshop
+      };
+    });
+
+    if (event.category === 'workshop') {
+      const { data: groupsData } = await supabase
+        .from('event_groups')
+        .select(`
+          id,
+          name,
+          event_group_members(user_id)
+        `)
+        .eq('event_id', eventId);
+
+      if (groupsData) {
+        // Create user_id -> group_name mapping
+        const userGroupMap = new Map<string, string>();
+        groupsData.forEach((g: any) => {
+          if (Array.isArray(g.event_group_members)) {
+            g.event_group_members.forEach((m: any) => {
+              userGroupMap.set(m.user_id, g.name);
+            });
+          }
+        });
+
+        // Apply mapping
+        transformedEnrollments.forEach((e) => {
+          e.group_name = userGroupMap.get(e.user_id) || null;
+        });
+      }
+    }
 
     return NextResponse.json({
       data: {

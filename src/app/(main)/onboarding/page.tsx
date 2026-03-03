@@ -8,6 +8,8 @@ import {
   type PreferenceTag,
   type AvatarConfig,
   DEFAULT_AVATAR_CONFIG,
+  type ServiceRole,
+  SERVICE_ROLE_LABELS,
 } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
@@ -18,6 +20,7 @@ interface FormData {
   name: string;
   surname: string;
   scout_group: string;
+  service_role: ServiceRole | '';
   preferences: PreferenceTag[];
   avatar_config: AvatarConfig;
 }
@@ -35,6 +38,7 @@ export default function OnboardingPage() {
     name: '',
     surname: '',
     scout_group: '',
+    service_role: '',
     preferences: [],
     avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() },
   });
@@ -60,6 +64,11 @@ export default function OnboardingPage() {
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
   const handleNext = () => {
+    if (currentStep === 'info' && (!formData.name || !formData.surname || !formData.service_role)) {
+      setError('Compila tutti i campi obbligatori (Nome, Cognome e Ruolo di Servizio).');
+      return;
+    }
+    setError(null);
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       setCurrentStep(steps[nextIndex].id);
@@ -98,6 +107,7 @@ export default function OnboardingPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...formData,
+            service_role: formData.service_role || null, // Converti in null se vuoto
             onboarding_completed: true,
             avatar_completed: true,
             preferences_set: formData.preferences.length > 0,
@@ -165,11 +175,10 @@ export default function OnboardingPage() {
           {steps.map((step, index) => (
             <div key={step.id} className="flex flex-col items-center flex-1 min-w-[60px]">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
-                  index <= currentStepIndex
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${index <= currentStepIndex
                     ? 'bg-agesci-blue text-white'
                     : 'bg-gray-200 text-gray-500'
-                }`}
+                  }`}
               >
                 {index < currentStepIndex ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,6 +232,23 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-agesci-blue mb-1">Ruolo di Servizio *</label>
+                  <select
+                    value={formData.service_role}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, service_role: e.target.value as ServiceRole | '' }))}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="" disabled>Seleziona il tuo ruolo di servizio</option>
+                    {Object.entries(SERVICE_ROLE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-agesci-blue mb-1">Gruppo Scout</label>
                   <input
                     type="text"
@@ -250,11 +276,10 @@ export default function OnboardingPage() {
                     <button
                       key={tag}
                       onClick={() => togglePreference(tag)}
-                      className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                        formData.preferences.includes(tag)
+                      className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${formData.preferences.includes(tag)
                           ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
                           : 'border-gray-200 hover:border-agesci-blue/30 text-gray-600'
-                      }`}
+                        }`}
                     >
                       {tag.charAt(0).toUpperCase() + tag.slice(1)}
                     </button>
@@ -304,6 +329,9 @@ export default function OnboardingPage() {
                       <strong>Nome:</strong> {formData.name} {formData.surname}
                     </li>
                     <li>
+                      <strong>Ruolo:</strong> {formData.service_role ? SERVICE_ROLE_LABELS[formData.service_role as ServiceRole] : 'Non specificato'}
+                    </li>
+                    <li>
                       <strong>Gruppo:</strong> {formData.scout_group || 'Non specificato'}
                     </li>
                     <li>
@@ -322,11 +350,10 @@ export default function OnboardingPage() {
               <button
                 onClick={handleBack}
                 disabled={currentStep === 'info'}
-                className={`px-6 py-2 rounded-xl font-medium ${
-                  currentStep === 'info'
+                className={`px-6 py-2 rounded-xl font-medium ${currentStep === 'info'
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'btn-outline'
-                }`}
+                  }`}
               >
                 Indietro
               </button>

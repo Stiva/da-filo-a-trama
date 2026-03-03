@@ -58,7 +58,7 @@ export async function GET(
         // 1. Dati Gruppo e Evento
         const { data: groupData, error: groupError } = await supabase
             .from('event_groups')
-            .select('*, event:events(title, checkin_enabled)')
+            .select('*, event:events(title, checkin_enabled, location_name, latitude, longitude), poi:poi(nome, latitude, longitude, maps_url)')
             .eq('id', groupId)
             .eq('event_id', eventId)
             .single();

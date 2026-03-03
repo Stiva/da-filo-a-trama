@@ -11,6 +11,12 @@ interface EventInfo {
     category: string;
 }
 
+interface PoiInfo {
+    id: string;
+    nome: string;
+    tipo: string;
+}
+
 export default function AdminEventGroupsPage() {
     const params = useParams();
     const eventId = params.id as string;
@@ -18,6 +24,7 @@ export default function AdminEventGroupsPage() {
     const [event, setEvent] = useState<EventInfo | null>(null);
     const [groups, setGroups] = useState<EventGroup[]>([]);
     const [staffUsers, setStaffUsers] = useState<Profile[]>([]);
+    const [pois, setPois] = useState<PoiInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +47,7 @@ export default function AdminEventGroupsPage() {
             setEvent(result.data.event);
             setGroups(result.data.groups);
             setStaffUsers(result.data.staffUsers || []);
+            setPois(result.data.pois || []);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore sconosciuto');
         } finally {
@@ -57,6 +65,24 @@ export default function AdminEventGroupsPage() {
             if (!res.ok) {
                 const data = await res.json();
                 throw new Error(data.error || "Errore durante l'assegnazione");
+            }
+            fetchData();
+        } catch (err: unknown) {
+            if (err instanceof Error) alert(err.message);
+            else alert('Errore sconosciuto');
+        }
+    };
+
+    const handleAssignLocation = async (groupId: string, locationId: string) => {
+        try {
+            const res = await fetch(`/api/admin/events/${eventId}/groups/${groupId}/location`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location_poi_id: locationId || null }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Errore durante l'aggiornamento del luogo");
             }
             fetchData();
         } catch (err: unknown) {
@@ -136,6 +162,28 @@ export default function AdminEventGroupsPage() {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Dettagli Gruppo & Location */}
+                                <div className="lg:col-span-2">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1 max-w-sm">
+                                            <label htmlFor={`location-select-${group.id}`} className="block text-sm font-semibold text-gray-600 uppercase mb-2">Luogo (Opzionale)</label>
+                                            <select
+                                                id={`location-select-${group.id}`}
+                                                className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                                                value={group.location_poi_id || ''}
+                                                onChange={(e) => handleAssignLocation(group.id, e.target.value)}
+                                            >
+                                                <option value="">(Nessun luogo specifico: usa luogo evento)</option>
+                                                {pois.map(poi => (
+                                                    <option key={poi.id} value={poi.id}>
+                                                        {poi.nome}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Moderatori */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">Moderatori</h3>
@@ -207,7 +255,74 @@ export default function AdminEventGroupsPage() {
                                 </div>
                             </div>
 
-                            {/* Read only views for notes & attachments will go here, potentially in an expanded details section */}
+                            {/* Mostra Note e Allegati (Sola Lettura) */}
+                            <div className="mt-8 pt-6 border-t border-gray-100 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {/* Note */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3 flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Appunti ({group.notes?.length || 0})
+                                    </h3>
+                                    <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
+                                        {group.notes && group.notes.length > 0 ? (
+                                            group.notes.map(note => (
+                                                <div key={note.id} className="bg-gray-50 p-3 rounded shadow-sm text-sm">
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className="font-medium text-gray-800 bg-white px-2 py-0.5 rounded text-xs">
+                                                            {note.profile?.name} {note.profile?.surname}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400">
+                                                            {new Date(note.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-gray-700 mt-2 whitespace-pre-wrap">{note.content}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">Nessun appunto condiviso.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Allegati */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3 flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                        </svg>
+                                        Allegati ({group.attachments?.length || 0})
+                                    </h3>
+                                    <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                                        {group.attachments && group.attachments.length > 0 ? (
+                                            group.attachments.map(att => (
+                                                <a
+                                                    key={att.id}
+                                                    href={att.file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 bg-gray-50 p-3 rounded hover:bg-gray-100 transition shadow-sm"
+                                                >
+                                                    <div className="bg-blue-100 p-2 rounded text-blue-600">
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                        </svg>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">{att.file_name}</p>
+                                                        <p className="text-xs text-gray-500">
+                                                            {att.profile?.name} {att.profile?.surname} • {new Date(att.created_at).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </a>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">Nessun file allegato.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>

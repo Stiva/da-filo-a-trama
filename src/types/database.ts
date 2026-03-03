@@ -6,6 +6,23 @@
 // ============================================
 // PROFILES
 // ============================================
+export type ServiceRole =
+  | 'Capi Branco'
+  | 'Capi Cerchio'
+  | 'Formatori'
+  | 'Membri pattuglia regionale'
+  | 'IABZ'
+  | 'Comitato regionale/nazionale';
+
+export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
+  'Capi Branco': 'Capi Branco',
+  'Capi Cerchio': 'Capi Cerchio',
+  'Formatori': 'Formatori',
+  'Membri pattuglia regionale': 'Membri pattuglia regionale',
+  'IABZ': 'Incaricati di Branca/Settore (IABZ)',
+  'Comitato regionale/nazionale': 'Comitato Regionale / Nazionale'
+};
+
 export interface Profile {
   id: string;
   clerk_id: string;
@@ -14,6 +31,7 @@ export interface Profile {
   surname: string | null;
   first_name: string | null;
   scout_group: string | null;
+  service_role: ServiceRole | null;
   role: 'user' | 'staff' | 'admin';
   preferences: string[];
   avatar_config: AvatarConfig;
@@ -60,6 +78,7 @@ export interface ProfileUpdate {
   surname?: string;
   first_name?: string;
   scout_group?: string;
+  service_role?: ServiceRole | null;
   preferences?: string[];
   avatar_config?: Partial<AvatarConfig>;
   profile_image_url?: string | null;
@@ -107,6 +126,8 @@ export type EventCategory =
 // Event visibility - public = everyone, registered = only authenticated users
 export type EventVisibility = 'public' | 'registered';
 
+export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy';
+
 export interface Event {
   id: string;
   title: string;
@@ -127,6 +148,8 @@ export interface Event {
   checkin_enabled: boolean;
   user_can_upload_assets: boolean;
   workshop_groups_count: number;
+  group_creation_mode: EventGroupCreationMode;
+  source_event_id: string | null;
   visibility: EventVisibility;
   created_by: string | null;
   created_at: string;
@@ -155,6 +178,7 @@ export interface EventGroup {
   id: string;
   event_id: string;
   name: string;
+  location_poi_id: string | null;
   created_at: string;
   moderators?: EventGroupModerator[];
   members?: EventGroupMember[];

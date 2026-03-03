@@ -122,9 +122,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       is_published: body.is_published ?? false,
       auto_enroll_all: body.auto_enroll_all ?? false,
       checkin_enabled: body.checkin_enabled ?? false,
-      user_can_upload_assets: body.user_can_upload_assets ?? false,
       visibility: body.visibility || 'public',
       workshop_groups_count: body.category === 'workshop' ? (body.workshop_groups_count || 0) : 0,
+      group_creation_mode: body.category === 'workshop' ? (body.group_creation_mode || 'random') : null,
+      source_event_id: (body.category === 'workshop' && body.group_creation_mode === 'copy') ? (body.source_event_id || null) : null,
     };
 
     const { data, error } = await supabase
@@ -137,8 +138,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       throw error;
     }
 
-    // Crea i gruppi di lavoro se previsti
-    if (eventData.workshop_groups_count > 0) {
+    // Crea i gruppi di lavoro se previsti (solo se non è in modalità copia, la copia avverrà separatamente)
+    if (eventData.workshop_groups_count > 0 && eventData.group_creation_mode !== 'copy') {
       const groupsToCreate = Array.from({ length: eventData.workshop_groups_count }).map((_, i) => ({
         event_id: data.id,
         name: `Gruppo ${i + 1}`,

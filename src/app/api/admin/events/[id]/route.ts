@@ -273,6 +273,8 @@ export async function PUT(
       user_can_upload_assets: body.user_can_upload_assets ?? false,
       visibility: body.visibility || 'public',
       workshop_groups_count: body.category === 'workshop' ? (body.workshop_groups_count || 0) : 0,
+      group_creation_mode: body.category === 'workshop' ? (body.group_creation_mode || 'random') : null,
+      source_event_id: (body.category === 'workshop' && body.group_creation_mode === 'copy') ? (body.source_event_id || null) : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -291,7 +293,7 @@ export async function PUT(
     }
 
     // Gestione creazione gruppi se il numero e' aumentato
-    if (eventData.workshop_groups_count > 0) {
+    if (eventData.workshop_groups_count > 0 && eventData.group_creation_mode !== 'copy') {
       const { data: existingGroups } = await supabase
         .from('event_groups')
         .select('id')
@@ -402,6 +404,8 @@ export async function PATCH(
     if (body.workshop_groups_count !== undefined) {
       updateData.workshop_groups_count = body.category === 'workshop' || body.category === undefined && existingEvent.category === 'workshop' ? body.workshop_groups_count : 0;
     }
+    if (body.group_creation_mode !== undefined) updateData.group_creation_mode = body.group_creation_mode;
+    if (body.source_event_id !== undefined) updateData.source_event_id = body.source_event_id;
 
     const { data, error } = await supabase
       .from('events')
@@ -417,8 +421,8 @@ export async function PATCH(
       throw error;
     }
 
-    // Gestione creazione gruppi se il numero e' aumentato
-    if (updateData.workshop_groups_count && (updateData.workshop_groups_count as number) > 0) {
+    // Gestione creazione gruppi se il numero e' aumentato e mod non e' copy
+    if (updateData.workshop_groups_count && (updateData.workshop_groups_count as number) > 0 && updateData.group_creation_mode !== 'copy') {
       const { data: existingGroups } = await supabase
         .from('event_groups')
         .select('id')
