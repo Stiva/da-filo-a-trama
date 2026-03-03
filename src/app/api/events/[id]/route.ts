@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { EventWithEnrollment, ApiResponse } from '@/types/database';
 
 interface RouteParams {
@@ -56,10 +56,8 @@ export async function GET(
     let isGroupModerator = false;
 
     if (userId) {
-      const supabaseAuth = await createServerSupabaseClient();
-
       // Recupera profile_id dell'utente
-      const { data: profile } = await supabaseAuth
+      const { data: profile } = await supabase
         .from('profiles')
         .select('id')
         .eq('clerk_id', userId)
