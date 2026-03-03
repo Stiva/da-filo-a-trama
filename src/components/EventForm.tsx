@@ -2,7 +2,7 @@
 
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord, EventGroupCreationMode } from '@/types/database';
+import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord, EventGroupCreationMode, ServiceRoleRecord } from '@/types/database';
 
 const RichTextEditor = lazy(() => import('@/components/RichTextEditor'));
 
@@ -52,19 +52,22 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     workshop_groups_count: event?.workshop_groups_count || 0,
     group_creation_mode: event?.group_creation_mode || 'random' as EventGroupCreationMode,
     source_event_id: event?.source_event_id || '',
+    group_eligible_roles: event?.group_eligible_roles || [],
     visibility: event?.visibility || 'public' as EventVisibility,
   });
 
   const [workshopEvents, setWorkshopEvents] = useState<{ id: string; title: string; start_time: string }[]>([]);
+  const [serviceRoles, setServiceRoles] = useState<ServiceRoleRecord[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [poisRes, categoriesRes, tagsRes, eventsRes] = await Promise.all([
+        const [poisRes, categoriesRes, tagsRes, eventsRes, rolesRes] = await Promise.all([
           fetch('/api/admin/poi'),
           fetch('/api/categories'),
           fetch('/api/tags'),
           fetch('/api/admin/events'),
+          fetch('/api/service-roles'),
         ]);
 
         if (!poisRes.ok) throw new Error('Failed to fetch POIs');
@@ -72,16 +75,18 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
         if (!tagsRes.ok) throw new Error('Failed to fetch tags');
         if (!eventsRes.ok) throw new Error('Failed to fetch events');
 
-        const [poisData, categoriesData, tagsData, eventsData] = await Promise.all([
+        const [poisData, categoriesData, tagsData, eventsData, rolesData] = await Promise.all([
           poisRes.json(),
           categoriesRes.json(),
           tagsRes.json(),
           eventsRes.json(),
+          rolesRes.json(),
         ]);
 
         setPois(poisData.data || []);
         setCategories(categoriesData.data || []);
         setTags(tagsData.data || []);
+        if (rolesData.data) setServiceRoles(rolesData.data);
 
         const wEvents = (eventsData.data || [])
           .filter((e: any) => {
@@ -307,6 +312,36 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                   </p>
                 </div>
               )}
+
+              {/* Ruoli di servizio idonei */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ruoli di servizio da includere nei gruppi
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Se nessuno è selezionato, tutti i ruoli saranno inclusi.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {serviceRoles.map((role) => (
+                    <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={formData.group_eligible_roles.includes(role.name)}
+                        onChange={(e) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            group_eligible_roles: e.target.checked
+                              ? [...prev.group_eligible_roles, role.name]
+                              : prev.group_eligible_roles.filter(r => r !== role.name),
+                          }));
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-800">{role.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

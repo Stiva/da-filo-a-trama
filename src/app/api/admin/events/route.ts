@@ -123,9 +123,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       auto_enroll_all: body.auto_enroll_all ?? false,
       checkin_enabled: body.checkin_enabled ?? false,
       visibility: body.visibility || 'public',
-      workshop_groups_count: body.category === 'workshop' ? (body.workshop_groups_count || 0) : 0,
-      group_creation_mode: body.category === 'workshop' ? (body.group_creation_mode || 'random') : null,
-      source_event_id: (body.category === 'workshop' && body.group_creation_mode === 'copy') ? (body.source_event_id || null) : null,
+      workshop_groups_count: body.workshop_groups_count || 0,
+      group_creation_mode: body.group_creation_mode || 'random',
+      source_event_id: body.group_creation_mode === 'copy' ? (body.source_event_id || null) : null,
+      group_eligible_roles: body.group_eligible_roles || [],
     };
 
     const { data, error } = await supabase

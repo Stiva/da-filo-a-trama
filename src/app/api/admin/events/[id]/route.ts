@@ -272,9 +272,10 @@ export async function PUT(
       checkin_enabled: body.checkin_enabled ?? false,
       user_can_upload_assets: body.user_can_upload_assets ?? false,
       visibility: body.visibility || 'public',
-      workshop_groups_count: body.category === 'workshop' ? (body.workshop_groups_count || 0) : 0,
-      group_creation_mode: body.category === 'workshop' ? (body.group_creation_mode || 'random') : null,
-      source_event_id: (body.category === 'workshop' && body.group_creation_mode === 'copy') ? (body.source_event_id || null) : null,
+      workshop_groups_count: body.workshop_groups_count || 0,
+      group_creation_mode: body.group_creation_mode || 'random',
+      source_event_id: body.group_creation_mode === 'copy' ? (body.source_event_id || null) : null,
+      group_eligible_roles: body.group_eligible_roles || [],
       updated_at: new Date().toISOString(),
     };
 
@@ -401,11 +402,10 @@ export async function PATCH(
     if (body.auto_enroll_all !== undefined) updateData.auto_enroll_all = body.auto_enroll_all;
     if (body.checkin_enabled !== undefined) updateData.checkin_enabled = body.checkin_enabled;
     if (body.user_can_upload_assets !== undefined) updateData.user_can_upload_assets = body.user_can_upload_assets;
-    if (body.workshop_groups_count !== undefined) {
-      updateData.workshop_groups_count = body.category === 'workshop' || body.category === undefined && existingEvent.category === 'workshop' ? body.workshop_groups_count : 0;
-    }
+    if (body.workshop_groups_count !== undefined) updateData.workshop_groups_count = body.workshop_groups_count;
     if (body.group_creation_mode !== undefined) updateData.group_creation_mode = body.group_creation_mode;
     if (body.source_event_id !== undefined) updateData.source_event_id = body.source_event_id;
+    if (body.group_eligible_roles !== undefined) updateData.group_eligible_roles = body.group_eligible_roles;
 
     const { data, error } = await supabase
       .from('events')

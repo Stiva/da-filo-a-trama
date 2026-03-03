@@ -150,6 +150,7 @@ export interface Event {
   workshop_groups_count: number;
   group_creation_mode: EventGroupCreationMode;
   source_event_id: string | null;
+  group_eligible_roles: string[];
   visibility: EventVisibility;
   created_by: string | null;
   created_at: string;

@@ -39,7 +39,7 @@ export async function POST(
         // 1. Fetch Event
         const { data: event, error: eventError } = await supabase
             .from('events')
-            .select('id, category, group_creation_mode')
+            .select('id, category, group_creation_mode, group_eligible_roles')
             .eq('id', eventId)
             .single();
 
@@ -47,7 +47,7 @@ export async function POST(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        if (event.category !== 'workshop' || event.group_creation_mode !== 'mix_roles') {
+        if (event.group_creation_mode !== 'mix_roles') {
             return NextResponse.json({ error: 'Operazione non valida per questo evento' }, { status: 400 });
         }
 
@@ -88,8 +88,14 @@ export async function POST(
         }
 
         // 5. Filter out admin/staff, only distribute regular 'user' profiles
+        // Also filter by eligible roles if specified
+        const eligibleRoles: string[] = event.group_eligible_roles || [];
         const participants = (enrollments || []).filter(
-            (e: any) => e.profile?.role === 'user'
+            (e: any) => {
+                if (e.profile?.role !== 'user') return false;
+                if (eligibleRoles.length === 0) return true;
+                return e.profile?.service_role && eligibleRoles.includes(e.profile.service_role);
+            }
         );
 
         if (participants.length === 0) {

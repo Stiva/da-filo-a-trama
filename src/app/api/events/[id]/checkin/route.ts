@@ -48,7 +48,7 @@ export async function POST(
     // Recupera evento
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, start_time, checkin_enabled, workshop_groups_count, group_creation_mode')
+      .select('id, start_time, checkin_enabled, workshop_groups_count, group_creation_mode, group_eligible_roles')
       .eq('id', eventId)
       .eq('is_published', true)
       .single();
@@ -123,7 +123,9 @@ export async function POST(
     }
 
     // Assegnazione automatica ai gruppi di lavoro per gli utenti (non admin/staff)
-    if (event.workshop_groups_count > 0 && profile.role === 'user' && event.group_creation_mode === 'random') {
+    const eligibleRoles: string[] = event.group_eligible_roles || [];
+    const userIsEligible = eligibleRoles.length === 0 || (profile.service_role && eligibleRoles.includes(profile.service_role));
+    if (event.workshop_groups_count > 0 && profile.role === 'user' && event.group_creation_mode === 'random' && userIsEligible) {
       const { data: groups, error: groupsError } = await supabase
         .from('event_groups')
         .select('id')
