@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { ApiResponse } from '@/types/database';
 
 const BUCKET_NAME = 'assets';
@@ -21,9 +21,9 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const supabaseAuth = await createServerSupabaseClient();
+        const supabase = createServiceRoleClient();
 
-        const { data: attachments, error } = await supabaseAuth
+        const { data: attachments, error } = await supabase
             .from('event_group_attachments')
             .select('id, file_name, file_url, created_at, user_id, profile:profiles(id, name, surname)')
             .eq('group_id', groupId)
@@ -61,10 +61,10 @@ export async function POST(
             return NextResponse.json({ error: 'Nessun file fornito' }, { status: 400 });
         }
 
-        const supabaseAuth = await createServerSupabaseClient();
+        const supabase = createServiceRoleClient();
 
         // Recupera profile ID
-        const { data: profile } = await supabaseAuth
+        const { data: profile } = await supabase
             .from('profiles')
             .select('id')
             .eq('clerk_id', userId)
@@ -74,14 +74,12 @@ export async function POST(
             return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
         }
 
-        // Carica file su Supabase Storage usando Service Role (per l'upload) o user client
-        // Il bucket 'assets' e' solitamente public, o potremmo usare event-assets
-        // Usiamo il bucket assets che esiste gia' per altri
+        // Carica file su Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${groupId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `groups/${fileName}`;
 
-        const { error: uploadError } = await supabaseAuth.storage
+        const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
             .upload(filePath, file);
 
@@ -90,13 +88,13 @@ export async function POST(
         }
 
         // Ottieni public URL
-        const { data: urlData } = supabaseAuth.storage
+        const { data: urlData } = supabase.storage
             .from(BUCKET_NAME)
             .getPublicUrl(filePath);
 
         const displayName = title || file.name;
 
-        const { data: attachment, error: dbError } = await supabaseAuth
+        const { data: attachment, error: dbError } = await supabase
             .from('event_group_attachments')
             .insert({
                 group_id: groupId,
@@ -137,17 +135,12 @@ export async function DELETE(
             return NextResponse.json({ error: 'asset_id mancante' }, { status: 400 });
         }
 
-        const supabaseAuth = await createServerSupabaseClient();
+        const supabase = createServiceRoleClient();
 
-        // The RLS handles the permissions, only admins or the user who created it can delete
-        const { error } = await supabaseAuth
+        const { error } = await supabase
             .from('event_group_attachments')
             .delete()
             .eq('id', asset_id);
-
-        // Dobbiamo anche cancellare il file da storage? 
-        // Per un MVP possiamo lasciare i file orfani, ma l'ideale sarebbe cancellarli.
-        // Il record db viene cancellato quindi scompare dall'UI.
 
         if (error) throw error;
 

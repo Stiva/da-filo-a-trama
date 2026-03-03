@@ -1,6 +1,6 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { createServiceRoleClient, createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { ApiResponse } from '@/types/database';
 
 interface RouteParams {
@@ -19,9 +19,10 @@ export async function GET(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const supabase = createServiceRoleClient();
+
         // Identifica il profile.id dell'utente
-        const supabaseAuth = await createServerSupabaseClient();
-        const { data: profile } = await supabaseAuth
+        const { data: profile } = await supabase
             .from('profiles')
             .select('id, role')
             .eq('clerk_id', userId)
@@ -30,8 +31,6 @@ export async function GET(
         if (!profile) {
             return NextResponse.json({ error: 'Utente non trovato nel database' }, { status: 404 });
         }
-
-        const supabase = createServiceRoleClient();
 
         // Controlla l'accesso dell'utente a questo gruppo
         let hasAccess = false;
