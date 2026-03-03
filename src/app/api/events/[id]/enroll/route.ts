@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { EnrollmentResult, ApiResponse } from '@/types/database';
 
 interface RouteParams {
@@ -9,7 +9,7 @@ interface RouteParams {
 
 /**
  * POST /api/events/[id]/enroll
- * Iscrizione a un evento tramite RPC atomica
+ * Iscrizione a un evento (bypass RPC, usa service role)
  */
 export async function POST(
   request: Request,
@@ -26,62 +26,128 @@ export async function POST(
       );
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServiceRoleClient();
 
-    // Chiama la funzione RPC per iscrizione atomica
-    // La funzione gestisce concorrenza e waitlist
-    const { data, error } = await supabase.rpc('enroll_user_to_event', {
-      p_event_id: eventId,
-    });
+    // 1. Recupera profilo utente
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('clerk_id', userId)
+      .single();
 
-    if (error) {
-      console.error('RPC error:', error);
-      throw error;
-    }
-
-    // L'RPC ritorna un JSONB con success/error/message
-    const rpcResult = data as {
-      success: boolean;
-      error?: string;
-      message?: string;
-      enrollment_id?: string;
-      status?: 'confirmed' | 'waitlist';
-      waitlist_position?: number;
-    };
-
-    // Gestisci errori specifici dall'RPC
-    if (!rpcResult.success) {
-      const errorMap: Record<string, { message: string; status: number }> = {
-        'UNAUTHORIZED': { message: 'Autenticazione richiesta', status: 401 },
-        'PROFILE_NOT_FOUND': { message: 'Completa prima il tuo profilo per iscriverti agli eventi', status: 400 },
-        'EVENT_NOT_FOUND': { message: 'Evento non trovato', status: 404 },
-        'EVENT_NOT_PUBLISHED': { message: 'Evento non ancora disponibile per le iscrizioni', status: 400 },
-        'ALREADY_ENROLLED': { message: 'Sei gia iscritto a questo evento', status: 409 },
-        'EVENT_STARTED': { message: 'L\'evento e gia iniziato', status: 400 },
-      };
-
-      const errorInfo = errorMap[rpcResult.error || ''] || {
-        message: rpcResult.message || 'Errore durante l\'iscrizione',
-        status: 400
-      };
-
+    if (!profile) {
       return NextResponse.json(
-        { error: errorInfo.message },
-        { status: errorInfo.status }
+        { error: 'Completa prima il tuo profilo per iscriverti agli eventi' },
+        { status: 400 }
       );
     }
 
-    // Costruisci il risultato di successo
+    // 2. Recupera dati evento
+    const { data: event } = await supabase
+      .from('events')
+      .select('max_posti, start_time, is_published')
+      .eq('id', eventId)
+      .single();
+
+    if (!event) {
+      return NextResponse.json(
+        { error: 'Evento non trovato' },
+        { status: 404 }
+      );
+    }
+
+    if (!event.is_published) {
+      return NextResponse.json(
+        { error: 'Evento non ancora disponibile per le iscrizioni' },
+        { status: 400 }
+      );
+    }
+
+    if (new Date(event.start_time) <= new Date()) {
+      return NextResponse.json(
+        { error: 'L\'evento è già iniziato' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Verifica se già iscritto
+    const { data: existing } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('user_id', profile.id)
+      .eq('event_id', eventId)
+      .neq('status', 'cancelled')
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Sei già iscritto a questo evento' },
+        { status: 409 }
+      );
+    }
+
+    // 4. Conta iscrizioni confermate (solo utenti normali)
+    const { count: currentCount } = await supabase
+      .from('enrollments')
+      .select('*, profiles!inner(role)', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('status', 'confirmed')
+      .eq('profiles.role', 'user');
+
+    const confirmedCount = currentCount || 0;
+
+    // 5. Determina status
+    let enrollStatus: 'confirmed' | 'waitlist';
+    let waitlistPosition: number | null = null;
+
+    if (profile.role === 'admin' || profile.role === 'staff') {
+      // Admin e staff confermati sempre, non occupano posti
+      enrollStatus = 'confirmed';
+    } else if (confirmedCount < event.max_posti) {
+      enrollStatus = 'confirmed';
+    } else {
+      enrollStatus = 'waitlist';
+      // Calcola posizione in waitlist
+      const { count: wlCount } = await supabase
+        .from('enrollments')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .eq('status', 'waitlist');
+      waitlistPosition = (wlCount || 0) + 1;
+    }
+
+    // 6. Inserisci iscrizione
+    const { data: enrollment, error: insertError } = await supabase
+      .from('enrollments')
+      .insert({
+        user_id: profile.id,
+        event_id: eventId,
+        status: enrollStatus,
+        waitlist_position: waitlistPosition,
+        registration_time: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return NextResponse.json(
+          { error: 'Sei già iscritto a questo evento' },
+          { status: 409 }
+        );
+      }
+      throw insertError;
+    }
+
     const result: EnrollmentResult = {
       success: true,
-      status: rpcResult.status || 'confirmed',
-      waitlist_position: rpcResult.waitlist_position,
+      status: enrollStatus,
+      waitlist_position: waitlistPosition ?? undefined,
     };
 
-    // Messaggio in base allo status
     let message = 'Iscrizione confermata!';
-    if (result.status === 'waitlist') {
-      message = `Sei in lista d'attesa (posizione ${result.waitlist_position})`;
+    if (enrollStatus === 'waitlist') {
+      message = `Sei in lista d'attesa (posizione ${waitlistPosition})`;
     }
 
     return NextResponse.json({
