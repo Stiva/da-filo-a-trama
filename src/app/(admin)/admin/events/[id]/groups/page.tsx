@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import RichTextContent from '@/components/RichTextContent';
 import type { EventGroup, EventGroupModerator, EventGroupMember, Profile } from '@/types/database';
 
 interface EventInfo {
@@ -277,7 +278,7 @@ export default function AdminEventGroupsPage() {
                                                             {new Date(note.created_at).toLocaleDateString()}
                                                         </span>
                                                     </div>
-                                                    <p className="text-gray-700 mt-2 whitespace-pre-wrap">{note.content}</p>
+                                                    <RichTextContent content={note.content} className="text-gray-700 mt-2" />
                                                 </div>
                                             ))
                                         ) : (
