@@ -42,6 +42,30 @@ export default function Autocomplete({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Keep a stable reference to onChange to avoid infinite loops if it changes
+    const onChangeRef = useRef(onChange);
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
+
+    // Validate input when dropdown closes
+    useEffect(() => {
+        if (!isOpen) {
+            if (!inputValue) {
+                onChangeRef.current('');
+                return;
+            }
+            const exactMatch = options.find(opt => opt.name.toLowerCase() === inputValue.toLowerCase());
+            if (exactMatch) {
+                setInputValue(exactMatch.name);
+                onChangeRef.current(exactMatch.name);
+            } else {
+                setInputValue('');
+                onChangeRef.current('');
+            }
+        }
+    }, [isOpen, inputValue, options]);
+
     const filteredOptions = options.filter(opt =>
         opt.name.toLowerCase().includes(inputValue.toLowerCase())
     );
@@ -53,7 +77,6 @@ export default function Autocomplete({
                 value={inputValue}
                 onChange={(e) => {
                     setInputValue(e.target.value);
-                    onChange(e.target.value); // keep it synced
                     setIsOpen(true);
                 }}
                 onFocus={() => setIsOpen(true)}
