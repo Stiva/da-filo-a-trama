@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { Profile, ServiceRole } from '@/types/database';
 import { SERVICE_ROLE_LABELS } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
+import Autocomplete from '@/components/Autocomplete';
 
 interface ProfileWithEnrollments extends Profile {
   enrollments_count?: number;
@@ -263,20 +264,14 @@ export default function AdminUserDetailPage({
                   </div>
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Scout</label>
-                  <select
+                  <Autocomplete
                     value={formData.scout_group}
-                    onChange={(e) => setFormData({ ...formData, scout_group: e.target.value })}
-                    className="input w-full"
-                  >
-                    <option value="">Nessun gruppo / Preferisco non specificare</option>
-                    {scoutGroups.map((g) => (
-                      <option key={g.id} value={g.name}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, scout_group: val })}
+                    options={scoutGroups}
+                    placeholder="Es. Roma 123 o lascia vuoto"
+                  />
                 </div>
 
                 {user.service_role && (

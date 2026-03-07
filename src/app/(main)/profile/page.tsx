@@ -13,6 +13,7 @@ import {
 } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
+import Autocomplete from '@/components/Autocomplete';
 
 const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
 
@@ -348,22 +349,16 @@ export default function ProfilePage() {
                     </select>
                   </div>
 
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Gruppo Scout
                     </label>
-                    <select
+                    <Autocomplete
                       value={formData.scout_group}
-                      onChange={(e) => setFormData(prev => ({ ...prev, scout_group: e.target.value }))}
-                      className="input w-full"
-                    >
-                      <option value="">Nessun gruppo / Preferisco non specificare</option>
-                      {scoutGroups.map((g) => (
-                        <option key={g.id} value={g.name}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFormData(prev => ({ ...prev, scout_group: val }))}
+                      options={scoutGroups}
+                      placeholder="Es. Roma 123 o lascia vuoto"
+                    />
                   </div>
                 </div>
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/scout-groups
@@ -7,7 +7,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
  */
 export async function GET() {
     try {
-        const supabase = await createServerSupabaseClient();
+        const supabase = createServiceRoleClient();
         const { data, error } = await supabase
             .from('scout_groups')
             .select('id, name')

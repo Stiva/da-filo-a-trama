@@ -1,0 +1,12 @@
+
+> da-filo-a-trama-app@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use by process 66635, using available port 3001 instead.
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.1.43:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1275ms
