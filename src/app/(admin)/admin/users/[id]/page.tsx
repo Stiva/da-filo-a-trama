@@ -40,10 +40,22 @@ export default function AdminUserDetailPage({
     avatar_completed: false,
     preferences_set: false,
   });
+  const [scoutGroups, setScoutGroups] = useState<{ id: string, name: string }[]>([]);
 
   useEffect(() => {
     fetchUser();
+    fetchScoutGroups();
   }, [id]);
+
+  const fetchScoutGroups = async () => {
+    try {
+      const res = await fetch('/api/scout-groups');
+      const json = await res.json();
+      if (res.ok && json.data) setScoutGroups(json.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchUser = async () => {
     setIsLoading(true);
@@ -253,13 +265,18 @@ export default function AdminUserDetailPage({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Scout</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.scout_group}
                     onChange={(e) => setFormData({ ...formData, scout_group: e.target.value })}
                     className="input w-full"
-                    placeholder="Es. Roma 123"
-                  />
+                  >
+                    <option value="">Nessun gruppo / Preferisco non specificare</option>
+                    {scoutGroups.map((g) => (
+                      <option key={g.id} value={g.name}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {user.service_role && (

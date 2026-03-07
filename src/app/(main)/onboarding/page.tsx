@@ -33,6 +33,7 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceRoles, setServiceRoles] = useState<ServiceRoleRecord[]>([]);
+  const [scoutGroups, setScoutGroups] = useState<{ id: string, name: string }[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -54,11 +55,16 @@ export default function OnboardingPage() {
     }
   }, [isLoaded, user]);
 
-  // Carica ruoli di servizio dinamicamente
+  // Carica ruoli di servizio e gruppi dinamicamente
   useEffect(() => {
     fetch('/api/service-roles')
       .then(res => res.json())
       .then(result => { if (result.data) setServiceRoles(result.data); })
+      .catch(console.error);
+
+    fetch('/api/scout-groups')
+      .then(res => res.json())
+      .then(result => { if (result.data) setScoutGroups(result.data); })
       .catch(console.error);
   }, []);
 
@@ -258,13 +264,18 @@ export default function OnboardingPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-agesci-blue mb-1">Gruppo Scout</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.scout_group}
                     onChange={(e) => setFormData((prev) => ({ ...prev, scout_group: e.target.value }))}
                     className="input w-full"
-                    placeholder="es. Roma 123"
-                  />
+                  >
+                    <option value="">Nessun gruppo / Preferisco non specificare</option>
+                    {scoutGroups.map((g) => (
+                      <option key={g.id} value={g.name}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}

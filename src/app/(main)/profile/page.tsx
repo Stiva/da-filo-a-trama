@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'info' | 'preferences' | 'avatar'>('info');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [scoutGroups, setScoutGroups] = useState<{ id: string, name: string }[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -47,7 +48,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchProfile();
+    fetchScoutGroups();
   }, []);
+
+  const fetchScoutGroups = async () => {
+    try {
+      const res = await fetch('/api/scout-groups');
+      const json = await res.json();
+      if (res.ok && json.data) setScoutGroups(json.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchProfile = async () => {
     setIsLoading(true);
@@ -275,8 +287,8 @@ export default function ProfilePage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === tab.id
-                    ? 'border-agesci-blue text-agesci-blue'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-agesci-blue text-agesci-blue'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
               >
                 {tab.label}
@@ -340,13 +352,18 @@ export default function ProfilePage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Gruppo Scout
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.scout_group}
                       onChange={(e) => setFormData(prev => ({ ...prev, scout_group: e.target.value }))}
                       className="input w-full"
-                      placeholder="es. Roma 123"
-                    />
+                    >
+                      <option value="">Nessun gruppo / Preferisco non specificare</option>
+                      {scoutGroups.map((g) => (
+                        <option key={g.id} value={g.name}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -373,8 +390,8 @@ export default function ProfilePage() {
                       key={tag}
                       onClick={() => togglePreference(tag)}
                       className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${formData.preferences.includes(tag)
-                          ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
-                          : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-agesci-blue bg-agesci-blue/10 text-agesci-blue'
+                        : 'border-gray-200 hover:border-gray-300'
                         }`}
                     >
                       {tag.charAt(0).toUpperCase() + tag.slice(1)}
