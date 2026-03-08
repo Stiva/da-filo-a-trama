@@ -27,11 +27,6 @@ export const getChatUserIdFromClerkId = (clerkId: string): string => {
   return `clerk_${clerkId}`;
 };
 
-export const getSupportChannelIdFromClerkId = (clerkId: string): string => {
-  const safeId = clerkId.replace(/[^a-zA-Z0-9_-]/g, '_');
-  return `support_${safeId}`;
-};
-
 export const getRoleFromPublicMetadata = (metadata: unknown): AppRole => {
   const role = (metadata as { role?: string } | null)?.role;
   if (role === 'admin' || role === 'staff') {
@@ -56,47 +51,61 @@ export const buildChatDisplayName = (user: User): string => {
   return `Utente ${user.id.slice(0, 8)}`;
 };
 
-export const ensureSupportChannel = async (params: {
+export const getActiveOrCreateSupportChannelId = async (params: {
   streamClient: StreamChat;
-  channelId: string;
   customerUserId: string;
   customerDisplayName: string;
-  adminUserIds?: string[];
-}): Promise<void> => {
-  const { streamClient, channelId, customerUserId, customerDisplayName } = params;
+}): Promise<string> => {
+  const { streamClient, customerUserId, customerDisplayName } = params;
 
   const existingChannels = await streamClient.queryChannels(
     {
       type: 'messaging',
-      id: { $eq: channelId },
-    },
+      support_chat: true,
+      created_by_id: customerUserId,
+    } as any,
     { created_at: -1 },
     { limit: 1, watch: false, state: true }
   );
 
-  if (existingChannels.length === 0) {
-    const channelData = {
-      name: `Supporto · ${customerDisplayName}`,
-      members: [customerUserId],
-      support_chat: true,
-      support_status: 'pending',
-      created_by_id: customerUserId,
-    } as Record<string, unknown>;
+  let activeChannelId: string | null = null;
+  let activeChannel = null;
 
-    const channel = streamClient.channel('messaging', channelId, channelData);
-    await channel.create();
-    return;
+  if (existingChannels.length > 0) {
+    activeChannel = existingChannels[0];
+    const lastActivity = (activeChannel.state?.last_message_at || activeChannel.data?.created_at) as string | Date | null | undefined;
+    const isRecent = lastActivity && (new Date().getTime() - new Date(lastActivity).getTime() < 30 * 60 * 1000);
+
+    if (isRecent && activeChannel.id) {
+      activeChannelId = activeChannel.id;
+    }
   }
 
-  const channel = existingChannels[0];
-  const channelData = (channel.data || {}) as Record<string, unknown>;
-  const currentStatus = (channelData.support_status as string | undefined) || '';
-  if (!currentStatus) {
-    await channel.updatePartial({
-      set: {
-        support_chat: true,
-        support_status: 'pending',
-      } as Record<string, unknown>,
-    });
+  if (activeChannelId && activeChannel) {
+    const channelData = (activeChannel.data || {}) as Record<string, unknown>;
+    const currentStatus = (channelData.support_status as string | undefined) || '';
+    if (!currentStatus) {
+      await activeChannel.updatePartial({
+        set: {
+          support_chat: true,
+          support_status: 'pending',
+        } as Record<string, unknown>,
+      });
+    }
+    return activeChannelId;
   }
+
+  const newChannelId = `support_${customerUserId.replace(/[^a-zA-Z0-9_-]/g, '_')}_${Date.now()}`;
+  const channelData = {
+    name: `Supporto · ${customerDisplayName}`,
+    members: [customerUserId],
+    support_chat: true,
+    support_status: 'pending',
+    created_by_id: customerUserId,
+  } as Record<string, unknown>;
+
+  const channel = streamClient.channel('messaging', newChannelId, channelData);
+  await channel.create();
+
+  return newChannelId;
 };

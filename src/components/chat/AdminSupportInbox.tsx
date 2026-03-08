@@ -18,6 +18,8 @@ const AdminSupportInboxInner = () => {
   const [channels, setChannels] = useState<StreamChannel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<StreamChannel | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showPastChats, setShowPastChats] = useState(false);
 
   const canUse = useMemo(() => {
     if (loading || error || !client || !session) return false;
@@ -29,11 +31,14 @@ const AdminSupportInboxInner = () => {
 
     setIsRefreshing(true);
     try {
-      const filters = {
+      const filters: Record<string, unknown> = {
         type: 'messaging',
         support_chat: true,
-        support_status: { $in: ['pending', 'active'] },
-      } as Record<string, unknown>;
+      };
+
+      if (searchQuery.trim()) {
+        filters.name = { $autocomplete: searchQuery.trim() };
+      }
 
       const result = await client.queryChannels(
         filters,
@@ -50,8 +55,24 @@ const AdminSupportInboxInner = () => {
   };
 
   useEffect(() => {
-    void refreshChannels();
-  }, [client, session?.isAdmin]);
+    const timeoutId = setTimeout(() => {
+      void refreshChannels();
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [client, session?.isAdmin, searchQuery]);
+
+  const isChannelActive = (channel: StreamChannel) => {
+    const lastActivity = (channel.state?.last_message_at || channel.data?.created_at) as string | Date | undefined;
+    if (!lastActivity) return false;
+    return (Date.now() - new Date(lastActivity).getTime()) < 30 * 60 * 1000;
+  };
+
+  const filteredChannels = useMemo(() => {
+    return channels.filter(channel => {
+      if (!showPastChats && !isChannelActive(channel)) return false;
+      return true;
+    });
+  }, [channels, showPastChats]);
 
   useEffect(() => {
     if (!selectedChannel?.id) return;
@@ -87,24 +108,44 @@ const AdminSupportInboxInner = () => {
   return (
     <div className="grid lg:grid-cols-[340px_1fr] gap-4 min-h-[70vh]">
       <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-agesci-blue">Richieste Supporto</h2>
-          <button
-            type="button"
-            onClick={() => void refreshChannels()}
-            className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200"
-          >
-            {isRefreshing ? 'Aggiorno...' : 'Aggiorna'}
-          </button>
+        <div className="px-4 py-3 border-b border-gray-200 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-agesci-blue">Richieste Supporto</h2>
+            <button
+              type="button"
+              onClick={() => void refreshChannels()}
+              className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200"
+            >
+              {isRefreshing ? 'Aggiorno...' : 'Aggiorna'}
+            </button>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Cerca utente per nome..."
+            className="input w-full text-sm py-1.5"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showPastChats}
+              onChange={(e) => setShowPastChats(e.target.checked)}
+              className="rounded text-agesci-blue focus:ring-agesci-blue"
+            />
+            Mostra chat passate ({'>'}30 min)
+          </label>
         </div>
 
-        {channels.length === 0 ? (
-          <p className="p-4 text-sm text-gray-500">Nessuna richiesta in coda.</p>
+        {filteredChannels.length === 0 ? (
+          <p className="p-4 text-sm text-gray-500">Nessuna richiesta trovata.</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {channels.map((channel) => {
+          <ul className="divide-y divide-gray-100 overflow-y-auto max-h-[60vh] custom-scrollbar">
+            {filteredChannels.map((channel) => {
               const data = (channel.data || {}) as Record<string, unknown>;
-              const status = (data.support_status as string) || 'pending';
+              const isActive = isChannelActive(channel);
               const channelName =
                 (data.name as string | undefined) || channel.id || 'Support request';
               return (
@@ -112,25 +153,27 @@ const AdminSupportInboxInner = () => {
                   <button
                     type="button"
                     onClick={() => void handleOpenChannel(channel)}
-                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 ${
-                      selectedChannel?.id === channel.id ? 'bg-agesci-blue/5' : ''
-                    }`}
+                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedChannel?.id === channel.id ? 'bg-agesci-blue/5 border-l-2 border-agesci-blue' : 'border-l-2 border-transparent'
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-sm text-gray-900 line-clamp-1">
-                        {channelName}
+                        {channelName.replace('Supporto · ', '')}
                       </p>
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-700'
-                        }`}
+                        className={`text-xs px-2 py-0.5 rounded-full ${isActive
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-500'
+                          }`}
                       >
-                        {status === 'pending' ? 'Pending' : 'Active'}
+                        {isActive ? 'Attiva' : 'Scaduta'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">ID: {channel.id}</p>
+                    {channel.id && (
+                      <p className="text-xs text-gray-400 mt-1 uppercase">
+                        ID: {channel.id.split('_').slice(1, 3).join('_')}
+                      </p>
+                    )}
                   </button>
                 </li>
               );

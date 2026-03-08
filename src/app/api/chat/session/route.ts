@@ -6,12 +6,11 @@ import { generateAvatarDataUri } from '@/lib/avatar';
 import {
   buildChatDisplayName,
   createStreamServerClient,
-  ensureSupportChannel,
+  getActiveOrCreateSupportChannelId,
   getChatUserIdFromClerkId,
   mapAppRoleToStreamRole,
   getRoleFromPublicMetadata,
   getStreamApiKey,
-  getSupportChannelIdFromClerkId,
 } from '@/lib/chat/streamServer';
 
 interface ChatSessionPayload {
@@ -70,11 +69,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
     let supportChannelId: string | null = null;
 
     if (role === 'user') {
-      supportChannelId = getSupportChannelIdFromClerkId(userId);
-
-      await ensureSupportChannel({
+      supportChannelId = await getActiveOrCreateSupportChannelId({
         streamClient,
-        channelId: supportChannelId,
         customerUserId: streamUserId,
         customerDisplayName: streamDisplayName,
       });
