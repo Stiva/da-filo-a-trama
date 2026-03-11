@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { currentUser } from '@clerk/nextjs/server';
 
 export async function POST(request: Request) {
@@ -14,8 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Dati subscription non validi' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
-    const { data: profile } = await supabase.from('profiles').select('id').eq('clerk_id', user.id).single();
+    // Usiamo il service client per estrarre l'ID basandosi sul clerk_id
+    const supabaseAdmin = createServiceRoleClient();
+    const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('clerk_id', user.id).single();
 
     if (!profile) {
       return NextResponse.json({ error: 'Profilo utente non trovato' }, { status: 404 });
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     const userAgent = request.headers.get('user-agent') || 'Browser Sconosciuto';
 
     // Salva o aggiorna la subscription 
-    const { error } = await supabase.from('push_subscriptions').upsert({
+    const { error } = await supabaseAdmin.from('push_subscriptions').upsert({
       user_id: profile.id,
       endpoint: subscription.endpoint,
       p256dh: subscription.keys.p256dh,

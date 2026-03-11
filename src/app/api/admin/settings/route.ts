@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { currentUser } from '@clerk/nextjs/server';
 
 export async function GET(request: Request) {
@@ -43,10 +43,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Key and value are required' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabaseAdmin = createServiceRoleClient();
     
     // Controlliamo il ruolo admin del Clerk ID
-    const { data: profileData } = await supabase
+    const { data: profileData } = await supabaseAdmin
       .from('profiles')
       .select('id, role')
       .eq('clerk_id', user.id)
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('app_settings')
       .upsert({
         key,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { currentUser } from '@clerk/nextjs/server';
+//...
 import webpush from 'web-push';
 
 // Configura web-push con le chiavi VAPID
@@ -30,10 +31,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title and body are required' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    // Usa createServiceRoleClient per bypassare RLS nelle route di backend
+    const supabaseAdmin = createServiceRoleClient();
     
     // Controlliamo il ruolo admin del sender
-    const { data: profileData } = await supabase
+    const { data: profileData } = await supabaseAdmin
       .from('profiles')
       .select('id, role')
       .eq('clerk_id', user.id)
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     // Selections per i push
-    let query = supabase.from('push_subscriptions').select('*');
+    let query = supabaseAdmin.from('push_subscriptions').select('*');
     if (targetUserId) {
       query = query.eq('user_id', targetUserId);
     }
@@ -94,7 +96,7 @@ export async function POST(request: Request) {
         failureCount++;
         // Se c'è un errore 410 (Gone) o 404 (Not Found), la subscription non è più valida
         if (result.reason?.statusCode === 410 || result.reason?.statusCode === 404) {
-          await supabase.from('push_subscriptions').delete().eq('id', subscriptions[i].id);
+          await supabaseAdmin.from('push_subscriptions').delete().eq('id', subscriptions[i].id);
         }
       }
     }
