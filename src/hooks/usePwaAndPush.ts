@@ -18,6 +18,7 @@ export function usePwaAndPush() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isServiceWorkerReady, setIsServiceWorkerReady] = useState(false);
   const [pushStatus, setPushStatus] = useState<NotificationPermission>('default');
+  const [isIosInstallable, setIsIosInstallable] = useState(false);
 
   useEffect(() => {
     // 1. Controlliamo se e' gia' installata testando il display-mode
@@ -28,6 +29,13 @@ export function usePwaAndPush() {
       setIsInstalled(isStandalone || isIosStandalone);
     };
     checkIfInstalled();
+
+    // 1b. Check if device is iOS and not already installed
+    const isIos = () => {
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod/.test(userAgent);
+    };
+    setIsIosInstallable(isIos() && !isInstalled);
 
     // 2. Registrazione Service Worker
     if ('serviceWorker' in navigator) {
@@ -124,6 +132,7 @@ export function usePwaAndPush() {
 
   return {
     isInstallable,
+    isIosInstallable,
     isInstalled,
     pushStatus,
     promptInstall,

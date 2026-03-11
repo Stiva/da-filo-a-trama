@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePwaAndPush } from '@/hooks/usePwaAndPush';
 
 export default function InstallBanner() {
-  const { isInstallable, isInstalled, promptInstall, subscribeToPush } = usePwaAndPush();
+  const { isInstallable, isIosInstallable, isInstalled, promptInstall, subscribeToPush } = usePwaAndPush();
   const [bannerHtml, setBannerHtml] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -39,12 +39,12 @@ export default function InstallBanner() {
       return;
     }
 
-    if (isInstallable && !isInstalled && bannerHtml) {
+    if ((isInstallable || isIosInstallable) && !isInstalled && bannerHtml) {
       setIsVisible(true);
     } else {
       setIsVisible(false);
     }
-  }, [isInstallable, isInstalled, bannerHtml]);
+  }, [isInstallable, isIosInstallable, isInstalled, bannerHtml]);
 
   if (!isVisible || dismissed || !bannerHtml) return null;
 
@@ -63,20 +63,26 @@ export default function InstallBanner() {
           dangerouslySetInnerHTML={{ __html: bannerHtml }}
         />
         
-        <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
           <button 
             onClick={handleDismiss}
-            className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
             Più tardi
           </button>
           
-          <button 
-            onClick={promptInstall}
-            className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-white bg-agesci-blue hover:bg-agesci-blue/90 rounded-lg shadow-sm transition-colors"
-          >
-            Installa App
-          </button>
+          {isIosInstallable && !isInstallable ? (
+            <div className="w-full sm:w-auto text-xs text-blue-800 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 mt-2 sm:mt-0">
+              Tocca <strong>Condividi</strong> in basso<br className="hidden sm:block" /> e poi <strong>Aggiungi alla schermata Home</strong>
+            </div>
+          ) : (
+            <button 
+              onClick={promptInstall}
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-agesci-blue hover:bg-agesci-blue/90 rounded-lg shadow-sm transition-colors"
+            >
+              Installa App
+            </button>
+          )}
         </div>
       </div>
     </div>
