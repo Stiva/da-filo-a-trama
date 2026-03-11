@@ -469,6 +469,32 @@ export interface PreferenceTagRecord {
 }
 
 // ============================================
+// APP SETTINGS
+// ============================================
+export interface AppSettings {
+  key: string;
+  value: any;
+  description: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// PUSH SUBSCRIPTIONS
+// ============================================
+export interface PushSubscriptionRecord {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // API Response types
 // ============================================
 export interface ApiResponse<T> {

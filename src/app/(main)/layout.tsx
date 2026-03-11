@@ -1,6 +1,7 @@
 import Navbar from '@/components/Navbar';
 import Image from 'next/image';
 import UserSupportChatWidget from '@/components/chat/UserSupportChatWidget';
+import InstallBanner from '@/components/pwa/InstallBanner';
 
 export default function MainLayout({
   children,
@@ -39,6 +40,7 @@ export default function MainLayout({
       </footer>
 
       <UserSupportChatWidget />
+      <InstallBanner />
     </div>
   );
 }
