@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
 CREATE TRIGGER update_app_settings_modtime
     BEFORE UPDATE ON public.app_settings
     FOR EACH ROW
-    EXECUTE FUNCTION update_modified_column();
+    EXECUTE FUNCTION trigger_set_timestamp();
 
 -- RLS
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
@@ -28,7 +28,7 @@ CREATE POLICY "Public profiles can read app settings" ON public.app_settings
 
 -- Solo gli admin possono modificare i settings
 CREATE POLICY "Admins can insert app settings" ON public.app_settings
-    FOR FULL USING (
+    FOR ALL USING (
         EXISTS (
             SELECT 1 FROM public.profiles
             WHERE id = auth.uid() AND role = 'admin'
@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON public.push_subscri
 CREATE TRIGGER update_push_subscriptions_modtime
     BEFORE UPDATE ON public.push_subscriptions
     FOR EACH ROW
-    EXECUTE FUNCTION update_modified_column();
+    EXECUTE FUNCTION trigger_set_timestamp();
 
 -- RLS
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
