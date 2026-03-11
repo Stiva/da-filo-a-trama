@@ -495,6 +495,23 @@ export interface PushSubscriptionRecord {
 }
 
 // ============================================
+// PUSH NOTIFICATIONS HISTORY
+// ============================================
+export interface PushNotificationHistoryRecord {
+  id: string;
+  title: string;
+  body_html: string;
+  body_text: string;
+  target_type: 'all' | 'staff' | 'event';
+  target_event_id: string | null;
+  action_url: string | null;
+  success_count: number;
+  failure_count: number;
+  sent_by: string | null;
+  created_at: string;
+}
+
+// ============================================
 // API Response types
 // ============================================
 export interface ApiResponse<T> {

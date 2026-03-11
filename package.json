@@ -24,6 +24,7 @@
     "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
     "lexical": "^0.40.0",
+    "lucide-react": "^0.577.0",
     "next": "15.5.12",
     "papaparse": "^5.5.3",
     "react": "^19.0.0",

@@ -40,19 +40,20 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const urlToOpen = event.notification.data?.url || '/';
+  const targetUrl = new URL(urlToOpen, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Se c'è già una finestra aperta, mettile a fuoco ed eventualmente naviga
+      // Se c'è già una finestra aperta con questa URL, focalizzala
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url === urlToOpen && 'focus' in client) {
+        if (client.url === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
       // Altrimenti apri una nuova finestra
       if (self.clients.openWindow) {
-        return self.clients.openWindow(urlToOpen);
+        return self.clients.openWindow(targetUrl);
       }
     })
   );

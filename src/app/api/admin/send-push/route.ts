@@ -25,10 +25,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, body, targetUserId, url } = await request.json();
+    const { title, body: bodyHtml, targetType, targetEventId, url } = await request.json();
 
-    if (!title || !body) {
-      return NextResponse.json({ error: 'Title and body are required' }, { status: 400 });
+    if (!title || !bodyHtml || !targetType) {
+      return NextResponse.json({ error: 'Title, body and targetType are required' }, { status: 400 });
     }
 
     // Usa createServiceRoleClient per bypassare RLS nelle route di backend
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       .eq('clerk_id', user.id)
       .single();
 
-    if (!profileData || profileData.role !== 'admin') {
+    if (!profileData || !['admin', 'staff'].includes(profileData.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -49,10 +49,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'VAPID keys not configured in environment variables' }, { status: 500 });
     }
 
-    // Selections per i push
+    // Costruzione target users IDs
+    let targetUserIds: string[] | null = null; // null means target all
+
+    if (targetType === 'staff') {
+      const { data: staffMembers } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .in('role', ['admin', 'staff']);
+      targetUserIds = staffMembers?.map(s => s.id) || [];
+    } else if (targetType === 'event' && targetEventId) {
+      const { data: eventParticipants } = await supabaseAdmin
+        .from('enrollments')
+        .select('user_id')
+        .eq('event_id', targetEventId)
+        .eq('status', 'confirmed');
+      targetUserIds = eventParticipants?.map(p => p.user_id) || [];
+    }
+
+    // Selections per i push subscriptions
     let query = supabaseAdmin.from('push_subscriptions').select('*');
-    if (targetUserId) {
-      query = query.eq('user_id', targetUserId);
+    if (targetUserIds !== null) {
+      // Se abbiamo un array (anche vuoto), filtriamo per quello
+      if (targetUserIds.length === 0) {
+        return NextResponse.json({ success: true, message: 'Nessun destinatario nel target selezionato' });
+      }
+      query = query.in('user_id', targetUserIds);
     }
 
     const { data: subscriptions, error } = await query;
@@ -65,9 +87,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: 'Nessuna subscription trovata per i destinatari' });
     }
 
+    // Pulisci HTML per OS Push nativo
+    const bodyText = bodyHtml.replace(/<[^>]*>?/gm, '');
+
     const payload = JSON.stringify({
       title,
-      body,
+      body: bodyText,
       url: url || '/'
     });
 
@@ -100,6 +125,19 @@ export async function POST(request: Request) {
         }
       }
     }
+
+    // Salva nello storico
+    await supabaseAdmin.from('push_notifications_history').insert({
+      title,
+      body_html: bodyHtml,
+      body_text: bodyText,
+      target_type: targetType,
+      target_event_id: targetType === 'event' ? targetEventId : null,
+      action_url: url || null,
+      success_count: successCount,
+      failure_count: failureCount,
+      sent_by: profileData.id
+    });
 
     return NextResponse.json({
       success: true,
