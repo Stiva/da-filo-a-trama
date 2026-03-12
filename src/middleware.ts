@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/events',        // Lista eventi pubblica
   '/api/poi',           // POI pubblici
   '/api/webhooks(.*)',  // Webhook Clerk (verifica propria firma)
+  '/api/settings(.*)',  // Impostazioni globali app (es. Banner PWA)
 ]);
 
 // Route riservate agli admin

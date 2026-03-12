@@ -108,48 +108,8 @@ export default function AdminLayout({
 
   const configLinks = [
     {
-      href: '/admin/categories',
-      label: 'Categorie',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-        </svg>
-      ),
-      badge: false,
-    },
-    {
-      href: '/admin/service-roles',
-      label: 'Ruoli di Servizio',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4H2v16h5m10 0v-5H7v5m10 0H7" />
-        </svg>
-      ),
-      badge: false,
-    },
-    {
-      href: '/admin/tags',
-      label: 'Tags',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-        </svg>
-      ),
-      badge: false,
-    },
-    {
-      href: '/admin/groups',
-      label: 'Gruppi',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      ),
-      badge: false,
-    },
-    {
       href: '/admin/settings',
-      label: 'Banner PWA',
+      label: 'Impostazioni',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -157,10 +117,14 @@ export default function AdminLayout({
         </svg>
       ),
       badge: false,
+      activePatterns: ['/admin/settings', '/admin/categories', '/admin/service-roles', '/admin/tags', '/admin/groups'],
     },
   ];
 
-  const isLinkActive = (href: string, exact?: boolean) => {
+  const isLinkActive = (href: string, exact?: boolean, activePatterns?: string[]) => {
+    if (activePatterns) {
+      return activePatterns.some(pattern => pathname === pattern || pathname.startsWith(pattern + '/'));
+    }
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
   };
@@ -225,12 +189,13 @@ export default function AdminLayout({
         {/* Sidebar */}
         <aside
           className={`
-            fixed lg:static inset-y-0 left-0 z-50
-            w-64 bg-gray-800 min-h-[calc(100vh-4rem)] text-white
+            fixed lg:sticky lg:top-16 inset-y-0 left-0 z-50
+            w-64 bg-gray-800 h-[calc(100vh-4rem)] text-white
             transform transition-transform duration-300 ease-in-out
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0
-            pt-16 lg:pt-0
+            pt-16 lg:pt-0 pb-16 lg:pb-0
+            overflow-y-auto
           `}
         >
           <nav className="p-4 space-y-2">
@@ -246,7 +211,7 @@ export default function AdminLayout({
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg
                   transition-colors min-h-[44px]
-                  ${isLinkActive(link.href, link.exact)
+                  ${isLinkActive(link.href, link.exact, (link as any).activePatterns)
                     ? 'bg-gray-700 text-white'
                     : 'hover:bg-gray-700 active:bg-gray-600 text-gray-300'
                   }
@@ -269,7 +234,7 @@ export default function AdminLayout({
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg
                   transition-colors min-h-[44px]
-                  ${isLinkActive(link.href)
+                  ${isLinkActive(link.href, false, (link as any).activePatterns)
                     ? 'bg-gray-700 text-white'
                     : 'hover:bg-gray-700 active:bg-gray-600 text-gray-300'
                   }
@@ -292,7 +257,7 @@ export default function AdminLayout({
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg
                   transition-colors min-h-[44px]
-                  ${isLinkActive(link.href)
+                  ${isLinkActive(link.href, false, (link as any).activePatterns)
                     ? 'bg-gray-700 text-white'
                     : 'hover:bg-gray-700 active:bg-gray-600 text-gray-300'
                   }
@@ -316,7 +281,7 @@ export default function AdminLayout({
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg
                   transition-colors min-h-[44px]
-                  ${isLinkActive(link.href)
+                  ${isLinkActive(link.href, false, (link as any).activePatterns)
                     ? 'bg-gray-700 text-white'
                     : 'hover:bg-gray-700 active:bg-gray-600 text-gray-300'
                   }

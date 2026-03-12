@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ServiceRoleRecord } from '@/types/database';
+import SettingsTabs from '@/components/admin/SettingsTabs';
 
 export default function ServiceRolesPage() {
     const [roles, setRoles] = useState<ServiceRoleRecord[]>([]);
@@ -112,6 +113,7 @@ export default function ServiceRolesPage() {
 
     return (
         <div>
+            <SettingsTabs />
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>

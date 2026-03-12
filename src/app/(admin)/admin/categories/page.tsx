@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { EventCategoryRecord } from '@/types/database';
+import SettingsTabs from '@/components/admin/SettingsTabs';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<EventCategoryRecord[]>([]);
@@ -181,6 +182,7 @@ export default function CategoriesPage() {
 
   return (
     <div>
+      <SettingsTabs />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>

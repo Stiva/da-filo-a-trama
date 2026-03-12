@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import SettingsTabs from '@/components/admin/SettingsTabs';
 
 interface ScoutGroup {
     id: string;
@@ -103,6 +104,7 @@ export default function AdminGroupsPage() {
 
     return (
         <div className="space-y-6">
+            <SettingsTabs />
             <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Gestione Gruppi Scout</h1>

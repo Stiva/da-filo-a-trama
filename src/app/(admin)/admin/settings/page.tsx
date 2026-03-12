@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@clerk/nextjs';
+import SettingsTabs from '@/components/admin/SettingsTabs';
 
 const RichTextEditor = dynamic(() => import('@/components/RichTextEditor'), {
   ssr: false,
@@ -78,6 +79,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
+      <SettingsTabs />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Impostazioni App</h1>
         <p className="mt-2 text-gray-600">
