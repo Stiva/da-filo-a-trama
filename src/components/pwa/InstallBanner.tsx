@@ -32,6 +32,13 @@ export default function InstallBanner() {
     // Non mostrare durante SSR
     if (typeof window === 'undefined') return;
     
+    // Possibilità in Debug di forzare il reset del banner nascosto
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reset-banner') === 'true') {
+      localStorage.removeItem('pwa_banner_dismissed');
+      setDismissed(false);
+    }
+
     // Controlliamo in locale se l'utente l'ha chiuso
     const isDismissed = localStorage.getItem('pwa_banner_dismissed') === 'true';
     if (isDismissed) {

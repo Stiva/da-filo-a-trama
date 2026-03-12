@@ -188,7 +188,7 @@ export default function AdminAssetsPage() {
       {/* Header - Responsive */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Assets</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Materiali Evento</h1>
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Gestisci file, documenti e media</p>
         </div>
         <Link
@@ -198,7 +198,7 @@ export default function AdminAssetsPage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Nuovo Asset
+          Nuovo Materiale
         </Link>
       </div>
 
@@ -281,7 +281,7 @@ export default function AdminAssetsPage() {
 
       {selectedIds.length > 0 && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-indigo-800 font-medium">{selectedIds.length} asset selezionati</span>
+          <span className="text-indigo-800 font-medium">{selectedIds.length} materiali selezionati</span>
           <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={() => setSelectedIds([])}
@@ -320,7 +320,7 @@ export default function AdminAssetsPage() {
             href="/admin/assets/new"
             className="inline-block mt-4 text-agesci-blue hover:underline"
           >
-            Carica il primo asset
+            Carica il primo materiale
           </Link>
         </div>
       ) : (
