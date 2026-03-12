@@ -70,8 +70,9 @@ export default function InstallBanner() {
       // Nascondi
       setIsVisible(false);
       setDismissed(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Errore durante iter di installazione / iscrizione push:', err);
+      window.alert('Non è stato possibile attivare le notifiche: ' + (err.message || 'Errore sconosciuto.'));
       // Fallback close
       setIsVisible(false);
     }
@@ -85,8 +86,9 @@ export default function InstallBanner() {
       }
       setIsVisible(false);
       setDismissed(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Errore attivazione push iOS:', err);
+      window.alert('Non è stato possibile attivare le notifiche: ' + (err.message || 'Errore sconosciuto.'));
       setIsVisible(false);
     }
   };
