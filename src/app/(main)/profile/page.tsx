@@ -14,6 +14,8 @@ import {
 import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
 import Autocomplete from '@/components/Autocomplete';
+import { usePwaAndPush } from '@/hooks/usePwaAndPush';
+import { Bell, BellOff } from 'lucide-react';
 
 const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
 
@@ -36,6 +38,10 @@ export default function ProfilePage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [scoutGroups, setScoutGroups] = useState<{ id: string, name: string }[]>([]);
+
+  // Push notifications hook
+  const { isSubscribed, subscribeToPush, unsubscribeFromPush } = usePwaAndPush();
+  const [isPushLoading, setIsPushLoading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -128,6 +134,27 @@ export default function ProfilePage() {
         ? prev.preferences.filter(t => t !== tag)
         : [...prev.preferences, tag],
     }));
+  };
+
+  const handlePushToggle = async () => {
+    setIsPushLoading(true);
+    setError(null);
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromPush();
+        setSuccess('Notifiche push disattivate con successo su questo dispositivo.');
+      } else {
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) throw new Error("Chiave di sicurezza Push non configurata nel server");
+        await subscribeToPush(vapidKey);
+        setSuccess('Notifiche push attivate con successo su questo dispositivo!');
+      }
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message || "Non è stato possibile aggiornare lo stato notifiche");
+    } finally {
+      setIsPushLoading(false);
+    }
   };
 
   const updateAvatarConfig = (updates: Partial<AvatarConfig>) => {
@@ -375,6 +402,29 @@ export default function ProfilePage() {
             {/* Preferences Tab */}
             {activeTab === 'preferences' && (
               <div>
+                <div className="mb-8 p-6 border border-gray-200 rounded-lg bg-gray-50/50">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-agesci-blue flex items-center gap-2">
+                        {isSubscribed ? <Bell className="w-5 h-5 text-green-600" /> : <BellOff className="w-5 h-5 text-gray-500" />}
+                        Notifiche Push
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Ricevi aggiornamenti in tempo reale su attività ed eventi su questo dispositivo.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handlePushToggle}
+                      disabled={isPushLoading}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:ring-offset-2 disabled:opacity-50 ${isSubscribed ? 'bg-green-500' : 'bg-gray-300'}`}
+                      role="switch"
+                      aria-checked={isSubscribed}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isSubscribed ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+
                 <p className="text-gray-600 mb-4">
                   Seleziona i temi che ti interessano. Useremo queste preferenze per consigliarti gli eventi piu adatti a te.
                 </p>

@@ -32,6 +32,7 @@ export function usePwaAndPush() {
   const [isServiceWorkerReady, setIsServiceWorkerReady] = useState(false);
   const [pushStatus, setPushStatus] = useState<NotificationPermission>('default');
   const [isIosInstallable, setIsIosInstallable] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     // 1. Controlliamo se e' gia' installata testando il display-mode
@@ -56,6 +57,11 @@ export function usePwaAndPush() {
         .then((registration) => {
           console.log('Service Worker registrato con scope:', registration.scope);
           setIsServiceWorkerReady(true);
+          
+          // Controlla se siamo già iscritti
+          registration.pushManager.getSubscription().then(sub => {
+            setIsSubscribed(sub !== null);
+          });
         })
         .catch((error) => {
           console.error('Registrazione Service Worker fallita:', error);
@@ -140,7 +146,35 @@ export function usePwaAndPush() {
       throw new Error('Errore nel salvataggio della subscription a DB.');
     }
 
+    setIsSubscribed(true);
     return subscription;
+  }, [isServiceWorkerReady]);
+
+  const unsubscribeFromPush = useCallback(async () => {
+    if (!isServiceWorkerReady) return;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        // Elimina lato server dal Database
+        const response = await fetch('/api/push-subscriptions', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+        
+        if (!response.ok) {
+           console.warn("L'eliminazione via API è fallita o restituito un errore");
+        }
+
+        // Elimina localmente dal browser
+        await subscription.unsubscribe();
+        setIsSubscribed(false);
+      }
+    } catch (err) {
+      console.error('Errore durante l\'unsubscribe:', err);
+      throw err;
+    }
   }, [isServiceWorkerReady]);
 
   return {
@@ -148,7 +182,9 @@ export function usePwaAndPush() {
     isIosInstallable,
     isInstalled,
     pushStatus,
+    isSubscribed,
     promptInstall,
-    subscribeToPush
+    subscribeToPush,
+    unsubscribeFromPush
   };
 }

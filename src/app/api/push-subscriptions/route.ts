@@ -43,3 +43,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { endpoint } = await request.json();
+    if (!endpoint) {
+      return NextResponse.json({ error: 'Endpoint non fornito' }, { status: 400 });
+    }
+
+    const supabaseAdmin = createServiceRoleClient();
+    const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('clerk_id', user.id).single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profilo utente non trovato' }, { status: 404 });
+    }
+
+    // Identifichiamo specificatamente la riga per utente ed endpoint ed eliminiamola in sicurezza
+    const { error } = await supabaseAdmin
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', profile.id)
+      .eq('endpoint', endpoint);
+
+    if (error) {
+      console.error("Supabase Error delete push subscription:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
