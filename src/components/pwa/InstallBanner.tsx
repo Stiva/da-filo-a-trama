@@ -54,6 +54,43 @@ export default function InstallBanner() {
     localStorage.setItem('pwa_banner_dismissed', 'true');
   };
 
+  const handleInstallClick = async () => {
+    try {
+      // 1. Installa PWA se supportata
+      if (isInstallable) {
+        await promptInstall();
+      }
+
+      // 2. Richiedi subito permessi per le notifiche (passando la VAPID)
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (vapidKey) {
+        await subscribeToPush(vapidKey);
+      }
+      
+      // Nascondi
+      setIsVisible(false);
+      setDismissed(true);
+    } catch (err) {
+      console.error('Errore durante iter di installazione / iscrizione push:', err);
+      // Fallback close
+      setIsVisible(false);
+    }
+  };
+
+  const handleOnlyPush = async () => {
+    try {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (vapidKey) {
+        await subscribeToPush(vapidKey);
+      }
+      setIsVisible(false);
+      setDismissed(true);
+    } catch (err) {
+      console.error('Errore attivazione push iOS:', err);
+      setIsVisible(false);
+    }
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.1)] border-t border-gray-200">
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -72,15 +109,23 @@ export default function InstallBanner() {
           </button>
           
           {isIosInstallable && !isInstallable ? (
-            <div className="w-full sm:w-auto text-xs text-blue-800 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 mt-2 sm:mt-0">
-              Tocca <strong>Condividi</strong> in basso<br className="hidden sm:block" /> e poi <strong>Aggiungi alla schermata Home</strong>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-full sm:w-auto text-[10px] leading-tight text-blue-800 bg-blue-50 px-2 py-1.5 rounded-md border border-blue-200 text-center">
+                1. Tocca <strong>Condividi</strong>, poi <strong>Aggiungi a Home</strong>
+              </div>
+              <button 
+                onClick={handleOnlyPush}
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-agesci-blue hover:bg-agesci-blue/90 rounded-lg shadow-sm transition-colors"
+              >
+                2. Attiva Notifiche
+              </button>
             </div>
           ) : (
             <button 
-              onClick={promptInstall}
+              onClick={handleInstallClick}
               className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-agesci-blue hover:bg-agesci-blue/90 rounded-lg shadow-sm transition-colors"
             >
-              Installa App
+              Installa & Attiva Notifiche
             </button>
           )}
         </div>
