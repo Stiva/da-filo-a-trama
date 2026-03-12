@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { PreferenceTagRecord } from '@/types/database';
+import SettingsTabs from '@/components/admin/SettingsTabs';
 
 export default function TagsPage() {
   const [tags, setTags] = useState<PreferenceTagRecord[]>([]);
@@ -145,6 +146,7 @@ export default function TagsPage() {
 
   return (
     <div>
+      <SettingsTabs />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>

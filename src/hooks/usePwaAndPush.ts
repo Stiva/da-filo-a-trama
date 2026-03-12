@@ -35,21 +35,22 @@ export function usePwaAndPush() {
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
-    // 1. Controlliamo se e' gia' installata testando il display-mode
     const checkIfInstalled = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      // Safari iOS // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Metodo 1: css media query
+      const isStandaloneMedia = window.matchMedia('(display-mode: standalone)').matches;
+      // Metodo 2: iOS web app
       const isIosStandalone = ('standalone' in window.navigator) && ((window.navigator as any).standalone === true);
-      setIsInstalled(isStandalone || isIosStandalone);
+      
+      setIsInstalled(isStandaloneMedia || isIosStandalone);
     };
     checkIfInstalled();
 
-    // 1b. Check if device is iOS and not already installed
     const isIos = () => {
       const userAgent = window.navigator.userAgent.toLowerCase();
-      return /iphone|ipad|ipod/.test(userAgent);
+      // Controlla anche MacTip per ipad
+      return /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     };
-    setIsIosInstallable(isIos() && !isInstalled);
+    setIsIosInstallable(isIos());
 
     // 2. Registrazione Service Worker
     if ('serviceWorker' in navigator) {
