@@ -7,9 +7,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const key = searchParams.get('key');
     
-    const supabase = await createServerSupabaseClient();
+    // Usiamo il service role perché il middleware (isAdminRoute) protegge già questa API.
+    // L'uso di createServerSupabaseClient può fallire su Vercel se ci sono problemi con il token di auth nel server.
+    const supabaseAdmin = createServiceRoleClient();
     
-    let query = supabase.from('app_settings').select('*');
+    let query = supabaseAdmin.from('app_settings').select('*');
     if (key) {
       query = query.eq('key', key);
     }
