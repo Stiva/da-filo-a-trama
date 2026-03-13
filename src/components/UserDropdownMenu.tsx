@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import AvatarPreview from '@/components/AvatarPreview';
 
