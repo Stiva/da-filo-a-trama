@@ -55,7 +55,11 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     group_eligible_roles: event?.group_eligible_roles || [],
     max_group_size: event?.max_group_size || 10,
     visibility: event?.visibility || 'public' as EventVisibility,
+    is_placeholder: event?.is_placeholder || false,
   });
+
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [occurrences, setOccurrences] = useState(1);
 
   const [workshopEvents, setWorkshopEvents] = useState<{ id: string; title: string; start_time: string }[]>([]);
   const [serviceRoles, setServiceRoles] = useState<ServiceRoleRecord[]>([]);
@@ -127,6 +131,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           end_time: formData.end_time
             ? new Date(formData.end_time).toISOString()
             : null,
+          occurrences: isRecurring && !isEditing ? occurrences : 1,
         }),
       });
 
@@ -427,6 +432,51 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             />
           </div>
         </div>
+
+        {/* Opzioni Aggiuntive e Ricorrenza */}
+        {!isEditing && (
+          <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-4">
+            <label className="flex items-center gap-3 cursor-pointer p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.is_placeholder}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_placeholder: e.target.checked }))}
+                className="w-5 h-5 text-gray-600 rounded focus:ring-gray-500"
+              />
+              <div>
+                <span className="block text-sm font-medium text-gray-900">Evento Segnaposto (es. Pausa, Pranzo)</span>
+                <span className="block text-xs text-gray-500 mt-1">Non permette iscrizioni e appare in grigio tratteggiato sul calendario.</span>
+              </div>
+            </label>
+
+            <div className="flex flex-col gap-3 p-4 border rounded-lg bg-gray-50">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+                />
+                <span className="text-sm font-medium text-gray-900">Ripeti Evento (Ogni giorno)</span>
+              </label>
+              
+              {isRecurring && (
+                <div className="pl-8 pt-1 flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Per</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={occurrences}
+                    onChange={(e) => setOccurrences(parseInt(e.target.value) || 1)}
+                    className="input w-20 py-1.5 px-2"
+                  />
+                  <span className="text-sm text-gray-600">giorni consecutivi</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Speaker */}

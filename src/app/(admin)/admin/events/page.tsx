@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Event, EventCategory } from '@/types/database';
 import DailyCalendarView from '@/components/DailyCalendarView';
+import MassEventImport from '@/components/admin/MassEventImport';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -150,20 +151,25 @@ export default function AdminEventsPage() {
   return (
     <div>
       {/* Header - Responsive */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestione Eventi</h1>
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Crea, modifica e gestisci gli eventi</p>
         </div>
-        <Link
-          href="/admin/events/new"
-          className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors min-h-[44px] w-full sm:w-auto"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuovo Evento
-        </Link>
+        
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <MassEventImport onImportSuccess={fetchEvents} />
+          
+          <Link
+            href="/admin/events/new"
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors min-h-[44px] w-full sm:w-auto mt-2 sm:mt-0"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuovo Evento
+          </Link>
+        </div>
       </div>
 
       {/* Filters - Touch friendly */}

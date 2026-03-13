@@ -153,6 +153,7 @@ export interface Event {
   group_eligible_roles: string[];
   max_group_size: number;
   visibility: EventVisibility;
+  is_placeholder: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;

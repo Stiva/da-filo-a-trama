@@ -81,15 +81,25 @@ export default function DailyCalendarView({
         const colWidth = 100 / overlapping.length;
         const colLeft = colWidth * idx;
 
-        const linkHref = isAdmin ? `/admin/events/${event.id}` : `/events/${event.id}`;
+        const linkHref = isAdmin ? `/admin/events/${event.id}` : (event.is_placeholder ? '#' : `/events/${event.id}`);
         const isFavourited = event.is_favourited;
         const isEnrolled = event.is_enrolled;
         const isFull = event.max_posti && event.enrollment_count >= event.max_posti;
+        const isPlaceholder = event.is_placeholder === true;
+
+        const baseClasses = `absolute rounded-md border p-1.5 shadow-sm flex flex-col overflow-hidden transition-all`;
+        
+        let styleClasses = '';
+        if (isPlaceholder) {
+            styleClasses = `bg-gray-100 border-gray-400 border-dashed text-gray-600 opacity-80`; // Placeholder styling
+        } else {
+            styleClasses = `hover:z-30 hover:shadow-lg ${getCategoryColor(event.category)}`; // Normal styling
+        }
 
         return (
             <div
                 key={event.id}
-                className={`absolute rounded-md border p-1.5 shadow-sm flex flex-col overflow-hidden transition-all hover:z-30 hover:shadow-lg ${getCategoryColor(event.category)}`}
+                className={`${baseClasses} ${styleClasses}`}
                 style={{
                     top: `${topOffset}px`,
                     height: `${height}px`,
@@ -99,11 +109,18 @@ export default function DailyCalendarView({
                 title={`${event.title} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
             >
                 <div className="flex justify-between items-start gap-1">
-                    <Link href={linkHref} className="font-semibold text-xs leading-tight line-clamp-2 hover:underline flex-1">
-                        {event.title}
-                    </Link>
-                    {/* Action Buttons for Users */}
-                    {!isAdmin && (onToggleFavourite || onToggleSubscribe) && height > 40 && colWidth > 30 && (
+                    {isPlaceholder ? (
+                        <span className="font-semibold text-xs leading-tight line-clamp-2 flex-1">
+                            {event.title}
+                        </span>
+                    ) : (
+                        <Link href={linkHref} className="font-semibold text-xs leading-tight line-clamp-2 hover:underline flex-1">
+                            {event.title}
+                        </Link>
+                    )}
+                    
+                    {/* Action Buttons for Users (Hidden for placeholders) */}
+                    {!isAdmin && !isPlaceholder && (onToggleFavourite || onToggleSubscribe) && height > 40 && colWidth > 30 && (
                         <div className="flex items-center gap-1 flex-shrink-0 bg-white/50 rounded-md px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                             {onToggleFavourite && (
                                 <button

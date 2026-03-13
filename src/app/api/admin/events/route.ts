@@ -108,54 +108,78 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
 
     const supabase = createServiceRoleClient();
 
-    const eventData = {
-      title: body.title,
-      description: body.description || null,
-      category: body.category,
-      tags: body.tags || [],
-      location_poi_id: body.location_poi_id || null,
-      start_time: body.start_time,
-      end_time: body.end_time || null,
-      max_posti: body.max_posti || 50,
-      speaker_name: body.speaker_name || null,
-      speaker_bio: body.speaker_bio || null,
-      is_published: body.is_published ?? false,
-      auto_enroll_all: body.auto_enroll_all ?? false,
-      checkin_enabled: body.checkin_enabled ?? false,
-      visibility: body.visibility || 'public',
-      workshop_groups_count: body.workshop_groups_count || 0,
-      group_creation_mode: body.group_creation_mode || 'random',
-      source_event_id: body.group_creation_mode === 'copy' ? (body.source_event_id || null) : null,
-      group_eligible_roles: body.group_eligible_roles || [],
-      max_group_size: body.max_group_size || 10,
-    };
+    const isPlaceholder = body.is_placeholder ?? false;
+    const occurrencesCount = parseInt(body.occurrences || '1', 10) || 1;
+    
+    // Check if we requested recurrence
+    const eventsToInsert = [];
+    
+    for (let i = 0; i < occurrencesCount; i++) {
+        // Calculate the start/end time for each occurrence (adding i days)
+        const eventStart = new Date(body.start_time);
+        eventStart.setDate(eventStart.getDate() + i);
+        
+        // Handling end time gracefully if missing
+        let eventEnd = null;
+        if (body.end_time) {
+            eventEnd = new Date(body.end_time);
+            eventEnd.setDate(eventEnd.getDate() + i);
+        }
+
+        eventsToInsert.push({
+            title: body.title,
+            description: body.description || null,
+            category: body.category,
+            tags: body.tags || [],
+            location_poi_id: body.location_poi_id || null,
+            start_time: eventStart.toISOString(),
+            end_time: eventEnd ? eventEnd.toISOString() : null,
+            max_posti: body.max_posti || 50,
+            speaker_name: body.speaker_name || null,
+            speaker_bio: body.speaker_bio || null,
+            is_published: body.is_published ?? false,
+            auto_enroll_all: isPlaceholder ? false : (body.auto_enroll_all ?? false),
+            checkin_enabled: body.checkin_enabled ?? false,
+            visibility: body.visibility || 'public',
+            workshop_groups_count: isPlaceholder ? 0 : (body.workshop_groups_count || 0),
+            group_creation_mode: body.group_creation_mode || 'random',
+            source_event_id: body.group_creation_mode === 'copy' ? (body.source_event_id || null) : null,
+            group_eligible_roles: body.group_eligible_roles || [],
+            max_group_size: body.max_group_size || 10,
+            is_placeholder: isPlaceholder,
+        });
+    }
 
     const { data, error } = await supabase
       .from('events')
-      .insert(eventData)
-      .select()
-      .single();
+      .insert(eventsToInsert)
+      .select();
 
     if (error) {
       throw error;
     }
 
-    // Crea i gruppi di lavoro se previsti (solo se non è in modalità copia, la copia avverrà separatamente)
-    if (eventData.workshop_groups_count > 0 && eventData.group_creation_mode !== 'copy') {
-      const groupsToCreate = Array.from({ length: eventData.workshop_groups_count }).map((_, i) => ({
-        event_id: data.id,
-        name: `Gruppo ${i + 1}`,
-      }));
-      await supabase.from('event_groups').insert(groupsToCreate);
+    // Process post-creation hooks (groups and auto-enroll) for each created event
+    for (const createdEvent of data) {
+      // Crea i gruppi di lavoro se previsti
+      if (createdEvent.workshop_groups_count > 0 && createdEvent.group_creation_mode !== 'copy' && !isPlaceholder) {
+        const groupsToCreate = Array.from({ length: createdEvent.workshop_groups_count }).map((_, i) => ({
+          event_id: createdEvent.id,
+          name: `Gruppo ${i + 1}`,
+        }));
+        await supabase.from('event_groups').insert(groupsToCreate);
+      }
+
+      if (createdEvent.auto_enroll_all && !isPlaceholder) {
+        await enrollAllProfilesToEvent(supabase, createdEvent.id);
+      }
     }
 
-    if (eventData.auto_enroll_all) {
-      await enrollAllProfilesToEvent(supabase, data.id);
-    }
-
+    // Return the first event as response data to keep the interface simple, or an array if needed
+    // The current UI assumes a single event return, but for multiple we output the list.
     return NextResponse.json({
-      data: data as Event,
-      message: 'Evento creato con successo',
+      data: occurrencesCount > 1 ? data : data[0],
+      message: occurrencesCount > 1 ? `${occurrencesCount} eventi creati con successo` : 'Evento creato con successo',
     });
   } catch (error) {
     console.error('Errore POST /api/admin/events:', error);

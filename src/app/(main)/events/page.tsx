@@ -486,7 +486,7 @@ function EventsPageContent() {
                 />
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {events.map((event) => {
+                  {events.filter(e => !e.is_placeholder).map((event) => {
                   const spotsLeft = event.max_posti - event.enrollment_count;
                   const isFull = spotsLeft <= 0;
                   const occupancyPercent = event.max_posti > 0
