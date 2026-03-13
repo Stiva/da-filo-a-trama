@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePwaAndPush } from '@/hooks/usePwaAndPush';
+import DOMPurify from 'isomorphic-dompurify';
 
 export default function InstallBanner() {
   const { isInstallable, isIosInstallable, isInstalled, promptInstall, subscribeToPush } = usePwaAndPush();
@@ -106,7 +107,7 @@ export default function InstallBanner() {
         {/* Contenuto Rich Text (Lexical genera HTML pulito che iniettiamo qui) */}
         <div 
           className="prose prose-sm max-w-none text-gray-700 flex-1"
-          dangerouslySetInnerHTML={{ __html: bannerHtml }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bannerHtml) }}
         />
         
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
