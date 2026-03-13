@@ -2,36 +2,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, ApiResponse } from '@/types/database';
-
-async function enrollAllProfilesToEvent(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string) {
-  const { data: profiles, error } = await supabase
-    .from('profiles')
-    .select('id');
-
-  if (error) {
-    throw error;
-  }
-
-  if (!profiles?.length) {
-    return;
-  }
-
-  const enrollments = profiles.map((profile) => ({
-    event_id: eventId,
-    user_id: profile.id,
-    status: 'confirmed',
-    waitlist_position: null,
-    registration_type: 'auto',
-  }));
-
-  const { error: insertError } = await supabase
-    .from('enrollments')
-    .upsert(enrollments, { onConflict: 'user_id,event_id', ignoreDuplicates: true });
-
-  if (insertError) {
-    throw insertError;
-  }
-}
+import { enrollAllProfilesToEvents } from '@/lib/events/enrollment';
 
 /**
  * GET /api/admin/events
@@ -160,19 +131,33 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
     }
 
     // Process post-creation hooks (groups and auto-enroll) for each created event
+    const allGroupsToCreate: { event_id: string; name: string }[] = [];
+    const eventIdsToAutoEnroll: string[] = [];
+
     for (const createdEvent of data) {
-      // Crea i gruppi di lavoro se previsti
+      // Prepara i gruppi di lavoro se previsti
       if (createdEvent.workshop_groups_count > 0 && createdEvent.group_creation_mode !== 'copy' && !isPlaceholder) {
-        const groupsToCreate = Array.from({ length: createdEvent.workshop_groups_count }).map((_, i) => ({
+        const eventGroups = Array.from({ length: createdEvent.workshop_groups_count }).map((_, i) => ({
           event_id: createdEvent.id,
           name: `Gruppo ${i + 1}`,
         }));
-        await supabase.from('event_groups').insert(groupsToCreate);
+        allGroupsToCreate.push(...eventGroups);
       }
 
+      // Raccogli eventi per auto enroll
       if (createdEvent.auto_enroll_all && !isPlaceholder) {
-        await enrollAllProfilesToEvent(supabase, createdEvent.id);
+        eventIdsToAutoEnroll.push(createdEvent.id);
       }
+    }
+
+    // Batch insert per i gruppi di lavoro
+    if (allGroupsToCreate.length > 0) {
+      await supabase.from('event_groups').insert(allGroupsToCreate);
+    }
+
+    // Batch auto-enroll per gli utenti
+    if (eventIdsToAutoEnroll.length > 0) {
+      await enrollAllProfilesToEvents(supabase, eventIdsToAutoEnroll);
     }
 
     // Return the first event as response data to keep the interface simple, or an array if needed
