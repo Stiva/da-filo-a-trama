@@ -163,6 +163,7 @@ describe('getActiveOrCreateSupportChannelId', () => {
   });
 });
 
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import {
   getStreamApiKey,
   getChatUserIdFromClerkId,
@@ -173,6 +174,7 @@ import {
 import type { User } from '@clerk/nextjs/server';
 
 describe('streamServer functions', () => {
+describe('streamServer', () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {

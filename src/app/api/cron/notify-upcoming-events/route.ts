@@ -37,48 +37,66 @@ export async function GET(request: Request) {
 
     let createdCount = 0;
 
-    for (const event of events) {
-      const poi = event.poi as unknown as { nome: string } | null;
-      const locationName = poi?.nome || 'luogo evento';
+    const eventIds = events.map((event) => event.id);
 
-      const { data: enrollments, error: enrollmentsError } = await supabase
-        .from('enrollments')
-        .select('user_id')
-        .eq('event_id', event.id)
-        .eq('status', 'confirmed');
+    const { data: enrollments, error: enrollmentsError } = await supabase
+      .from('enrollments')
+      .select('user_id, event_id')
+      .in('event_id', eventIds)
+      .eq('status', 'confirmed');
 
-      if (enrollmentsError) {
-        throw enrollmentsError;
+    if (enrollmentsError) {
+      throw enrollmentsError;
+    }
+
+    if (enrollments && enrollments.length > 0) {
+      const notifications = [];
+
+      // Create a map to look up enrollments by event_id efficiently
+      const enrollmentsByEvent = enrollments.reduce((acc, enrollment) => {
+        if (!acc[enrollment.event_id]) {
+          acc[enrollment.event_id] = [];
+        }
+        acc[enrollment.event_id].push(enrollment);
+        return acc;
+      }, {} as Record<string, typeof enrollments>);
+
+      for (const event of events) {
+        const eventEnrollments = enrollmentsByEvent[event.id];
+        if (!eventEnrollments?.length) continue;
+
+        const poi = event.poi as unknown as { nome: string } | null;
+        const locationName = poi?.nome || 'luogo evento';
+
+        for (const enrollment of eventEnrollments) {
+          notifications.push({
+            user_id: enrollment.user_id,
+            type: 'event_starting_soon',
+            title: 'Evento in arrivo',
+            body: `${event.title} sta per iniziare presso ${locationName}. Ti aspettiamo!`,
+            action_url: `/events/${event.id}`,
+            event_id: event.id,
+            payload: {
+              event_id: event.id,
+              event_title: event.title,
+              location_name: locationName,
+            },
+          });
+        }
       }
 
-      if (!enrollments?.length) {
-        continue;
+      if (notifications.length > 0) {
+        const { data, error: insertError } = await supabase
+          .from('notifications')
+          .upsert(notifications, { onConflict: 'user_id,type,event_id' })
+          .select('id');
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        createdCount += data?.length || 0;
       }
-
-      const notifications = enrollments.map((enrollment) => ({
-        user_id: enrollment.user_id,
-        type: 'event_starting_soon',
-        title: 'Evento in arrivo',
-        body: `${event.title} sta per iniziare presso ${locationName}. Ti aspettiamo!`,
-        action_url: `/events/${event.id}`,
-        event_id: event.id,
-        payload: {
-          event_id: event.id,
-          event_title: event.title,
-          location_name: locationName,
-        },
-      }));
-
-      const { data, error: insertError } = await supabase
-        .from('notifications')
-        .upsert(notifications, { onConflict: 'user_id,type,event_id' })
-        .select('id');
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      createdCount += data?.length || 0;
     }
 
     return NextResponse.json({ data: { created: createdCount } });
