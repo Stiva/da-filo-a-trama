@@ -25,7 +25,7 @@ interface FormData {
   avatar_config: AvatarConfig;
 }
 
-const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
+const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 
 export default function OnboardingPage() {
   const router = useRouter();

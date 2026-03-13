@@ -53,6 +53,40 @@ export async function POST(
       );
     }
 
+    // Security: Validazione tipo file (Allowlist)
+    const allowedMimeTypes = new Set([
+      // Images
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+      // Documents
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      // Video
+      'video/mp4', 'video/webm',
+      // Audio
+      'audio/mpeg', 'audio/wav',
+    ]);
+
+    const allowedExtensions = new Set([
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+      '.mp4', '.webm',
+      '.mp3', '.wav'
+    ]);
+
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+    if (!allowedMimeTypes.has(file.type) || !allowedExtensions.has(fileExtension)) {
+      return NextResponse.json(
+        { error: 'Tipo di file non consentito. Formati supportati: documenti, immagini, video e audio comuni.' },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceRoleClient();
 
     // Genera nome file unico

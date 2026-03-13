@@ -17,7 +17,7 @@ import Autocomplete from '@/components/Autocomplete';
 import { usePwaAndPush } from '@/hooks/usePwaAndPush';
 import { Bell, BellOff } from 'lucide-react';
 
-const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
+const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 
 /** Converte un vecchio avatar_config (legacy) nel nuovo formato DiceBear */
 const migrateAvatarConfig = (config: Record<string, unknown>): AvatarConfig => {
