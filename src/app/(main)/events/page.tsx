@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { EventListItem, EventCategory, EventCategoryRecord, Poi } from '@/types/database';
 import { stripHtml } from '@/lib/stripHtml';
+import DailyCalendarView from '@/components/DailyCalendarView';
 
 function EventsPageContent() {
   const searchParams = useSearchParams();
@@ -25,6 +26,10 @@ function EventsPageContent() {
   const [dateFilter, setDateFilter] = useState('');
   const [showAvailable, setShowAvailable] = useState(false);
   const [showRecommended, setShowRecommended] = useState(false);
+  const [showFavourites, setShowFavourites] = useState(false);
+
+  // View state
+  const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -73,7 +78,7 @@ function EventsPageContent() {
   // Fetch events when filters change
   useEffect(() => {
     fetchEvents();
-  }, [category, showRecommended, poiFilter, debouncedSearch, dateFilter, showAvailable]);
+  }, [category, showRecommended, poiFilter, debouncedSearch, dateFilter, showAvailable, showFavourites]);
 
   const fetchEvents = async () => {
     setIsLoading(true);
@@ -87,6 +92,7 @@ function EventsPageContent() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (dateFilter) params.set('date', dateFilter);
       if (showAvailable) params.set('available', 'true');
+      if (showFavourites) params.set('favourites', 'true');
 
       const response = await fetch(`/api/events?${params}`);
       const result = await response.json();
@@ -124,10 +130,96 @@ function EventsPageContent() {
     setDateFilter('');
     setShowAvailable(false);
     setShowRecommended(false);
+    setShowFavourites(false);
     router.replace('/events');
   };
 
-  const hasActiveFilters = category || poiFilter || debouncedSearch || dateFilter || showAvailable || showRecommended;
+  const handleToggleFavourite = async (eventId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Optimistic update
+    setEvents(prev => prev.map(ev =>
+      ev.id === eventId ? { ...ev, is_favourited: !ev.is_favourited } : ev
+    ));
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/favourite`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Revert on error
+        setEvents(prev => prev.map(ev =>
+          ev.id === eventId ? { ...ev, is_favourited: !ev.is_favourited } : ev
+        ));
+        return;
+      }
+
+      setEvents(prev => prev.map(ev =>
+        ev.id === eventId ? { ...ev, is_favourited: result.data.is_favourited } : ev
+      ));
+    } catch {
+      // Revert on error
+      setEvents(prev => prev.map(ev =>
+        ev.id === eventId ? { ...ev, is_favourited: !ev.is_favourited } : ev
+      ));
+    }
+  };
+
+  const handleToggleSubscribe = async (eventId: string, isEnrolled: boolean, e: React.MouseEvent, forceOptions?: { force: boolean; cancelEventId: string }) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const method = isEnrolled ? 'DELETE' : 'POST';
+    
+    // Optimistic update - only for subscribe initially, wait for server if possible
+    // Because enrollment involves max_posti and waitlists, we rely mostly on the server response
+    // But we can show a loading state if we want. For now, we just call the API and refresh the event list.
+
+    try {
+      let url = `/api/events/${eventId}/enroll`;
+      if (forceOptions && !isEnrolled) {
+        url += `?force=true&cancelEventId=${forceOptions.cancelEventId}`;
+      }
+
+      if (isEnrolled && !window.confirm('Sei sicuro di voler cancellare la tua iscrizione?')) {
+        return;
+      }
+
+      const response = await fetch(url, { method });
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Gestione conflitto temporale
+        if (response.status === 409 && result.conflict) {
+          const confirmMessage = `Attenzione! L'evento si sovrappone con "${result.conflictingEvent.title}".\n\nVuoi cancellare l'iscrizione precedente e iscriverti a questo evento?`;
+          if (window.confirm(confirmMessage)) {
+            // Riprova forzando
+            return handleToggleSubscribe(eventId, isEnrolled, e, { force: true, cancelEventId: result.conflictingEvent.id });
+          } else {
+            return; // Utente ha annullato
+          }
+        }
+        alert(result.error || 'Errore durante l\'operazione');
+        return;
+      }
+
+      // Refresh the events list to get updated states (counts, enrollment status)
+      fetchEvents();
+      
+      if (!isEnrolled) {
+        alert(result.message || 'Iscrizione confermata!');
+      } else {
+        alert('Iscrizione cancellata');
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    }
+  };
+
+  const hasActiveFilters = category || poiFilter || debouncedSearch || dateFilter || showAvailable || showRecommended || showFavourites;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -153,7 +245,7 @@ function EventsPageContent() {
     return 'bg-green-500';
   };
 
-  const activeFilterCount = [category, poiFilter, debouncedSearch, dateFilter, showAvailable, showRecommended].filter(Boolean).length;
+  const activeFilterCount = [category, poiFilter, debouncedSearch, dateFilter, showAvailable, showRecommended, showFavourites].filter(Boolean).length;
 
   return (
     <>
@@ -281,6 +373,17 @@ function EventsPageContent() {
               <span className="text-sm text-gray-700">Consigliati per me</span>
             </label>
 
+            {/* Favourites */}
+            <label className="flex items-center gap-2 cursor-pointer p-2 -m-1 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={showFavourites}
+                onChange={(e) => setShowFavourites(e.target.checked)}
+                className="w-5 h-5 text-yellow-500 rounded focus:ring-yellow-400"
+              />
+              <span className="text-sm text-gray-700">⭐ Preferiti</span>
+            </label>
+
             {/* Clear all filters — desktop */}
             {hasActiveFilters && (
               <button
@@ -293,8 +396,34 @@ function EventsPageContent() {
             )}
           </div>
 
-          {/* Active POI filter chip (when coming from map) */}
-          {poiFilter && poiName && (
+          {/* Row 3: View Toggle & Active POI */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-100">
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-shadow ${viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                Griglia
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-shadow ${viewMode === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Calendario
+              </button>
+            </div>
+
+            {/* Active POI filter chip (when coming from map) */}
+            {poiFilter && poiName && (
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,6 +442,7 @@ function EventsPageContent() {
               </span>
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -346,8 +476,17 @@ function EventsPageContent() {
           ) : (
             <>
               <p className="text-sm text-gray-500 mb-4">{events.length} eventi trovati</p>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {events.map((event) => {
+              
+              {viewMode === 'calendar' ? (
+                <DailyCalendarView 
+                  events={events} 
+                  isAdmin={false}
+                  onToggleFavourite={handleToggleFavourite}
+                  onToggleSubscribe={handleToggleSubscribe}
+                />
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {events.map((event) => {
                   const spotsLeft = event.max_posti - event.enrollment_count;
                   const isFull = spotsLeft <= 0;
                   const occupancyPercent = event.max_posti > 0
@@ -362,9 +501,20 @@ function EventsPageContent() {
                     >
                       {/* Card Header */}
                       <div className="p-4 border-b border-gray-100">
-                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
-                          {event.category}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
+                            {event.category}
+                          </span>
+                          <button
+                            onClick={(e) => handleToggleFavourite(event.id, e)}
+                            className="p-1.5 rounded-full hover:bg-yellow-50 transition-colors active:scale-90"
+                            aria-label={event.is_favourited ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+                          >
+                            <svg className={`w-5 h-5 transition-colors ${event.is_favourited ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 fill-none'}`} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                            </svg>
+                          </button>
+                        </div>
                         <h3 className="mt-2 text-lg font-semibold text-gray-900 line-clamp-2">
                           {event.title}
                         </h3>
@@ -451,6 +601,7 @@ function EventsPageContent() {
                   );
                 })}
               </div>
+              )}
             </>
           )}
         </>

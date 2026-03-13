@@ -28,6 +28,7 @@ export default function EventDetailPage() {
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
+  const [isFavourited, setIsFavourited] = useState(false);
 
   useEffect(() => {
     if (eventId) {
@@ -48,6 +49,7 @@ export default function EventDetailPage() {
       }
 
       setEvent(result.data);
+      setIsFavourited(result.data.is_favourited || false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
     } finally {
@@ -55,17 +57,32 @@ export default function EventDetailPage() {
     }
   };
 
-  const handleEnroll = async () => {
+  const handleEnroll = async (forceOptions?: { force: boolean; cancelEventId: string }) => {
     setIsEnrolling(true);
     setEnrollMessage(null);
 
     try {
-      const response = await fetch(`/api/events/${eventId}/enroll`, {
+      let url = `/api/events/${eventId}/enroll`;
+      if (forceOptions) {
+        url += `?force=true&cancelEventId=${forceOptions.cancelEventId}`;
+      }
+
+      const response = await fetch(url, {
         method: 'POST',
       });
       const result = await response.json();
 
       if (!response.ok) {
+        // Gestione conflitto temporale
+        if (response.status === 409 && result.conflict) {
+          const confirmMessage = `Attenzione! L'evento si sovrappone con "${result.conflictingEvent.title}".\n\nVuoi cancellare l'iscrizione precedente e iscriverti a questo evento?`;
+          if (window.confirm(confirmMessage)) {
+            // Riprova forzando
+            return handleEnroll({ force: true, cancelEventId: result.conflictingEvent.id });
+          } else {
+            return; // Utente ha annullato
+          }
+        }
         throw new Error(result.error || 'Errore durante l\'iscrizione');
       }
 
@@ -133,6 +150,29 @@ export default function EventDetailPage() {
     const start = new Date(startTime);
     const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
     return now >= windowStart;
+  };
+
+  const handleToggleFavourite = async () => {
+    // Optimistic update
+    setIsFavourited(prev => !prev);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/favourite`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Revert on error
+        setIsFavourited(prev => !prev);
+        return;
+      }
+
+      setIsFavourited(result.data.is_favourited);
+    } catch {
+      // Revert on error
+      setIsFavourited(prev => !prev);
+    }
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -225,7 +265,18 @@ export default function EventDetailPage() {
               )}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-2">{event.title}</h1>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-gray-900 mb-2 flex items-center gap-3">
+              {event.title}
+              <button
+                onClick={(e) => { e.preventDefault(); handleToggleFavourite(); }}
+                className="flex-shrink-0 p-1 rounded-full hover:bg-yellow-50 transition-colors active:scale-90"
+                aria-label={isFavourited ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+              >
+                <svg className={`w-7 h-7 transition-colors ${isFavourited ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 fill-none'}`} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+              </button>
+            </h1>
 
             {event.speaker_name && (
               <p className="text-base sm:text-lg text-gray-600">
@@ -376,7 +427,7 @@ export default function EventDetailPage() {
                 {!event.is_enrolled && (
                   <div className="space-y-3">
                     <button
-                      onClick={handleEnroll}
+                      onClick={() => handleEnroll()}
                       disabled={isEnrolling}
                       className="w-full py-3 px-4 rounded-lg text-white font-medium disabled:opacity-50 min-h-[48px] active:scale-[0.98] transition-transform"
                       style={{ backgroundColor: isFull ? 'var(--scout-azure)' : 'var(--scout-green)' }}

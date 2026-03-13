@@ -161,6 +161,7 @@ export interface Event {
 
 export interface EventListItem extends Event {
   enrollment_count: number;
+  is_favourited?: boolean;
 }
 
 export interface EventWithEnrollment extends Event {
@@ -171,6 +172,7 @@ export interface EventWithEnrollment extends Event {
   checked_in_at?: string | null;
   user_group_id?: string;
   is_group_moderator?: boolean;
+  is_favourited?: boolean;
 }
 
 // ============================================
@@ -220,6 +222,16 @@ export interface EventGroupAttachment {
   file_url: string;
   created_at: string;
   profile?: Profile;
+}
+
+// ============================================
+// EVENT FAVOURITES
+// ============================================
+export interface EventFavourite {
+  id: string;
+  user_id: string;
+  event_id: string;
+  created_at: string;
 }
 
 // ============================================

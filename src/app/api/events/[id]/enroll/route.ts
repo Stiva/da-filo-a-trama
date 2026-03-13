@@ -17,6 +17,12 @@ export async function POST(
 ): Promise<NextResponse<ApiResponse<EnrollmentResult>>> {
   try {
     const { id: eventId } = await params;
+    
+    // Parse query params for force/cancel flow
+    const url = new URL(request.url);
+    const force = url.searchParams.get('force') === 'true';
+    const cancelEventId = url.searchParams.get('cancelEventId');
+
     const { userId } = await auth();
 
     if (!userId) {
@@ -45,7 +51,7 @@ export async function POST(
     // 2. Recupera dati evento
     const { data: event } = await supabase
       .from('events')
-      .select('max_posti, start_time, is_published')
+      .select('max_posti, start_time, end_time, is_published, title')
       .eq('id', eventId)
       .single();
 
@@ -84,6 +90,56 @@ export async function POST(
         { error: 'Sei già iscritto a questo evento' },
         { status: 409 }
       );
+    }
+
+    // 3.5. Verifica conflitti temporali
+    // Get all user's active enrollments with event times
+    const { data: activeEnrollments } = await supabase
+      .from('enrollments')
+      .select('id, event_id, events(title, start_time, end_time)')
+      .eq('user_id', profile.id)
+      .in('status', ['confirmed', 'waitlist']);
+
+    if (activeEnrollments && activeEnrollments.length > 0) {
+      const newStart = new Date(event.start_time);
+      const newEnd = new Date(event.end_time);
+
+      const overlap = activeEnrollments.find(e => {
+        // Ignora l'evento corrente (già gestito sopra) e assicurati che events esista
+        if (!e.events || e.event_id === eventId) return false;
+        
+        // Handling supabase join array or single object format correctly (it returns object for inner join single)
+        const eventData = Array.isArray(e.events) ? e.events[0] : e.events;
+        const eStart = new Date(eventData.start_time);
+        const eEnd = new Date(eventData.end_time);
+        
+        // Controllo sovrapposizione: inizio1 < fine2 AND fine1 > inizio2
+        return eStart < newEnd && eEnd > newStart;
+      });
+
+      if (overlap) {
+        if (force && cancelEventId === overlap.event_id) {
+          // L'utente ha confermato di voler sovrascrivere. Cancella la vecchia iscrizione.
+          await supabase
+            .from('enrollments')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .eq('id', overlap.id);
+        } else {
+          // Ritorna un payload speciale 409 per attivare la modale/confirm lato frontend
+          const conflictingData = Array.isArray(overlap.events) ? overlap.events[0] : overlap.events;
+          return NextResponse.json(
+            { 
+              error: 'Conflitto temporale',
+              conflict: true,
+              conflictingEvent: {
+                id: overlap.event_id,
+                title: conflictingData.title
+              }
+            },
+            { status: 409 }
+          );
+        }
+      }
     }
 
     // 4. Conta iscrizioni confermate (solo utenti normali)

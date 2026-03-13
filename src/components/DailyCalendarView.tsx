@@ -5,10 +5,18 @@ import { format, parseISO, isSameDay, startOfDay, addDays, subDays, differenceIn
 import { it } from 'date-fns/locale';
 
 interface MultiDayCalendarViewProps {
-    events: Event[];
+    events: any[]; // Use any to allow both Event and EventWithEnrollment/EventListItem
+    isAdmin?: boolean;
+    onToggleFavourite?: (eventId: string, e: React.MouseEvent) => void;
+    onToggleSubscribe?: (eventId: string, isEnrolled: boolean, e: React.MouseEvent) => void;
 }
 
-export default function DailyCalendarView({ events }: MultiDayCalendarViewProps) {
+export default function DailyCalendarView({
+    events,
+    isAdmin = true,
+    onToggleFavourite,
+    onToggleSubscribe
+}: MultiDayCalendarViewProps) {
     const sortedEvents = useMemo(() => {
         return [...events].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     }, [events]);
@@ -47,7 +55,7 @@ export default function DailyCalendarView({ events }: MultiDayCalendarViewProps)
 
     const getEventsForDay = (day: Date) => sortedEvents.filter(e => isSameDay(parseISO(e.start_time), day));
 
-    const renderEventBlock = (event: Event, dayEvents: Event[]) => {
+    const renderEventBlock = (event: any, dayEvents: any[]) => {
         const start = parseISO(event.start_time);
         const end = parseISO(event.end_time);
 
@@ -73,10 +81,15 @@ export default function DailyCalendarView({ events }: MultiDayCalendarViewProps)
         const colWidth = 100 / overlapping.length;
         const colLeft = colWidth * idx;
 
+        const linkHref = isAdmin ? `/admin/events/${event.id}` : `/events/${event.id}`;
+        const isFavourited = event.is_favourited;
+        const isEnrolled = event.is_enrolled;
+        const isFull = event.max_posti && event.enrollment_count >= event.max_posti;
+
         return (
             <div
                 key={event.id}
-                className={`absolute rounded-md border p-1.5 shadow-sm flex flex-col overflow-hidden transition-all hover:z-30 hover:shadow-lg cursor-pointer ${getCategoryColor(event.category)}`}
+                className={`absolute rounded-md border p-1.5 shadow-sm flex flex-col overflow-hidden transition-all hover:z-30 hover:shadow-lg ${getCategoryColor(event.category)}`}
                 style={{
                     top: `${topOffset}px`,
                     height: `${height}px`,
@@ -85,12 +98,54 @@ export default function DailyCalendarView({ events }: MultiDayCalendarViewProps)
                 }}
                 title={`${event.title} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
             >
-                <Link href={`/admin/events/${event.id}`} className="font-semibold text-xs leading-tight truncate hover:underline">
-                    {event.title}
-                </Link>
-                <span className="text-[10px] opacity-80 mt-0.5 font-medium">
+                <div className="flex justify-between items-start gap-1">
+                    <Link href={linkHref} className="font-semibold text-xs leading-tight line-clamp-2 hover:underline flex-1">
+                        {event.title}
+                    </Link>
+                    {/* Action Buttons for Users */}
+                    {!isAdmin && (onToggleFavourite || onToggleSubscribe) && height > 40 && colWidth > 30 && (
+                        <div className="flex items-center gap-1 flex-shrink-0 bg-white/50 rounded-md px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
+                            {onToggleFavourite && (
+                                <button
+                                    onClick={(e) => onToggleFavourite(event.id, e)}
+                                    className="p-0.5 rounded-full hover:bg-white transition-colors"
+                                    title={isFavourited ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+                                >
+                                    <svg className={`w-3.5 h-3.5 ${isFavourited ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 fill-none'}`} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                                    </svg>
+                                </button>
+                            )}
+                            {onToggleSubscribe && (
+                                <button
+                                    onClick={(e) => onToggleSubscribe(event.id, isEnrolled, e)}
+                                    className={`p-0.5 rounded-full hover:bg-white transition-colors ${isEnrolled ? 'text-red-500' : (isFull ? 'text-yellow-600' : 'text-green-600')}`}
+                                    title={isEnrolled ? 'Annulla iscrizione' : (isFull ? 'Iscriviti alla lista d\'attesa' : 'Iscriviti')}
+                                >
+                                    {isEnrolled ? (
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                        </svg>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+                
+                <span className="text-[10px] opacity-80 mt-0.5 font-medium flex items-center gap-1">
                     {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
+                    {!isAdmin && isEnrolled && (
+                        <span className="px-1 py-0.5 bg-green-500 text-white rounded-[4px] text-[8px] leading-none uppercase font-bold tracking-wide">
+                            Iscritto
+                        </span>
+                    )}
                 </span>
+                
                 {height > 50 && event.speaker_name && (
                     <span className="text-[10px] mt-auto truncate opacity-70">
                         {event.speaker_name}

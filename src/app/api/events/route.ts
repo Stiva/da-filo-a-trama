@@ -6,7 +6,7 @@ import type { Event, EventListItem, ApiResponse } from '@/types/database';
 /**
  * GET /api/events
  * Lista eventi pubblicati con filtri opzionali
- * Query params: category, tag, date, recommended, poi, search, available
+ * Query params: category, tag, date, recommended, poi, search, available, favourites
  */
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<EventListItem[]>>> {
   try {
@@ -18,6 +18,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
     const poi = searchParams.get('poi');
     const search = searchParams.get('search');
     const available = searchParams.get('available');
+    const favourites = searchParams.get('favourites');
 
     const { userId } = await auth();
 
@@ -79,10 +80,35 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
 
     const events = (data || []) as Event[];
 
+    // Fetch user's favourited event IDs if authenticated
+    let favouritedEventIds: Set<string> = new Set();
+    let profileId: string | null = null;
+
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('clerk_id', userId)
+        .single();
+
+      if (profile) {
+        profileId = profile.id;
+        const { data: favs } = await supabase
+          .from('event_favourites')
+          .select('event_id')
+          .eq('user_id', profile.id);
+
+        if (favs) {
+          favouritedEventIds = new Set(favs.map(f => f.event_id));
+        }
+      }
+    }
+
     // Conteggio iscrizioni confermate per ogni evento
     let eventsWithCount: EventListItem[] = events.map(e => ({
       ...e,
       enrollment_count: 0,
+      is_favourited: favouritedEventIds.has(e.id),
     }));
 
     if (events.length > 0) {
@@ -102,6 +128,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
         eventsWithCount = events.map(e => ({
           ...e,
           enrollment_count: countMap[e.id] || 0,
+          is_favourited: favouritedEventIds.has(e.id),
         }));
       }
     }
@@ -109,6 +136,11 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
     // Filtro posti disponibili (post-query)
     if (available === 'true') {
       eventsWithCount = eventsWithCount.filter(e => e.enrollment_count < e.max_posti);
+    }
+
+    // Filtro preferiti (post-query)
+    if (favourites === 'true' && userId) {
+      eventsWithCount = eventsWithCount.filter(e => e.is_favourited);
     }
 
     return NextResponse.json({ data: eventsWithCount });

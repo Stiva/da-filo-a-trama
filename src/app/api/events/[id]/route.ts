@@ -54,6 +54,7 @@ export async function GET(
     let checkedInAt = null;
     let userGroupId = undefined;
     let isGroupModerator = false;
+    let isFavourited = false;
 
     if (userId) {
       // Recupera profile_id dell'utente
@@ -107,6 +108,16 @@ export async function GET(
             }
           }
         }
+
+        // Check if user has favourited this event
+        const { data: fav } = await supabase
+          .from('event_favourites')
+          .select('id')
+          .eq('user_id', profile.id)
+          .eq('event_id', id)
+          .maybeSingle();
+
+        isFavourited = !!fav;
       }
     }
 
@@ -119,6 +130,7 @@ export async function GET(
       checked_in_at: checkedInAt,
       user_group_id: userGroupId,
       is_group_moderator: isGroupModerator,
+      is_favourited: isFavourited,
     };
 
     return NextResponse.json({ data: eventWithEnrollment });

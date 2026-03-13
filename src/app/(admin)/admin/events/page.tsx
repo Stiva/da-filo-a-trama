@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Event, EventCategory } from '@/types/database';
-import DailyCalendarView from '@/components/admin/DailyCalendarView';
+import DailyCalendarView from '@/components/DailyCalendarView';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
