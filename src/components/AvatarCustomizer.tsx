@@ -47,7 +47,7 @@ interface AvatarCustomizerProps {
   onChange: (updates: Partial<AvatarConfig>) => void;
 }
 
-const generateRandomSeed = () => Math.random().toString(36).substring(2, 10);
+const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 
 // Stepper per navigare tra varianti
 const FeatureStepper = ({

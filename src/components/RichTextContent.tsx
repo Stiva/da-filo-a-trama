@@ -1,3 +1,5 @@
+import DOMPurify from 'isomorphic-dompurify';
+
 interface RichTextContentProps {
   content?: string | null;
   className?: string;
@@ -19,7 +21,7 @@ const RichTextContent = ({ content, className = '' }: RichTextContentProps) => {
   return (
     <div
       className={`rich-text-content ${className}`}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
     />
   );
 };
