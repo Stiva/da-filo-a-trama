@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getActiveOrCreateSupportChannelId } from './streamServer';
+import {
+  getActiveOrCreateSupportChannelId,
+  getStreamApiKey,
+  getChatUserIdFromClerkId,
+  getRoleFromPublicMetadata,
+  mapAppRoleToStreamRole,
+  buildChatDisplayName
+} from './streamServer';
 import { StreamChat } from 'stream-chat';
+import type { User } from '@clerk/nextjs/server';
 
 describe('getActiveOrCreateSupportChannelId', () => {
   const mockCustomerUserId = 'user_123';
