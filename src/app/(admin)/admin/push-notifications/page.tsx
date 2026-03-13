@@ -1,5 +1,4 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { PushNotificationHistoryRecord } from '@/types/database';
 import Link from 'next/link';
 import { Plus, Bell, CheckCircle2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';

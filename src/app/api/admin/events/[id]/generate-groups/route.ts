@@ -140,6 +140,23 @@ export async function POST(
             // To keep track of how many users are currently assigned to each group
             const groupFills = new Array(groups.length).fill(0);
 
+            // To optimize finding the least filled group, maintain an array of group indices
+            // sorted by their fill count (ascending). The least filled group is always at index 0.
+            const sortedIndices = new Array(groups.length);
+            for (let i = 0; i < groups.length; i++) sortedIndices[i] = i;
+
+            // Helper to bubble up the modified group index to maintain sorted order
+            const updateSortedIndices = (modifiedGroupIdx: number, newFill: number) => {
+                groupFills[modifiedGroupIdx] = newFill;
+                let j = 0;
+                // Shift indices left until we find the correct sorted position for the modified group
+                while (j < groups.length - 1 && groupFills[sortedIndices[j + 1]] < newFill) {
+                    sortedIndices[j] = sortedIndices[j + 1];
+                    j++;
+                }
+                sortedIndices[j] = modifiedGroupIdx;
+            };
+
             // For each role, we find an available group (or multiple if the role list is larger than maxGroupSize)
             roles.forEach(role => {
                 const users = roleMap[role];
@@ -148,33 +165,24 @@ export async function POST(
                     const chunk = users.slice(i, i + maxGroupSize);
 
                     // Find the group with the most available space (or least filled)
-                    let bestGroupIdx = 0;
-                    for (let g = 1; g < groups.length; g++) {
-                        if (groupFills[g] < groupFills[bestGroupIdx]) {
-                            bestGroupIdx = g;
-                        }
-                    }
+                    // The least filled group is always the first element in sortedIndices
+                    const bestGroupIdx = sortedIndices[0];
 
                     // Assign all users in the chunk to this best group
                     chunk.forEach(userId => {
                         assignUser(userId, bestGroupIdx);
                     });
 
-                    // Update the fill count for this group
-                    groupFills[bestGroupIdx] += chunk.length;
+                    // Update the fill count and bubble it up to maintain sort
+                    updateSortedIndices(bestGroupIdx, groupFills[bestGroupIdx] + chunk.length);
                 }
             });
 
             // Distribute unassigned users evenly among the least filled groups
             unassignedRoleUsers.forEach(userId => {
-                let bestGroupIdx = 0;
-                for (let g = 1; g < groups.length; g++) {
-                    if (groupFills[g] < groupFills[bestGroupIdx]) {
-                        bestGroupIdx = g;
-                    }
-                }
+                const bestGroupIdx = sortedIndices[0];
                 assignUser(userId, bestGroupIdx);
-                groupFills[bestGroupIdx] += 1;
+                updateSortedIndices(bestGroupIdx, groupFills[bestGroupIdx] + 1);
             });
 
         } else {
