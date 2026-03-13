@@ -8,6 +8,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
