@@ -73,52 +73,108 @@ export async function POST(
         }
 
         let clonedCount = 0;
+        const sourceGroupIds = sourceGroups.map(g => g.id);
 
-        for (const sourceGroup of sourceGroups) {
-            // A. Crea il nuovo gruppo nell'evento target
-            const { data: newGroup, error: insertGroupError } = await supabase
-                .from('event_groups')
-                .insert({
-                    event_id: targetEventId,
-                    name: sourceGroup.name,
-                    description: sourceGroup.description,
-                    location_poi_id: sourceGroup.location_poi_id
-                })
-                .select('id')
-                .single();
+        if (sourceGroupIds.length === 0) {
+             return NextResponse.json({
+                data: { cloned: true, groups_count: 0 }, message: "L'evento sorgente non ha gruppi da clonare"
+            });
+        }
 
-            if (insertGroupError) throw insertGroupError;
-            if (!newGroup) continue;
-            clonedCount++;
-
-            // B. Clona i moderatori
-            const { data: sourceMods } = await supabase
+        // Fetch all moderators and members for the source groups in bulk to avoid N+1 queries
+        const [
+            { data: allSourceMods, error: modsError },
+            { data: allSourceMembers, error: membersError }
+        ] = await Promise.all([
+            supabase
                 .from('event_group_moderators')
-                .select('user_id')
-                .eq('group_id', sourceGroup.id);
-
-            if (sourceMods && sourceMods.length > 0) {
-                const newMods = sourceMods.map(m => ({
-                    group_id: newGroup.id,
-                    user_id: m.user_id
-                }));
-                await supabase.from('event_group_moderators').insert(newMods);
-            }
-
-            // C. Clona i membri (utenti normali)
-            // ATTENZIONE: clonando i membri, l'utente sarà assegnato al gruppo anche prima di fare check-in
-            const { data: sourceMembers } = await supabase
+                .select('group_id, user_id')
+                .in('group_id', sourceGroupIds),
+            supabase
                 .from('event_group_members')
-                .select('user_id')
-                .eq('group_id', sourceGroup.id);
+                .select('group_id, user_id')
+                .in('group_id', sourceGroupIds)
+        ]);
 
-            if (sourceMembers && sourceMembers.length > 0) {
-                const newMembers = sourceMembers.map(m => ({
-                    group_id: newGroup.id,
-                    user_id: m.user_id
-                }));
-                await supabase.from('event_group_members').insert(newMembers);
+        if (modsError) throw modsError;
+        if (membersError) throw membersError;
+
+        // Group moderators and members by their source group ID for quick lookup
+        const modsBySourceGroupId = new Map<string, string[]>();
+        const membersBySourceGroupId = new Map<string, string[]>();
+
+        if (allSourceMods) {
+            for (const mod of allSourceMods) {
+                if (!modsBySourceGroupId.has(mod.group_id)) modsBySourceGroupId.set(mod.group_id, []);
+                modsBySourceGroupId.get(mod.group_id)!.push(mod.user_id);
             }
+        }
+
+        if (allSourceMembers) {
+            for (const member of allSourceMembers) {
+                if (!membersBySourceGroupId.has(member.group_id)) membersBySourceGroupId.set(member.group_id, []);
+                membersBySourceGroupId.get(member.group_id)!.push(member.user_id);
+            }
+        }
+
+        // Process cloning of groups concurrently
+        const cloneResults = await Promise.allSettled(
+            sourceGroups.map(async (sourceGroup) => {
+                const newGroupId = crypto.randomUUID();
+
+                // A. Crea il nuovo gruppo nell'evento target (con UUID generato per riferimento immediato)
+                const { error: insertGroupError } = await supabase
+                    .from('event_groups')
+                    .insert({
+                        id: newGroupId,
+                        event_id: targetEventId,
+                        name: sourceGroup.name,
+                        description: sourceGroup.description,
+                        location_poi_id: sourceGroup.location_poi_id
+                    });
+
+                if (insertGroupError) throw insertGroupError;
+
+                // B. Clona i moderatori
+                const sourceMods = modsBySourceGroupId.get(sourceGroup.id) || [];
+                if (sourceMods.length > 0) {
+                    const newMods = sourceMods.map(userId => ({
+                        group_id: newGroupId,
+                        user_id: userId
+                    }));
+                    const { error: insertModsError } = await supabase.from('event_group_moderators').insert(newMods);
+                    if (insertModsError) throw insertModsError;
+                }
+
+                // C. Clona i membri (utenti normali)
+                // ATTENZIONE: clonando i membri, l'utente sarà assegnato al gruppo anche prima di fare check-in
+                const sourceMembers = membersBySourceGroupId.get(sourceGroup.id) || [];
+                if (sourceMembers.length > 0) {
+                    const newMembers = sourceMembers.map(userId => ({
+                        group_id: newGroupId,
+                        user_id: userId
+                    }));
+                    const { error: insertMembersError } = await supabase.from('event_group_members').insert(newMembers);
+                    if (insertMembersError) throw insertMembersError;
+                }
+
+                return newGroupId;
+            })
+        );
+
+        const failedClones: any[] = [];
+
+        for (const result of cloneResults) {
+            if (result.status === 'fulfilled') {
+                clonedCount++;
+            } else {
+                failedClones.push(result.reason);
+                console.error('Error cloning individual group:', result.reason);
+            }
+        }
+
+        if (clonedCount === 0 && failedClones.length > 0) {
+            throw new Error('Nessun gruppo clonato a causa di errori multipli');
         }
 
         // Aggiorna il contatore dei gruppi nell'evento
