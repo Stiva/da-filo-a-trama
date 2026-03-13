@@ -76,7 +76,7 @@ export async function POST(
 
         // Carica file su Supabase Storage
         const fileExt = file.name.split('.').pop();
-        const fileName = `${groupId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const fileName = `${groupId}/${crypto.randomUUID()}.${fileExt}`;
         const filePath = `groups/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
