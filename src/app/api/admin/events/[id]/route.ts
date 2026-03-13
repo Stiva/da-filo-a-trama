@@ -2,6 +2,7 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, ApiResponse } from '@/types/database';
+import { enrollAllProfilesToEvent } from '@/lib/events/enrollment';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -132,36 +133,6 @@ async function notifyWaitlistPromotions(
 
   if (error) {
     throw error;
-  }
-}
-
-async function enrollAllProfilesToEvent(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string) {
-  const { data: profiles, error } = await supabase
-    .from('profiles')
-    .select('id');
-
-  if (error) {
-    throw error;
-  }
-
-  if (!profiles?.length) {
-    return;
-  }
-
-  const enrollments = profiles.map((profile) => ({
-    event_id: eventId,
-    user_id: profile.id,
-    status: 'confirmed',
-    waitlist_position: null,
-    registration_type: 'auto',
-  }));
-
-  const { error: insertError } = await supabase
-    .from('enrollments')
-    .upsert(enrollments, { onConflict: 'user_id,event_id', ignoreDuplicates: true });
-
-  if (insertError) {
-    throw insertError;
   }
 }
 
