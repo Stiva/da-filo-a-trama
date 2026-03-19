@@ -127,6 +127,7 @@ export default function DailyCalendarView({
                                     onClick={(e) => onToggleFavourite(event.id, e)}
                                     className="p-0.5 rounded-full hover:bg-white transition-colors focus:ring-2 focus:ring-offset-1 focus:ring-yellow-500 focus:outline-none"
                                     title={isFavourited ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
+                                    aria-label={isFavourited ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}
                                     aria-label="Preferito"
                                     aria-pressed={isFavourited}
                                 >
@@ -140,6 +141,7 @@ export default function DailyCalendarView({
                                     onClick={(e) => onToggleSubscribe(event.id, isEnrolled, e)}
                                     className={`p-0.5 rounded-full hover:bg-white transition-colors focus:ring-2 focus:ring-offset-1 focus:ring-green-500 focus:outline-none ${isEnrolled ? 'text-red-500' : (isFull ? 'text-yellow-600' : 'text-green-600')}`}
                                     title={isEnrolled ? 'Annulla iscrizione' : (isFull ? 'Iscriviti alla lista d\'attesa' : 'Iscriviti')}
+                                    aria-label={isEnrolled ? 'Annulla iscrizione' : (isFull ? 'Iscriviti alla lista d\'attesa' : 'Iscriviti')}
                                     aria-label="Iscritto"
                                     aria-pressed={isEnrolled}
                                 >
@@ -184,6 +186,7 @@ export default function DailyCalendarView({
                 <div className="flex items-center justify-between px-4 py-3">
                     <button
                         onClick={handlePrev}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-agesci-blue focus:outline-none"
                         aria-label="Giorni precedenti"
                     >
@@ -196,6 +199,7 @@ export default function DailyCalendarView({
                     </h2>
                     <button
                         onClick={handleNext}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-agesci-blue focus:outline-none"
                         aria-label="Giorni successivi"
                     >
