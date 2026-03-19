@@ -122,6 +122,7 @@ export default function MyEventsPage() {
             <button
               key={tab.value}
               onClick={() => setStatusFilter(tab.value)}
+              aria-label={`Filtra per ${tab.label}`}
               className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 statusFilter === tab.value
                   ? 'border-green-500 text-green-600'
