@@ -18,6 +18,16 @@ export default function CheckinQRCodeDialog({ eventId, eventTitle }: CheckinQRCo
         }
     }, [eventId]);
 
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isOpen) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [isOpen]);
+
     return (
         <>
             <button
@@ -31,10 +41,15 @@ export default function CheckinQRCodeDialog({ eventId, eventTitle }: CheckinQRCo
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 transition-opacity">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 transition-opacity"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="qr-dialog-title"
+                >
                     <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col items-center p-8 animate-in fade-in zoom-in duration-200">
                         <div className="flex justify-between items-center w-full mb-6">
-                            <h2 className="text-xl font-bold text-gray-900 border-b pb-2 w-full text-center truncate">Check-in: {eventTitle}</h2>
+                            <h2 id="qr-dialog-title" className="text-xl font-bold text-gray-900 border-b pb-2 w-full text-center truncate">Check-in: {eventTitle}</h2>
                         </div>
 
                         <div className="bg-white p-4 rounded-lg shadow-inner mb-6">
