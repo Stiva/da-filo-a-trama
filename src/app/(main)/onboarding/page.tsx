@@ -115,18 +115,20 @@ export default function OnboardingPage() {
 
   // Funzione per salvare con retry (gestisce race condition con webhook)
   const saveProfileWithRetry = async (maxRetries = 3): Promise<boolean> => {
+    const body = JSON.stringify({
+      ...formData,
+      service_role: formData.service_role || null, // Converti in null se vuoto
+      onboarding_completed: true,
+      avatar_completed: true,
+      preferences_set: formData.preferences.length > 0,
+    });
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await fetch('/api/profiles', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...formData,
-            service_role: formData.service_role || null, // Converti in null se vuoto
-            onboarding_completed: true,
-            avatar_completed: true,
-            preferences_set: formData.preferences.length > 0,
-          }),
+          body,
         });
 
         if (response.ok) {
