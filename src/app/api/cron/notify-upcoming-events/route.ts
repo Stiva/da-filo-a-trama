@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const secret = process.env.CRON_SECRET;
     const headerSecret = request.headers.get('x-cron-secret');
 
-    if (secret && headerSecret !== secret) {
+    if (!secret || headerSecret !== secret) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
