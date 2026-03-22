@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import AvatarPreview from '@/components/AvatarPreview';
 import UserDropdownMenu from '@/components/UserDropdownMenu';
+import type { AvatarConfig } from '@/types/database';
 
 // Profilo removed — accessible via avatar dropdown
 const navLinks = [
@@ -19,7 +20,7 @@ const navLinks = [
 
 interface ProfileData {
   profile_image_url?: string | null;
-  avatar_config?: Record<string, unknown> | null;
+  avatar_config?: AvatarConfig | null;
   name?: string | null;
   surname?: string | null;
 }
@@ -105,9 +106,8 @@ export default function Navbar() {
     }
     if (hasAvatarConfig) {
       return (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <AvatarPreview
-          config={profile!.avatar_config as any}
+          config={profile!.avatar_config!}
           size="full"
           className="border-none !shadow-none w-full h-full"
         />
