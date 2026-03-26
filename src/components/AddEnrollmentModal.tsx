@@ -60,6 +60,16 @@ export default function AddEnrollmentModal({
     return () => clearTimeout(timeoutId);
   }, [searchQuery, searchUsers]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleSubmit = async () => {
     if (!selectedProfile) return;
 
@@ -93,10 +103,10 @@ export default function AddEnrollmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div role="dialog" aria-modal="true" aria-labelledby="add-enrollment-title" className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Aggiungi Iscrizione</h2>
+          <h2 id="add-enrollment-title" className="text-lg sm:text-xl font-bold text-gray-900">Aggiungi Iscrizione</h2>
           <button
             onClick={onClose}
             className="modal-close"
@@ -118,11 +128,12 @@ export default function AddEnrollmentModal({
 
           {/* Search Input - Touch friendly */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="searchUser" className="block text-sm font-medium text-gray-700 mb-1">
               Cerca utente
             </label>
             <div className="relative">
               <input
+                id="searchUser"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => {
