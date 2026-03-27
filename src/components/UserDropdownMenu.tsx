@@ -42,10 +42,19 @@ export default function UserDropdownMenu() {
                 setIsOpen(false);
             }
         };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsOpen(false);
+            }
+        };
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleKeyDown);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
     }, [isOpen]);
 
     const appProfileImageUrl = profile?.profile_image_url ?? null;
@@ -101,6 +110,7 @@ export default function UserDropdownMenu() {
                 type="button"
                 onClick={() => setIsOpen((o) => !o)}
                 aria-label="Menu utente"
+                aria-haspopup="menu"
                 aria-expanded={isOpen}
                 className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-agesci-yellow ring-offset-2 ring-offset-scout-cream bg-agesci-blue/10 flex items-center justify-center hover:scale-105 transition-transform focus:outline-none focus:ring-4"
             >
@@ -108,7 +118,11 @@ export default function UserDropdownMenu() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-agesci-blue/10 overflow-hidden z-50">
+                <div
+                    className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-agesci-blue/10 overflow-hidden z-50"
+                    role="menu"
+                    aria-label="Menu utente"
+                >
                     <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
                         <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-agesci-yellow flex-shrink-0 bg-agesci-blue/10 flex items-center justify-center">
                             <AvatarCircle size="sm" />
@@ -122,6 +136,7 @@ export default function UserDropdownMenu() {
                         <Link
                             href="/profile"
                             onClick={() => setIsOpen(false)}
+                            role="menuitem"
                             className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-agesci-yellow/20 transition-colors"
                         >
                             <UserIcon className="w-4 h-4 text-agesci-blue flex-shrink-0" />
@@ -130,6 +145,7 @@ export default function UserDropdownMenu() {
                         <button
                             type="button"
                             onClick={handleSignOut}
+                            role="menuitem"
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
                             <LogoutIcon className="w-4 h-4 flex-shrink-0" />
