@@ -209,6 +209,7 @@ export default function AddEnrollmentModal({
           <button
             onClick={handleSubmit}
             disabled={!selectedProfile || isSubmitting}
+            aria-busy={isSubmitting}
             className="w-full sm:w-auto px-4 py-2.5 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 min-h-[44px]"
           >
             {isSubmitting ? 'Aggiunta in corso...' : 'Aggiungi Iscrizione'}
