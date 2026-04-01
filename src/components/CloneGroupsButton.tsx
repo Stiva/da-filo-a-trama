@@ -50,6 +50,7 @@ export default function CloneGroupsButton({ targetEventId, sourceEventId }: Clon
         <button
             onClick={handleClone}
             disabled={isCloning}
+            aria-busy={isCloning}
             className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
             {isCloning ? (
