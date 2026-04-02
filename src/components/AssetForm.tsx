@@ -534,6 +534,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         <button
           type="submit"
           disabled={isSaving || !formData.file_url}
+          aria-busy={isSaving}
           className="px-6 py-2 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light transition-colors disabled:opacity-50"
         >
           {isSaving ? 'Salvataggio...' : isEditing ? 'Salva Modifiche' : 'Crea Asset'}
@@ -544,6 +545,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
             type="button"
             onClick={handleDelete}
             disabled={isDeleting}
+            aria-busy={isDeleting}
             className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
           >
             {isDeleting ? 'Eliminazione...' : 'Elimina'}
