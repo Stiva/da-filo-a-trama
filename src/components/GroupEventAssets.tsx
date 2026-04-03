@@ -226,6 +226,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                 <button
                     type="submit"
                     disabled={isSubmitting || !selectedFile}
+                    aria-busy={isSubmitting}
                     className="w-full py-2.5 px-4 rounded-lg text-white font-medium bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 min-h-[44px] transition-all text-sm"
                 >
                     {isSubmitting ? 'Caricamento...' : 'Carica file'}
