@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
+    codice_socio: '',
     scout_group: '',
     service_role: '' as ServiceRole | '',
     preferences: [] as PreferenceTag[],
@@ -84,6 +85,7 @@ export default function ProfilePage() {
       setFormData({
         name: result.data.name || '',
         surname: result.data.surname || '',
+        codice_socio: result.data.codice_socio || '',
         scout_group: result.data.scout_group || '',
         service_role: result.data.service_role || '',
         preferences: result.data.preferences || [],
@@ -97,6 +99,12 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    if (!formData.codice_socio || !/^[0-9]{6,8}$/.test(formData.codice_socio)) {
+      setError('Il Codice Socio deve essere un numero composto da 6 a 8 cifre.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     setSuccess(null);
@@ -374,6 +382,23 @@ export default function ProfilePage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Codice Socio *
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={8}
+                      value={formData.codice_socio}
+                      onChange={(e) => setFormData(prev => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
+                      className="input w-full"
+                      placeholder="Da 6 a 8 cifre"
+                      required
+                    />
                   </div>
 
                   <div className="relative">

@@ -30,6 +30,7 @@ export interface Profile {
   name: string | null;
   surname: string | null;
   first_name: string | null;
+  codice_socio: string | null;
   scout_group: string | null;
   service_role: ServiceRole | null;
   role: 'user' | 'staff' | 'admin';
@@ -77,6 +78,7 @@ export interface ProfileUpdate {
   name?: string;
   surname?: string;
   first_name?: string;
+  codice_socio?: string | null;
   scout_group?: string;
   service_role?: ServiceRole | null;
   preferences?: string[];

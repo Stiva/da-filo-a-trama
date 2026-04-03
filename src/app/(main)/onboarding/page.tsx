@@ -19,6 +19,7 @@ type OnboardingStep = 'info' | 'preferences' | 'avatar' | 'complete';
 interface FormData {
   name: string;
   surname: string;
+  codice_socio: string;
   scout_group: string;
   service_role: string;
   preferences: PreferenceTag[];
@@ -39,6 +40,7 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     surname: '',
+    codice_socio: '',
     scout_group: '',
     service_role: '',
     preferences: [],
@@ -79,9 +81,15 @@ export default function OnboardingPage() {
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
 
   const handleNext = () => {
-    if (currentStep === 'info' && (!formData.name || !formData.surname || !formData.service_role)) {
-      setError('Compila tutti i campi obbligatori (Nome, Cognome e Ruolo di Servizio).');
-      return;
+    if (currentStep === 'info') {
+      if (!formData.name || !formData.surname || !formData.service_role || !formData.codice_socio) {
+        setError('Compila tutti i campi obbligatori (Nome, Cognome, Codice Socio e Ruolo di Servizio).');
+        return;
+      }
+      if (!/^[0-9]{6,8}$/.test(formData.codice_socio)) {
+        setError('Il Codice Socio deve essere un numero composto da 6 a 8 cifre.');
+        return;
+      }
     }
     setError(null);
     const nextIndex = currentStepIndex + 1;
@@ -244,6 +252,22 @@ export default function OnboardingPage() {
                     className="input w-full"
                     placeholder="Il tuo cognome"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-agesci-blue mb-1">Codice Socio *</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={8}
+                    value={formData.codice_socio}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
+                    className="input w-full"
+                    placeholder="Da 6 a 8 cifre"
+                    required
+                  />
+                  <p className="text-xs text-agesci-blue/60 mt-1">Il tuo identificativo numerico AGESCI univoco.</p>
                 </div>
 
                 <div>
