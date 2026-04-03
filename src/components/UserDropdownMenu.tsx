@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import AvatarPreview from '@/components/AvatarPreview';
+import type { AvatarConfig } from '@/types/database';
 
 interface ProfileData {
     profile_image_url?: string | null;
-    avatar_config?: Record<string, unknown> | null;
+    avatar_config?: AvatarConfig | null;
     name?: string | null;
     surname?: string | null;
 }
@@ -92,9 +93,8 @@ export default function UserDropdownMenu() {
         }
         if (hasAvatarConfig) {
             return (
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 <AvatarPreview
-                    config={profile!.avatar_config as any}
+                    config={profile!.avatar_config!}
                     size="full"
                     className="border-none !shadow-none w-full h-full"
                 />
