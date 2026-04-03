@@ -151,6 +151,7 @@ export default function EventCard({
                   onEnroll?.();
                 }}
                 disabled={enrolling}
+                aria-busy={enrolling}
                 className="btn-primary btn-sm flex-1 sm:flex-none"
               >
                 {enrolling ? 'Iscrizione...' : 'Iscriviti'}
