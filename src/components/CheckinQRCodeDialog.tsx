@@ -22,6 +22,8 @@ export default function CheckinQRCodeDialog({ eventId, eventTitle }: CheckinQRCo
         <>
             <button
                 onClick={() => setIsOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={isOpen}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,9 +34,14 @@ export default function CheckinQRCodeDialog({ eventId, eventTitle }: CheckinQRCo
 
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 transition-opacity">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col items-center p-8 animate-in fade-in zoom-in duration-200">
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="dialog-title"
+                        className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col items-center p-8 animate-in fade-in zoom-in duration-200"
+                    >
                         <div className="flex justify-between items-center w-full mb-6">
-                            <h2 className="text-xl font-bold text-gray-900 border-b pb-2 w-full text-center truncate">Check-in: {eventTitle}</h2>
+                            <h2 id="dialog-title" className="text-xl font-bold text-gray-900 border-b pb-2 w-full text-center truncate">Check-in: {eventTitle}</h2>
                         </div>
 
                         <div className="bg-white p-4 rounded-lg shadow-inner mb-6">
