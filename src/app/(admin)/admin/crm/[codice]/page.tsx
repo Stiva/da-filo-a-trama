@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 import { CheckCircle, XCircle, ArrowLeft, User, Mail, MapPin, Tag } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
 
@@ -11,9 +12,23 @@ interface CRMDetailPageProps {
 export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
   const { codice } = await params;
   const decodedCodice = decodeURIComponent(codice);
-  const supabase = await createServerSupabaseClient();
+  
+  // Verify Admin manually since we are using service role to bypass restrictive RLS on participants
+  const session = await auth();
+  if (!session.userId) notFound();
+  
+  const supabase = createServiceRoleClient();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('clerk_id', session.userId)
+    .single();
 
-  // Fetch participant from view
+  if (!profile || profile.role !== 'admin') {
+    notFound();
+  }
+
+  // Fetch participant from view USING service role
   const { data: participant } = await supabase
     .from('participant_crm_view')
     .select('*')
