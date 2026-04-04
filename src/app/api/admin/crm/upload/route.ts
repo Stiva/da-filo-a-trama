@@ -58,6 +58,13 @@ export async function POST(request: Request) {
         gruppo: row['Gruppo'] || null,
         zona: row['Zona'] || null,
         ruolo: row['Partecipo in qualità di:'] || null,
+        allergie: row['Allergie? (indicare il grado di reazione)'] || null,
+        esigenze_mediche: row['Eventuali esigenze mediche?'] || null,
+        segnalazioni: row['Ulteriori segnalazioni?'] || null,
+        esigenze_alimentari: row['Esigenze alimentari?'] || null,
+        competenza_sostenibilita: row['Quanto ti senti competente sui temi della sostenibilità ambientale/sociale/economica?'] || null,
+        aspettativa_evento: row['Qual è la tua principale aspettativa rispetto all’evento?'] || null,
+        temi_sostenibilita: row['Su quale tema dello sviluppo sostenibile sei più interessato a lavorare nel tuo ruolo educativo?'] || null,
         is_active_in_list: true,
       };
     }).filter(p => p.codice); // Filtering out rows without 'Codice'

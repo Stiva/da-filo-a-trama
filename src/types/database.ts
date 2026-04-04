@@ -539,6 +539,13 @@ export interface Participant {
   gruppo: string | null;
   zona: string | null;
   ruolo: string | null;
+  allergie?: string | null;
+  esigenze_mediche?: string | null;
+  segnalazioni?: string | null;
+  esigenze_alimentari?: string | null;
+  competenza_sostenibilita?: string | null;
+  aspettativa_evento?: string | null;
+  temi_sostenibilita?: string | null;
   is_active_in_list: boolean;
   is_checked_in: boolean;
   checked_in_at: string | null;

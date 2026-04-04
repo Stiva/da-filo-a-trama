@@ -2,7 +2,10 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { auth } from '@clerk/nextjs/server';
-import { CheckCircle, XCircle, ArrowLeft, User, Mail, MapPin, Tag } from 'lucide-react';
+import { 
+  CheckCircle, XCircle, ArrowLeft, User, Mail, MapPin, Tag, 
+  HeartPulse, AlertTriangle, Leaf, Target, Lightbulb, Utensils 
+} from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
 
 interface CRMDetailPageProps {
@@ -199,6 +202,122 @@ export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
         </div>
       </div>
       
+      {/* Second Row: Sanitario & Sostenibilità */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        
+        {/* Left Column - Informazioni Sanitarie e Alimentari */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-200 bg-red-50/50">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <HeartPulse className="w-5 h-5 text-red-500" />
+              Area Prevenzione e Alimentazione
+            </h3>
+          </div>
+          <div className="p-6 space-y-6">
+            
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+               <dt className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                 <Utensils className="w-4 h-4 text-orange-500" /> Esigenze Alimentari
+               </dt>
+               <dd className="text-gray-900 leading-relaxed font-medium">
+                 {participant.esigenze_alimentari && participant.esigenze_alimentari.toLowerCase() !== 'nessuna' && participant.esigenze_alimentari.toLowerCase() !== 'no' 
+                   ? participant.esigenze_alimentari
+                   : <span className="text-gray-400 font-normal italic">Nessuna esigenza segnalata</span>
+                 }
+               </dd>
+            </div>
+
+            <div>
+               <dt className="text-sm font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                 <AlertTriangle className="w-4 h-4 text-red-500" /> Allergie & Reazioni
+               </dt>
+               <dd className="text-gray-900 leading-relaxed bg-white border border-red-100 rounded-lg p-3">
+                 {participant.allergie && participant.allergie.toLowerCase() !== 'nessuna' && participant.allergie.toLowerCase() !== 'no'
+                   ? <span className="text-red-700 font-medium">{participant.allergie}</span>
+                   : <span className="text-gray-400 italic">Nessuna allergia segnalata</span>
+                 }
+               </dd>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+              <div>
+                 <dt className="text-sm font-medium text-gray-500 mb-1">Esigenze Mediche</dt>
+                 <dd className="text-gray-900 text-sm">
+                   {participant.esigenze_mediche && participant.esigenze_mediche.toLowerCase() !== 'nessuna' && participant.esigenze_mediche.toLowerCase() !== 'no'
+                     ? participant.esigenze_mediche
+                     : <span className="text-gray-400 italic">Nessuna</span>
+                   }
+                 </dd>
+              </div>
+              <div>
+                 <dt className="text-sm font-medium text-gray-500 mb-1">Segnalazioni Extra</dt>
+                 <dd className="text-gray-900 text-sm">
+                   {participant.segnalazioni && participant.segnalazioni.trim() !== '' && participant.segnalazioni.toLowerCase() !== 'no' && participant.segnalazioni.toLowerCase() !== 'niente da segnalare'
+                     ? participant.segnalazioni
+                     : <span className="text-gray-400 italic">Nessuna</span>
+                   }
+                 </dd>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Right Column - Questionario Avventure Sostenibili */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-200 bg-green-50/50">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Leaf className="w-5 h-5 text-green-600" />
+              Questionario "Avventure Sostenibili"
+            </h3>
+          </div>
+          <div className="p-6 space-y-6">
+            
+            <div>
+               <dt className="text-sm font-medium text-gray-500 mb-1.5 flex items-center gap-1.5">
+                 <Target className="w-4 h-4" /> Qual è la principale aspettativa all'evento?
+               </dt>
+               <dd className="text-gray-900 font-medium bg-green-50/30 border border-green-100 px-4 py-3 rounded-xl border-l-4 border-l-green-400">
+                 {participant.aspettativa_evento || <span className="text-gray-400 italic">Non compilato</span>}
+               </dd>
+            </div>
+
+            <div>
+               <dt className="text-sm font-medium text-gray-500 mb-1.5 flex items-center gap-1.5">
+                 <Lightbulb className="w-4 h-4 text-yellow-500" /> Competenza percepita in sostenibilità
+               </dt>
+               <dd className="text-gray-900">
+                 {participant.competenza_sostenibilita ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100/50 text-yellow-800 border border-yellow-200">
+                      {participant.competenza_sostenibilita.toUpperCase()}
+                    </span>
+                 ) : (
+                    <span className="text-gray-400 italic text-sm">Non compilato</span>
+                 )}
+               </dd>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100">
+               <dt className="text-sm font-medium text-gray-500 mb-3">Temi di sviluppo sostenibile d'interesse</dt>
+               <dd className="flex flex-wrap gap-2 text-sm">
+                 {participant.temi_sostenibilita ? (
+                    // Parse comma-separated array from CSV format 
+                    participant.temi_sostenibilita.split(',').map((tema: string, i: number) => (
+                      <span key={i} className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-agesci-blue border border-blue-100 font-medium">
+                        {tema.trim()}
+                      </span>
+                    ))
+                 ) : (
+                    <span className="text-gray-400 italic">Nessun tema selezionato</span>
+                 )}
+               </dd>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 }
