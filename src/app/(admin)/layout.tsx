@@ -208,7 +208,7 @@ export default function AdminLayout({
         {/* Sidebar */}
         <aside
           className={`
-            fixed lg:sticky lg:top-16 inset-y-0 left-0 z-50
+            fixed lg:fixed lg:top-16 inset-y-0 left-0 z-40
             w-64 bg-gray-800 h-[100dvh] lg:h-[calc(100vh-4rem)] text-white
             transform transition-transform duration-300 ease-in-out
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -328,7 +328,7 @@ export default function AdminLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 lg:ml-64">
           {children}
         </main>
       </div>

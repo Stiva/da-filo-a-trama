@@ -62,7 +62,7 @@ export const getActiveOrCreateSupportChannelId = async (params: {
     {
       type: 'messaging',
       support_chat: true,
-      created_by_id: customerUserId,
+      members: { $in: [customerUserId] },
     } as any,
     { created_at: -1 },
     { limit: 1, watch: false, state: true }

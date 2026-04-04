@@ -66,15 +66,11 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
       role: streamRole,
     });
 
-    let supportChannelId: string | null = null;
-
-    if (role === 'user') {
-      supportChannelId = await getActiveOrCreateSupportChannelId({
-        streamClient,
-        customerUserId: streamUserId,
-        customerDisplayName: streamDisplayName,
-      });
-    }
+    const supportChannelId = await getActiveOrCreateSupportChannelId({
+      streamClient,
+      customerUserId: streamUserId,
+      customerDisplayName: streamDisplayName,
+    });
 
     const token = streamClient.createToken(streamUserId);
 
