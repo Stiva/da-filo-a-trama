@@ -7,20 +7,22 @@
 // PROFILES
 // ============================================
 export type ServiceRole =
-  | 'Capi Branco'
-  | 'Capi Cerchio'
-  | 'Formatori'
-  | 'Membri pattuglia regionale'
-  | 'IABZ'
-  | 'Comitato regionale/nazionale';
+  | 'Capo branco'
+  | 'Capo cerchio'
+  | 'Membro di staff CFM L/C'
+  | 'Incaricato di zona alla Branca L/C'
+  | 'Incaricato regionale alla Branca L/C'
+  | 'Membro di Pattuglia regionale (compresi referenti)'
+  | 'Assistente ecclesiastico';
 
 export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
-  'Capi Branco': 'Capi Branco',
-  'Capi Cerchio': 'Capi Cerchio',
-  'Formatori': 'Formatori',
-  'Membri pattuglia regionale': 'Membri pattuglia regionale',
-  'IABZ': 'Incaricati di Branca/Settore (IABZ)',
-  'Comitato regionale/nazionale': 'Comitato Regionale / Nazionale'
+  'Capo branco': 'Capo branco',
+  'Capo cerchio': 'Capo cerchio',
+  'Membro di staff CFM L/C': 'Membro di staff CFM L/C',
+  'Incaricato di zona alla Branca L/C': 'Incaricato di zona alla Branca L/C',
+  'Incaricato regionale alla Branca L/C': 'Incaricato regionale alla Branca L/C',
+  'Membro di Pattuglia regionale (compresi referenti)': 'Membro di Pattuglia regionale (compresi referenti)',
+  'Assistente ecclesiastico': 'Assistente ecclesiastico'
 };
 
 export interface Profile {

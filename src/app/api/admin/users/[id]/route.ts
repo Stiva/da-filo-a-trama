@@ -140,6 +140,7 @@ export async function PUT(
       'name',
       'surname',
       'first_name',
+      'codice_socio',
       'scout_group',
       'preferences',
       'avatar_config',
@@ -156,6 +157,34 @@ export async function PUT(
     }
 
     const supabase = createServiceRoleClient();
+
+    // Fetch existing profile to determine if service_role needs auto-assignment from CRM
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id, service_role, codice_socio')
+      .eq('id', id)
+      .single();
+
+    // Auto-populate service_role from CRM "participants" table if linking occurs
+    const futureCodice = body.codice_socio !== undefined ? body.codice_socio : existingProfile?.codice_socio;
+    const futureRole = (body as any).service_role !== undefined ? (body as any).service_role : existingProfile?.service_role;
+
+    if (futureCodice && (!futureRole || !body.scout_group)) {
+      const { data: crmData } = await supabase
+        .from('participants')
+        .select('ruolo, gruppo')
+        .eq('codice', futureCodice)
+        .single();
+      
+      if (crmData) {
+        if (!futureRole && crmData.ruolo) {
+          updateData.service_role = crmData.ruolo as any;
+        }
+        if (!body.scout_group && crmData.gruppo) {
+          updateData.scout_group = crmData.gruppo;
+        }
+      }
+    }
 
     const { data, error } = await supabase
       .from('profiles')

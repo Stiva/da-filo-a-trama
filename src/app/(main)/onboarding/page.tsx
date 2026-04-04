@@ -289,15 +289,6 @@ export default function OnboardingPage() {
                   </select>
                 </div>
 
-                <div className="relative">
-                  <label className="block text-sm font-medium text-agesci-blue mb-1">Gruppo Scout</label>
-                  <Autocomplete
-                    value={formData.scout_group}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, scout_group: val }))}
-                    options={scoutGroups}
-                    placeholder="Es. Roma 123 o lascia vuoto"
-                  />
-                </div>
               </div>
             )}
 
@@ -370,9 +361,6 @@ export default function OnboardingPage() {
                     </li>
                     <li>
                       <strong>Ruolo:</strong> {formData.service_role || 'Non specificato'}
-                    </li>
-                    <li>
-                      <strong>Gruppo:</strong> {formData.scout_group || 'Non specificato'}
                     </li>
                     <li>
                       <strong>Interessi:</strong>{' '}

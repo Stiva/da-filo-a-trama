@@ -400,18 +400,6 @@ export default function ProfilePage() {
                       required
                     />
                   </div>
-
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Gruppo Scout
-                    </label>
-                    <Autocomplete
-                      value={formData.scout_group}
-                      onChange={(val) => setFormData(prev => ({ ...prev, scout_group: val }))}
-                      options={scoutGroups}
-                      placeholder="Es. Roma 123 o lascia vuoto"
-                    />
-                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-gray-100">

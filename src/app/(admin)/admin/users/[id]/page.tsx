@@ -35,6 +35,7 @@ export default function AdminUserDetailPage({
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
+    codice_socio: '',
     scout_group: '',
     role: 'user' as 'user' | 'staff' | 'admin',
     onboarding_completed: false,
@@ -75,6 +76,7 @@ export default function AdminUserDetailPage({
       setFormData({
         name: userData.name || '',
         surname: userData.surname || '',
+        codice_socio: userData.codice_socio || '',
         scout_group: userData.scout_group || '',
         role: userData.role,
         onboarding_completed: userData.onboarding_completed,
@@ -99,6 +101,7 @@ export default function AdminUserDetailPage({
         body: JSON.stringify({
           name: formData.name,
           surname: formData.surname,
+          codice_socio: formData.codice_socio || null,
           scout_group: formData.scout_group,
           onboarding_completed: formData.onboarding_completed,
           avatar_completed: formData.avatar_completed,
@@ -279,6 +282,17 @@ export default function AdminUserDetailPage({
                       className="input w-full"
                     />
                   </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Codice Socio</label>
+                  <input
+                    type="text"
+                    value={formData.codice_socio}
+                    onChange={(e) => setFormData({ ...formData, codice_socio: e.target.value })}
+                    className="input w-full"
+                    placeholder="Es. 123456"
+                  />
                 </div>
 
                 <div className="relative">

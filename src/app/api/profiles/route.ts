@@ -107,12 +107,34 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     if (body.avatar_config !== undefined) updateData.avatar_config = body.avatar_config;
     if (body.onboarding_completed !== undefined) updateData.onboarding_completed = body.onboarding_completed;
 
-    // Prima prova update
+    // Fetch existing profile to determine if service_role needs auto-assignment from CRM
     const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, service_role, codice_socio')
       .eq('clerk_id', userId)
       .single();
+
+    // Auto-populate service_role from CRM "participants" table if linking occurs
+    const futureCodice = body.codice_socio !== undefined ? body.codice_socio : existingProfile?.codice_socio;
+    const futureRole = (body as any).service_role !== undefined ? (body as any).service_role : existingProfile?.service_role;
+
+    if (futureCodice && (!futureRole || !body.scout_group)) {
+      const { data: crmData } = await supabase
+        .from('participants')
+        .select('ruolo, gruppo')
+        .eq('codice', futureCodice)
+        .single();
+      
+      if (crmData) {
+        if (!futureRole && crmData.ruolo) {
+          updateData.service_role = crmData.ruolo;
+        }
+        // Always inherit the group if missing from profile payload
+        if (!body.scout_group && crmData.gruppo) {
+          updateData.scout_group = crmData.gruppo;
+        }
+      }
+    }
 
     let data;
     let error;
