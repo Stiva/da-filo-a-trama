@@ -36,6 +36,26 @@ export default function AdminLayout({
       ),
       badge: false,
     },
+    {
+      href: '/admin/crm',
+      label: 'CRM Segreteria',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4a2 2 0 00-2-2h-5m-9 18H2a2 2 0 01-2-2v-5a2 2 0 012-2h3m9 9H8M8 20V4a2 2 0 012-2h5m-2 18v-5a2 2 0 012-2h5m-9-9h5" />
+        </svg>
+      ),
+      badge: false,
+    },
+    {
+      href: '/admin/desks',
+      label: 'Check-in Desk',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      badge: false,
+    },
   ];
 
   const mapAndEventsLinks = [

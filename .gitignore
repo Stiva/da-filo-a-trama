@@ -48,3 +48,4 @@ Thumbs.db
 
 # clerk configuration (can include secrets)
 /.clerk/
+public/Evento23854.csv

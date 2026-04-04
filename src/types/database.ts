@@ -527,6 +527,33 @@ export interface PushNotificationHistoryRecord {
 }
 
 // ============================================
+// CRM PARTICIPANTS
+// ============================================
+export interface Participant {
+  codice: string;
+  nome: string;
+  cognome: string;
+  email_contatto: string | null;
+  email_referente: string | null;
+  regione: string | null;
+  gruppo: string | null;
+  zona: string | null;
+  ruolo: string | null;
+  is_active_in_list: boolean;
+  is_checked_in: boolean;
+  checked_in_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ParticipantCrmView extends Participant {
+  linked_profile_id: string | null;
+  profile_email: string | null;
+  profile_avatar_url: string | null;
+  is_app_registered: boolean;
+}
+
+// ============================================
 // API Response types
 // ============================================
 export interface ApiResponse<T> {
