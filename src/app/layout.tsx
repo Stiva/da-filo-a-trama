@@ -3,6 +3,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { itIT } from '@clerk/localizations';
 import { Inter, Quicksand, Dancing_Script } from 'next/font/google';
 import localFont from 'next/font/local';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 // Font per il corpo del testo
@@ -71,6 +72,7 @@ export default function RootLayout({
       <html lang="it" className={`${inter.variable} ${quicksand.variable} ${dancingScript.variable} ${loveYou.variable}`}>
         <body className="min-h-screen bg-scout-cream font-sans antialiased">
           {children}
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
