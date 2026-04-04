@@ -38,7 +38,17 @@ export async function GET(request: Request) {
     }
 
     if (search) {
-      query = query.or(`nome.ilike.%${search}%,cognome.ilike.%${search}%,codice.ilike.%${search}%`);
+      const searchTerms = search.split(' ').filter((t: string) => t.trim().length > 0);
+      if (searchTerms.length > 1) {
+        // If 2 or more terms, they might be "Nome Cognome" or "Cognome Nome"
+        const t1 = searchTerms[0];
+        const t2 = searchTerms.slice(1).join(' '); // Remaining words as second term
+        
+        // PostgREST advanced nested logic: (nome=t1 AND cognome=t2) OR (nome=t2 AND cognome=t1) OR codice=search
+        query = query.or(`and(nome.ilike.%${t1}%,cognome.ilike.%${t2}%),and(nome.ilike.%${t2}%,cognome.ilike.%${t1}%),codice.ilike.%${search}%`);
+      } else {
+        query = query.or(`nome.ilike.%${search}%,cognome.ilike.%${search}%,codice.ilike.%${search}%`);
+      }
     }
 
     const { data, error, count } = await query

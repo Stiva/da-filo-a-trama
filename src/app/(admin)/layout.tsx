@@ -28,7 +28,7 @@ export default function AdminLayout({
     },
     {
       href: '/admin/users',
-      label: 'Partecipanti',
+      label: 'Iscritti APP',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -38,7 +38,7 @@ export default function AdminLayout({
     },
     {
       href: '/admin/crm',
-      label: 'CRM Segreteria',
+      label: 'Lista Iscritti BC',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5V4a2 2 0 00-2-2h-5m-9 18H2a2 2 0 01-2-2v-5a2 2 0 012-2h3m9 9H8M8 20V4a2 2 0 012-2h5m-2 18v-5a2 2 0 012-2h5m-9-9h5" />
@@ -153,9 +153,9 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Top Navbar */}
-      <nav className="bg-gray-900 text-white shadow-lg sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+      <nav className="bg-gray-900 text-white shadow-lg fixed top-0 w-full z-50 h-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+          <div className="flex justify-between h-full">
             {/* Left: Hamburger + Logo */}
             <div className="flex items-center gap-3">
               {/* Hamburger - visible on mobile */}
@@ -195,7 +195,7 @@ export default function AdminLayout({
         </div>
       </nav>
 
-      <div className="flex">
+      <div className="flex pt-16">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div

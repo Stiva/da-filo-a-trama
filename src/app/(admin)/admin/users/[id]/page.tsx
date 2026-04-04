@@ -222,15 +222,32 @@ export default function AdminUserDetailPage({
             <h1 className="text-3xl font-bold text-gray-900">
               {user.name || user.first_name || 'N/D'} {user.surname || ''}
             </h1>
-            <p className="text-gray-500">{user.email}</p>
+            <p className="text-gray-500 flex items-center gap-2">
+              {user.email}
+              {user.codice_socio && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  C.S. {user.codice_socio}
+                </span>
+              )}
+            </p>
           </div>
         </div>
-        <button
-          onClick={handleDelete}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          Elimina Utente
-        </button>
+        <div className="flex items-center gap-3">
+          {user.codice_socio && (
+            <Link
+              href={`/admin/crm/${encodeURIComponent(user.codice_socio)}`}
+              className="px-4 py-2 bg-agesci-blue/10 text-agesci-blue hover:bg-agesci-blue/20 rounded-lg transition-colors font-medium border border-transparent"
+            >
+              Vedi in CRM
+            </Link>
+          )}
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Elimina Utente
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

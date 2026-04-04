@@ -70,7 +70,7 @@ export default function CRMPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">CRM Partecipanti</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Lista Iscritti BC</h1>
           <p className="mt-1 text-sm text-gray-500">
             Carica e gestisci i contatti dal dataset unico. {totalCount > 0 && `(${totalCount} contatti trovati)`}
           </p>
@@ -137,12 +137,13 @@ export default function CRMPage() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gruppo/Regione</th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Registrato App</th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                     <div className="flex justify-center items-center">
                       <div className="w-6 h-6 border-2 border-agesci-blue border-t-transparent rounded-full animate-spin mr-3"></div>
                       Caricamento contatti...
@@ -151,13 +152,13 @@ export default function CRMPage() {
                 </tr>
               ) : participants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                     Nessun partecipante trovato. Prova a modificare i filtri o a caricare un CSV.
                   </td>
                 </tr>
               ) : (
                 participants.map((person) => (
-                  <tr key={person.codice} className={!person.is_active_in_list ? 'bg-red-50/50' : ''}>
+                  <tr key={person.codice} className={`hover:bg-gray-50 transition-colors ${!person.is_active_in_list ? 'bg-red-50/50' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {person.codice}
                     </td>
@@ -189,6 +190,11 @@ export default function CRMPage() {
                           Assente
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                      <a href={`/admin/crm/${person.codice}`} className="text-agesci-blue hover:text-agesci-blue-light transition-colors flex items-center justify-end gap-1">
+                        Dettagli <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      </a>
                     </td>
                   </tr>
                 ))
