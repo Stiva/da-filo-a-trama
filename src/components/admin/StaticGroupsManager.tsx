@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, Users, ArrowRight, RefreshCw, Pencil, Check, X } from 'lucide-react';
+import { Settings, Users, ArrowRight, RefreshCw, Pencil, Check, X, Download } from 'lucide-react';
 
 interface Participant {
     codice: string;
@@ -39,6 +39,39 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
         if (selectedRoles.length === 0) return participants.length;
         return participants.filter(p => selectedRoles.includes(p.ruolo)).length;
     }, [participants, selectedRoles]);
+
+    const groupSummary = useMemo(() => {
+        const summary: Record<string, number> = {};
+        participants.forEach(p => {
+            if (p.static_group) {
+                summary[p.static_group] = (summary[p.static_group] || 0) + 1;
+            }
+        });
+        return Object.entries(summary).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [participants]);
+
+    const exportExcel = async () => {
+        try {
+            const XLSX = await import('xlsx');
+            const data = participants.map(p => ({
+                'Codice Socio': p.codice,
+                'Nome': p.nome,
+                'Cognome': p.cognome,
+                'Ruolo': p.ruolo,
+                'Regione': p.regione,
+                'Gruppo Statico': p.static_group || 'Nessuno',
+                'Registrato in App': p.is_app_registered ? 'Sì' : 'No'
+            }));
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, 'Iscritti_Gruppi');
+            XLSX.writeFile(wb, 'Export_Gruppi_Statici.xlsx');
+        } catch (error) {
+            console.error("Errore esportazione", error);
+            alert("Si è verificato un errore durante l'esportazione");
+        }
+    };
 
     const handleAverageSizeChange = (val: string) => {
         setAverageSize(val as any);
@@ -212,14 +245,40 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                 </div>
 
                 {/* PARTICIPANTS TABLE LIST */}
-                <div className="lg:col-span-2">
-                    <h2 className="text-xl font-bold flex items-center gap-2 mb-6 text-gray-800">
-                        <Users className="w-5 h-5 text-agesci-blue" />
-                        Tabella Assegnazioni 
-                        <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-auto">
-                            {participants.length} iscritti CRM
-                        </span>
-                    </h2>
+                <div className="lg:col-span-2 space-y-6">
+                    {/* SUMMARY PANELS */}
+                    {groupSummary.length > 0 && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-5 shadow-sm">
+                            <h3 className="text-sm font-bold tracking-wide uppercase text-blue-800 mb-3 flex items-center gap-2">
+                                Riepilogo Gruppi Assegnati ({groupSummary.length})
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {groupSummary.map(([groupName, count]) => (
+                                    <div key={groupName} className="bg-white border border-blue-200 shadow-sm rounded-md px-3 py-1.5 flex items-center gap-2">
+                                        <span className="font-bold text-agesci-blue text-sm">{groupName}</span>
+                                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">{count} iscritti</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-4">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
+                            <Users className="w-5 h-5 text-agesci-blue" />
+                            Tabella Assegnazioni 
+                            <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-auto">
+                                {participants.length} iscritti CRM
+                            </span>
+                        </h2>
+                        <button
+                            onClick={exportExcel}
+                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors"
+                        >
+                            <Download className="w-4 h-4" />
+                            Esporta in Excel
+                        </button>
+                    </div>
 
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                         <div className="max-h-[600px] overflow-y-auto">

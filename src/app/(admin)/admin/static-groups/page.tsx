@@ -1,4 +1,3 @@
-import SettingsTabs from '@/components/admin/SettingsTabs';
 import StaticGroupsManager from '@/components/admin/StaticGroupsManager';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { SERVICE_ROLE_LABELS } from '@/types/database';
@@ -25,8 +24,6 @@ export default async function StaticGroupsPage() {
           Gestisci i gruppi di lavoro permanenti in modalita' statica, calcolando bilanciamenti per ruolo e per regione dal CRM Iscritti.
         </p>
       </div>
-
-      <SettingsTabs />
 
       <div className="bg-white shadow rounded-lg border border-gray-200">
         <StaticGroupsManager 

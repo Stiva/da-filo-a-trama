@@ -56,6 +56,16 @@ export default function AdminLayout({
       ),
       badge: false,
     },
+    {
+      href: '/admin/static-groups',
+      label: 'Gruppi Statici',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8zm10 2a3 3 0 110-6 3 3 0 010 6zm-1.5 5.5L21 16m0 0l-3.5 1.5M21 16v5" />
+        </svg>
+      ),
+      badge: false,
+    },
   ];
 
   const mapAndEventsLinks = [
