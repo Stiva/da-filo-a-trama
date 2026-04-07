@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Settings, Users, ArrowRight, RefreshCw, Pencil, Check, X, Download } from 'lucide-react';
 
 interface Participant {
@@ -254,10 +255,10 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                             </h3>
                             <div className="flex flex-wrap gap-2">
                                 {groupSummary.map(([groupName, count]) => (
-                                    <div key={groupName} className="bg-white border border-blue-200 shadow-sm rounded-md px-3 py-1.5 flex items-center gap-2">
+                                    <Link key={groupName} href={`/admin/static-groups/${encodeURIComponent(groupName)}`} className="bg-white border hover:bg-blue-50 transition-colors border-blue-200 shadow-sm rounded-md px-3 py-1.5 flex items-center gap-2">
                                         <span className="font-bold text-agesci-blue text-sm">{groupName}</span>
                                         <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">{count} iscritti</span>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         </div>
