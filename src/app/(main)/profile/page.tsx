@@ -309,6 +309,11 @@ export default function ProfilePage() {
               {formData.scout_group && (
                 <p className="text-sm text-gray-400 mt-0.5">Gruppo: {formData.scout_group}</p>
               )}
+              {profile?.static_group && (
+                <p className="text-sm font-bold text-purple-700 mt-1 inline-flex items-center gap-1">
+                  Gruppo Statico Assegnato: {profile.static_group}
+                </p>
+              )}
             </div>
           </div>
 

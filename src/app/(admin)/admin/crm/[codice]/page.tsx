@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { auth } from '@clerk/nextjs/server';
 import { 
   CheckCircle, XCircle, ArrowLeft, User, Mail, MapPin, Tag, 
-  HeartPulse, AlertTriangle, Leaf, Target, Lightbulb, Utensils 
+  HeartPulse, AlertTriangle, Leaf, Target, Lightbulb, Utensils, Users 
 } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
 
@@ -84,6 +84,11 @@ export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
                     {participant.ruolo}
                   </span>
                 )}
+                {participant.static_group && (
+                  <Link href={`/admin/static-groups/${encodeURIComponent(participant.static_group)}`} className="inline-flex hover:bg-purple-100 transition-colors items-center px-3 py-1 rounded-full text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                    Gruppo: {participant.static_group}
+                  </Link>
+                )}
                 {!participant.is_active_in_list && (
                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200">
                      RIMOSSO
@@ -145,6 +150,19 @@ export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
                   <dt className="text-sm font-medium text-gray-500 mb-1 flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Regione / Zona</dt>
                   <dd className="text-gray-900">
                     {participant.regione || '-'} {participant.zona ? `(${participant.zona})` : ''}
+                  </dd>
+               </div>
+               <div className="md:col-span-2 border-t border-gray-100 pt-4 mt-2"></div>
+               <div>
+                  <dt className="text-sm font-bold text-agesci-blue mb-1 flex items-center gap-1.5"><Users className="w-4 h-4" /> Gruppo Statico Eventi</dt>
+                  <dd className="text-gray-900">
+                    {participant.static_group ? (
+                       <Link href={`/admin/static-groups/${encodeURIComponent(participant.static_group)}`} className="text-purple-700 font-bold hover:underline">
+                         {participant.static_group}
+                       </Link>
+                    ) : (
+                       <span className="text-gray-400 italic">Nessun gruppo assegnato</span>
+                    )}
                   </dd>
                </div>
              </div>
