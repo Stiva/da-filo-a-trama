@@ -47,38 +47,41 @@ export async function POST(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        if (event.group_creation_mode !== 'mix_roles' && event.group_creation_mode !== 'homogeneous') {
+        if (event.group_creation_mode !== 'mix_roles' && event.group_creation_mode !== 'homogeneous' && event.group_creation_mode !== 'static_crm') {
             return NextResponse.json({ error: 'Operazione non valida per questo evento (modalità non supportata)' }, { status: 400 });
         }
 
         // 2. Fetch Groups for this event
         const { data: groups, error: groupsError } = await supabase
             .from('event_groups')
-            .select('id')
+            .select('id, name')
             .eq('event_id', eventId);
 
-        if (groupsError || !groups || groups.length === 0) {
+        let existingGroups = groups || [];
+
+        if (event.group_creation_mode !== 'static_crm' && (groupsError || existingGroups.length === 0)) {
             return NextResponse.json({ error: 'Nessun gruppo esistente per questo evento. Impossibile assegnare iscritti.' }, { status: 400 });
         }
 
-        const groupIds = groups.map(g => g.id);
+        const groupIds = existingGroups.map(g => g.id);
 
         // 3. Delete existing members for these groups (reset)
-        const { error: deleteError } = await supabase
-            .from('event_group_members')
-            .delete()
-            .in('group_id', groupIds);
+        if (groupIds.length > 0) {
+            const { error: deleteError } = await supabase
+                .from('event_group_members')
+                .delete()
+                .in('group_id', groupIds);
 
-        if (deleteError) {
-            throw deleteError;
+            if (deleteError) {
+                throw deleteError;
+            }
         }
 
-        // 4. Fetch confirmed enrollments and profiles
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
             .select(`
         user_id,
-        profile:profiles(id, role, service_role)
+        profile:profiles(id, role, service_role, static_group)
       `)
             .eq('event_id', eventId)
             .eq('status', 'confirmed');
@@ -100,6 +103,42 @@ export async function POST(
 
         if (participants.length === 0) {
             return NextResponse.json({ message: 'Nessun partecipante confermato da distribuire' });
+        }
+
+        if (event.group_creation_mode === 'static_crm') {
+            // Find all unique static_group values among participants
+            const uniqueStaticGroups = [...new Set(participants.map((e: any) => e.profile?.static_group).filter(Boolean))] as string[];
+            if (uniqueStaticGroups.length === 0) {
+                 return NextResponse.json({ error: 'Nessun partecipante confermato ha un gruppo statico assegnato' }, { status: 400 });
+            }
+
+            // Create any missing groups
+            const missingGroups = uniqueStaticGroups.filter(sg => !existingGroups.some(eg => eg.name === sg));
+            if (missingGroups.length > 0) {
+                 const newGroups = missingGroups.map(sg => ({
+                      event_id: eventId,
+                      name: sg
+                 }));
+                 const { data: insertedGroups, error: insertError } = await supabase.from('event_groups').insert(newGroups).select('id, name');
+                 if (insertError) throw insertError;
+                 existingGroups = [...existingGroups, ...(insertedGroups || [])];
+            }
+            
+            // Map participants to their group
+            const inserts: { group_id: string; user_id: string }[] = [];
+            participants.forEach((e: any) => {
+                 const sg = e.profile?.static_group;
+                 if (!sg) return;
+                 const group = existingGroups.find(g => g.name === sg);
+                 if (group) inserts.push({ group_id: group.id, user_id: e.user_id });
+            });
+
+            if (inserts.length > 0) {
+                 const { error: insertMembersError } = await supabase.from('event_group_members').insert(inserts);
+                 if (insertMembersError) throw insertMembersError;
+            }
+
+            return NextResponse.json({ message: 'Gruppi statici assegnati con successo!', count: inserts.length });
         }
 
         // 6. Group participants by their service_role
@@ -124,11 +163,11 @@ export async function POST(
         const assignUser = (userId: string, groupIndex?: number) => {
             const idx = groupIndex !== undefined ? groupIndex : currentGroupIndex;
             inserts.push({
-                group_id: groups[idx].id,
+                group_id: existingGroups[idx].id,
                 user_id: userId
             });
             if (groupIndex === undefined) {
-                currentGroupIndex = (currentGroupIndex + 1) % groups.length;
+                currentGroupIndex = (currentGroupIndex + 1) % existingGroups.length;
             }
         };
 
@@ -138,19 +177,19 @@ export async function POST(
             const roles = Object.keys(roleMap);
 
             // To keep track of how many users are currently assigned to each group
-            const groupFills = new Array(groups.length).fill(0);
+            const groupFills = new Array(existingGroups.length).fill(0);
 
             // To optimize finding the least filled group, maintain an array of group indices
             // sorted by their fill count (ascending). The least filled group is always at index 0.
-            const sortedIndices = new Array(groups.length);
-            for (let i = 0; i < groups.length; i++) sortedIndices[i] = i;
+            const sortedIndices = new Array(existingGroups.length);
+            for (let i = 0; i < existingGroups.length; i++) sortedIndices[i] = i;
 
             // Helper to bubble up the modified group index to maintain sorted order
             const updateSortedIndices = (modifiedGroupIdx: number, newFill: number) => {
                 groupFills[modifiedGroupIdx] = newFill;
                 let j = 0;
                 // Shift indices left until we find the correct sorted position for the modified group
-                while (j < groups.length - 1 && groupFills[sortedIndices[j + 1]] < newFill) {
+                while (j < existingGroups.length - 1 && groupFills[sortedIndices[j + 1]] < newFill) {
                     sortedIndices[j] = sortedIndices[j + 1];
                     j++;
                 }

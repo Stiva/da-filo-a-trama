@@ -34,6 +34,7 @@ export interface Profile {
   first_name: string | null;
   codice_socio: string | null;
   scout_group: string | null;
+  static_group?: string | null;
   service_role: ServiceRole | null;
   role: 'user' | 'staff' | 'admin';
   preferences: string[];
@@ -130,7 +131,7 @@ export type EventCategory =
 // Event visibility - public = everyone, registered = only authenticated users
 export type EventVisibility = 'public' | 'registered';
 
-export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous';
+export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous' | 'static_crm';
 
 export interface Event {
   id: string;
@@ -551,6 +552,7 @@ export interface Participant {
   is_active_in_list: boolean;
   is_checked_in: boolean;
   checked_in_at: string | null;
+  static_group?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -560,6 +562,7 @@ export interface ParticipantCrmView extends Participant {
   profile_email: string | null;
   profile_avatar_url: string | null;
   is_app_registered: boolean;
+  static_group?: string | null;
 }
 
 // ============================================

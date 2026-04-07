@@ -121,7 +121,7 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     if (futureCodice && (!futureRole || !body.scout_group)) {
       const { data: crmData } = await supabase
         .from('participants')
-        .select('ruolo, gruppo')
+        .select('ruolo, gruppo, static_group')
         .eq('codice', futureCodice)
         .single();
       
@@ -132,6 +132,9 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
         // Always inherit the group if missing from profile payload
         if (!body.scout_group && crmData.gruppo) {
           updateData.scout_group = crmData.gruppo;
+        }
+        if (crmData.static_group) {
+          updateData.static_group = crmData.static_group;
         }
       }
     }

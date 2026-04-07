@@ -12,6 +12,7 @@ export default function SettingsTabs() {
     { href: '/admin/tags', label: 'Tags' },
     { href: '/admin/groups', label: 'Gruppi' },
     { href: '/admin/settings', label: 'Banner PWA' },
+    { href: '/admin/static-groups', label: 'Gruppi Statici' },
   ];
 
   return (
