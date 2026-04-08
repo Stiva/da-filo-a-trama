@@ -3,6 +3,7 @@ import { MapContainer as LeafletMapContainer, TileLayer, Marker, Popup, CircleMa
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import '@geoman-io/leaflet-geoman-free';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
 import { stripHtml } from '@/lib/stripHtml';
