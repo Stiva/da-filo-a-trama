@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, ReactNode } from 'react';
-import { MapContainer as LeafletMapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
+import { MapContainer as LeafletMapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 if (typeof window !== 'undefined') {
@@ -11,6 +11,8 @@ import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
 import { stripHtml } from '@/lib/stripHtml';
 import AreaLayer from './AreaLayer';
+
+const { BaseLayer } = LayersControl;
 
 // Fix per le icone di Leaflet in Next.js
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -195,10 +197,20 @@ export default function MapContainer({ pois, selectedPoi, onPoiSelect, children,
         style={{ height: '100%', minHeight: '500px', width: '100%', borderRadius: 'inherit' }}
         scrollWheelZoom={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <LayersControl position="topright">
+          <BaseLayer checked name="Mappa Standard">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </BaseLayer>
+          <BaseLayer name="Satellite">
+            <TileLayer
+              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+          </BaseLayer>
+        </LayersControl>
 
         <MapController
           selectedPoi={selectedPoi}

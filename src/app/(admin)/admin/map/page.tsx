@@ -17,6 +17,11 @@ export default function AdminMapPage() {
   const editableLayerRef = useRef<any>(null);
   const tempDrawLayerRef = useRef<any>(null); // To store the drawn generic L.Polygon until saved
 
+  // Map search state
+  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
   useEffect(() => {
     fetchPois();
   }, []);
@@ -30,6 +35,29 @@ export default function AdminMapPage() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleSearchAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim() || !mapInstance) return;
+    
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        mapInstance.flyTo([parseFloat(lat), parseFloat(lon)], 18);
+        setSearchQuery(''); // clear the input after jumping
+      } else {
+        alert('Indirizzo non trovato');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Errore durante la ricerca');
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -131,6 +159,18 @@ export default function AdminMapPage() {
           <h1 className="text-3xl font-bold">Gestione Mappa (Aree)</h1>
           <p className="text-gray-500 mt-2">Disegna aree (poligoni) sulla mappa per l'evento.</p>
         </div>
+        <form onSubmit={handleSearchAddress} className="flex items-center gap-2">
+            <input 
+               type="text" 
+               placeholder="Cerca via, città..." 
+               className="px-3 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button type="submit" disabled={isSearching} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+                {isSearching ? 'Cerco...' : 'Cerca'}
+            </button>
+        </form>
       </div>
 
       <div className="grid grid-cols-4 gap-6">
@@ -162,6 +202,7 @@ export default function AdminMapPage() {
                selectedPoi={null} 
                onPoiSelect={handleEditClick}
                editableLayerRef={editableLayerRef}
+               onMapReady={(m) => setMapInstance(m)}
              >
                 <AdminDrawTools 
                     editableLayerRef={editableLayerRef}
