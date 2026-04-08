@@ -53,6 +53,11 @@ export async function GET(
 
     const { latitude, longitude } = extractCoordinates(data.coordinate);
 
+    let areaGeojson = data.area_polygon;
+    if (typeof areaGeojson === 'string') {
+        try { areaGeojson = JSON.parse(areaGeojson); } catch (e) {}
+    }
+
     const poi: Poi = {
       id: data.id,
       nome: data.nome,
@@ -60,6 +65,8 @@ export async function GET(
       tipo: data.tipo,
       latitude,
       longitude,
+      area_polygon: areaGeojson,
+      color: data.color,
       icon_url: data.icon_url,
       is_active: data.is_active,
       created_at: data.created_at,
@@ -111,9 +118,16 @@ export async function PUT(
     if (body.tipo !== undefined) updateData.tipo = body.tipo;
     if (body.icon_url !== undefined) updateData.icon_url = body.icon_url;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.color !== undefined) updateData.color = body.color;
+    
+    // Convertiamo area_polygon GeoJSON in testuale per supabase PostgREST se presente, ma se lo pasiamo come JSON object supabase potrebbe non gestirlo automaticamente per GEOMETRY, quindi lo converto a stringa e faccio usare ST_GeomFromGeoJSON dal DB o passo la stringa.
+    // Di default supabase supporta passare plain geojson object a un campo GEOMETRY o string. Passiamo string se c'è un oggetto reale, o null
+    if (body.area_polygon !== undefined) {
+      updateData.area_polygon = body.area_polygon ? JSON.stringify(body.area_polygon) : null;
+    }
 
     // Se vengono fornite nuove coordinate, aggiornale
-    if (body.latitude !== undefined && body.longitude !== undefined) {
+    if (body.latitude !== undefined && body.longitude !== undefined && body.latitude !== null && body.longitude !== null) {
       updateData.coordinate = `SRID=4326;POINT(${body.longitude} ${body.latitude})`;
     }
 
@@ -136,6 +150,11 @@ export async function PUT(
 
     const { latitude, longitude } = extractCoordinates(data.coordinate);
 
+    let areaGeojson = data.area_polygon;
+    if (typeof areaGeojson === 'string') {
+        try { areaGeojson = JSON.parse(areaGeojson); } catch (e) {}
+    }
+
     const poi: Poi = {
       id: data.id,
       nome: data.nome,
@@ -143,6 +162,8 @@ export async function PUT(
       tipo: data.tipo,
       latitude,
       longitude,
+      area_polygon: areaGeojson,
+      color: data.color,
       icon_url: data.icon_url,
       is_active: data.is_active,
       created_at: data.created_at,

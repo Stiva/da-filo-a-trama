@@ -37,6 +37,11 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
     const pois: Poi[] = (data || []).map((poi) => {
       const { latitude, longitude } = extractCoordinates(poi.coordinate);
 
+      let areaGeojson = poi.area_polygon;
+      if (typeof areaGeojson === 'string') {
+          try { areaGeojson = JSON.parse(areaGeojson); } catch (e) {}
+      }
+
       return {
         id: poi.id,
         nome: poi.nome,
@@ -44,6 +49,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
         tipo: poi.tipo,
         latitude,
         longitude,
+        area_polygon: areaGeojson,
+        color: poi.color,
         icon_url: poi.icon_url,
         is_active: poi.is_active,
         created_at: poi.created_at,

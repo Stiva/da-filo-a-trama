@@ -297,6 +297,7 @@ export type PoiCategory =
   | 'worship'    // Area spiritualita
   | 'activity'   // Area attivita
   | 'entrance'   // Ingresso
+  | 'area'       // Area mappa
   | 'other';     // Altro
 
 // Raw POI from database
@@ -306,6 +307,8 @@ export interface PoiRaw {
   descrizione: string | null;
   tipo: PoiCategory;
   coordinate: unknown;  // PostGIS geography
+  area_polygon: unknown; // PostGIS GEOMETRY
+  color: string | null;
   icon_url: string | null;
   is_active: boolean;
   floor_level: number;
@@ -322,6 +325,8 @@ export interface Poi {
   tipo: PoiCategory;
   latitude: number;
   longitude: number;
+  area_polygon?: string | null; // serialized GeoJSON
+  color?: string | null;
   icon_url: string | null;
   is_active: boolean;
   created_at: string;
@@ -339,6 +344,7 @@ export const POI_TYPE_LABELS: Record<PoiCategory, string> = {
   worship: 'Spiritualità',
   activity: 'Attività',
   entrance: 'Ingresso',
+  area: 'Area Mappa',
   other: 'Altro',
 };
 

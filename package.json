@@ -14,6 +14,7 @@
     "@clerk/nextjs": "^6.37.2",
     "@dicebear/collection": "^9.3.1",
     "@dicebear/core": "^9.3.1",
+    "@geoman-io/leaflet-geoman-free": "^2.19.2",
     "@lexical/html": "^0.40.0",
     "@lexical/link": "^0.40.0",
     "@lexical/list": "^0.40.0",

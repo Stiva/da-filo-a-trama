@@ -38,6 +38,12 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
     const pois: Poi[] = (data || []).map((poi) => {
       const { latitude, longitude } = extractCoordinates(poi.coordinate);
 
+      // parse area_polygon if it's returned as string (some PostgREST versions return stringified GeoJSON)
+      let areaGeojson = poi.area_polygon;
+      if (typeof areaGeojson === 'string') {
+          try { areaGeojson = JSON.parse(areaGeojson); } catch (e) {}
+      }
+
       return {
         id: poi.id,
         nome: poi.nome,
@@ -45,6 +51,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
         tipo: poi.tipo,
         latitude,
         longitude,
+        area_polygon: areaGeojson,
+        color: poi.color,
         icon_url: poi.icon_url,
         is_active: poi.is_active,
         created_at: poi.created_at,
@@ -56,6 +64,95 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
     console.error('Errore nel recupero dei POI:', error);
     return NextResponse.json(
       { error: 'Errore nel recupero dei Points of Interest' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/admin/poi
+ * Crea un nuovo POI
+ */
+export async function POST(request: Request): Promise<NextResponse<ApiResponse<Poi>>> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const {
+      nome,
+      descrizione,
+      tipo,
+      latitude,
+      longitude,
+      icon_url,
+      area_polygon,
+      color,
+      is_active
+    } = await request.json();
+
+    if (!nome || !tipo) {
+      return NextResponse.json({ error: 'Nome e tipo sono obbligatori' }, { status: 400 });
+    }
+
+    const supabase = createServiceRoleClient();
+
+    const insertData: any = {
+      nome,
+      descrizione,
+      tipo,
+      icon_url,
+      color,
+      is_active: is_active ?? true
+    };
+
+    if (area_polygon) {
+      insertData.area_polygon = JSON.stringify(area_polygon);
+    }
+    
+    // Fallback to dummy data if not area because 'coordinate' is required in db
+    if (latitude !== undefined && longitude !== undefined && latitude !== null && longitude !== null) {
+      insertData.coordinate = `SRID=4326;POINT(${longitude} ${latitude})`;
+    } else if (!area_polygon) {
+       insertData.coordinate = `SRID=4326;POINT(11.132567610213458 44.58218434389957)`; // default
+    }
+
+    const { data, error } = await supabase
+      .from('poi')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    const savedLatLong = extractCoordinates(data.coordinate);
+    let areaGeojson = data.area_polygon;
+    if (typeof areaGeojson === 'string') {
+        try { areaGeojson = JSON.parse(areaGeojson); } catch (e) {}
+    }
+
+    const poi: Poi = {
+      id: data.id,
+      nome: data.nome,
+      descrizione: data.descrizione,
+      tipo: data.tipo,
+      latitude: savedLatLong.latitude,
+      longitude: savedLatLong.longitude,
+      area_polygon: areaGeojson,
+      color: data.color,
+      icon_url: data.icon_url,
+      is_active: data.is_active,
+      created_at: data.created_at,
+    };
+
+    return NextResponse.json({ data: poi, message: 'Creato con successo' });
+  } catch (error) {
+    console.error('Errore nel salvataggio POI:', error);
+    return NextResponse.json(
+      { error: 'Errore nel salvataggio del POI' },
       { status: 500 }
     );
   }
