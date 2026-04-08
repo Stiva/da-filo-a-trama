@@ -73,6 +73,7 @@ export default function AdminDrawTools({ onShapeCreated, onShapeEdited, onShapeD
 
     // Cleanup
     return () => {
+      initialized.current = false;
       map.pm.removeControls();
       map.off('pm:create');
       map.off('pm:remove');
