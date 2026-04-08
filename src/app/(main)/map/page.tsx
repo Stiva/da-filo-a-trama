@@ -9,7 +9,7 @@ import { POI_TYPE_LABELS } from '@/types/database';
 import { stripHtml } from '@/lib/stripHtml';
 
 // Import dinamico per evitare errori SSR con Leaflet
-const MapComponent = dynamic(() => import('@/components/Map'), {
+const MapComponent = dynamic(() => import('@/components/Map/MapContainer'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-[70vh] bg-gray-100 rounded-lg flex items-center justify-center">
