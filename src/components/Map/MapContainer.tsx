@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, useCallback, ReactNode } from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+if (typeof window !== 'undefined') {
+  (window as any).L = L;
+}
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import '@geoman-io/leaflet-geoman-free';
 import type { Poi, PoiCategory } from '@/types/database';

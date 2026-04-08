@@ -38,26 +38,51 @@ export default function AdminSupportPendingBadge() {
           {
             type: 'messaging',
             support_chat: true,
-            support_status: 'pending',
           } as Record<string, unknown>,
           { last_message_at: -1 },
           { limit: 30, watch: true, state: true }
         );
 
-        if (mounted) {
-          setPendingCount(channels.length);
-        }
+        const updateUnread = () => {
+          if (!mounted) return;
+          let count = 0;
+          for (const c of channels) {
+            count += c.countUnread() || 0;
+          }
+          setPendingCount(count);
+        };
+
+        updateUnread();
+
+        const subNew = streamClient.on('message.new', updateUnread);
+        const subRead = streamClient.on('message.read', updateUnread);
+        const subNotifNew = streamClient.on('notification.message_new', updateUnread);
+        const subNotifRead = streamClient.on('notification.mark_read', updateUnread);
+
+        return () => {
+          subNew.unsubscribe();
+          subRead.unsubscribe();
+          subNotifNew.unsubscribe();
+          subNotifRead.unsubscribe();
+        };
+
       } catch {
         if (mounted) {
           setPendingCount(0);
         }
+        return () => {};
       }
     };
 
-    loadPending();
+    let cleanupListeners = () => {};
+    
+    loadPending().then(cleanup => {
+      if (cleanup) cleanupListeners = cleanup;
+    });
 
     return () => {
       mounted = false;
+      cleanupListeners();
       if (streamClient) {
         void streamClient.disconnectUser();
       }

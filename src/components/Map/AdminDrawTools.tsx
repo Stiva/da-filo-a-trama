@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+if (typeof window !== 'undefined') {
+  (window as any).L = L;
+}
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 
 interface AdminDrawToolsProps {
   onShapeCreated: (layer: L.Layer, geojson: any) => void;
