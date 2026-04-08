@@ -59,12 +59,23 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<a
       return regA.localeCompare(regB);
     });
 
+    // Fetch custom colors from app_settings
+    let colors = ['Blu', 'Rosso', 'Giallo', 'Verde', 'Arancione', 'Viola', 'Grigio'];
+    const { data: colorSettings, error: colorErr } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'static_groups_colors')
+      .maybeSingle();
+
+    if (!colorErr && colorSettings?.value?.colors && Array.isArray(colorSettings.value.colors) && colorSettings.value.colors.length > 0) {
+      colors = colorSettings.value.colors;
+    }
+
     // Generate Group Names
-    const COLORS = ['Blu', 'Rosso', 'Giallo', 'Verde'];
     const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     const generateGroupName = (idx: number) => {
-      const color = COLORS[idx % 4];
-      const letter = LETTERS[Math.floor(idx / 4) % LETTERS.length];
+      const color = colors[idx % colors.length];
+      const letter = LETTERS[Math.floor(idx / colors.length) % LETTERS.length];
       return `${color} ${letter}`;
     };
 
