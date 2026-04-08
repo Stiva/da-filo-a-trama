@@ -22,6 +22,7 @@ const createIcon = (tipo: PoiCategory) => {
     worship: '#8b5cf6',    // Spiritualita - viola chiaro
     activity: '#eab308',   // Attivita - giallo
     entrance: '#06b6d4',   // Ingresso - ciano
+    area: '#14b8a6',
     other: '#6b7280',      // Altro - grigio
   };
 
@@ -71,6 +72,7 @@ const getTypeEmoji = (tipo: PoiCategory) => {
     worship: '🙏',
     activity: '🎯',
     entrance: '🚪',
+    area: '🗺',
     other: '📍',
   };
   return emojis[tipo] || '📍';
