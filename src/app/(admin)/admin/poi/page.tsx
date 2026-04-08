@@ -111,6 +111,7 @@ export default function AdminPoiPage() {
       worship: 'bg-indigo-100 text-indigo-800',
       activity: 'bg-yellow-100 text-yellow-800',
       entrance: 'bg-cyan-100 text-cyan-800',
+      area: 'bg-teal-100 text-teal-800',
       other: 'bg-slate-100 text-slate-800',
     };
     return colors[tipo] || 'bg-gray-100 text-gray-800';
