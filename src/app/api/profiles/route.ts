@@ -101,7 +101,9 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
 
     if (body.name !== undefined) updateData.name = body.name;
     if (body.surname !== undefined) updateData.surname = body.surname;
-    if (body.codice_socio !== undefined) updateData.codice_socio = body.codice_socio;
+    if (body.codice_socio !== undefined) {
+      updateData.codice_socio = body.codice_socio === '' ? null : body.codice_socio;
+    }
     if (body.scout_group !== undefined) updateData.scout_group = body.scout_group;
     if (body.preferences !== undefined) updateData.preferences = body.preferences;
     if (body.avatar_config !== undefined) updateData.avatar_config = body.avatar_config;
