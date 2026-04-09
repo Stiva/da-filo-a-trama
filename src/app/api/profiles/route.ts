@@ -131,10 +131,14 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
       updateData.role = 'staff'; // Assure database role is set to staff
       
       // Update Clerk metadata synchronously to grant admin panel access
-      const client = await clerkClient();
-      await client.users.updateUserMetadata(userId, {
-        publicMetadata: { role: 'staff' }
-      });
+      try {
+        const client = await clerkClient();
+        await client.users.updateUserMetadata(userId, {
+          publicMetadata: { role: 'staff' }
+        });
+      } catch (clerkError) {
+        console.error('Non sono riuscito ad aggiornare i metadata su Clerk:', clerkError);
+      }
 
       // Bypass CRM check but allow them to save their codice_socio if they typed one
       if (body.codice_socio) {
