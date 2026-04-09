@@ -107,7 +107,14 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     if (body.scout_group !== undefined) updateData.scout_group = body.scout_group;
     if (body.preferences !== undefined) updateData.preferences = body.preferences;
     if (body.avatar_config !== undefined) updateData.avatar_config = body.avatar_config;
-    if (body.onboarding_completed !== undefined) updateData.onboarding_completed = body.onboarding_completed;
+    if (body.onboarding_completed !== undefined) {
+      updateData.onboarding_completed = body.onboarding_completed;
+      // Se l'onboarding è completato, segna anche il profilo come completo
+      if (body.onboarding_completed === true) {
+        updateData.profile_setup_complete = true;
+        updateData.avatar_completed = true;
+      }
+    }
 
     // Fetch existing profile
     const { data: existingProfile } = await supabase
