@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import type { Profile, ProfileUpdate, ApiResponse } from '@/types/database';
@@ -107,36 +107,62 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     if (body.avatar_config !== undefined) updateData.avatar_config = body.avatar_config;
     if (body.onboarding_completed !== undefined) updateData.onboarding_completed = body.onboarding_completed;
 
-    // Fetch existing profile to determine if service_role needs auto-assignment from CRM
+    // Fetch existing profile
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id, service_role, codice_socio')
       .eq('clerk_id', userId)
       .single();
 
-    // Auto-populate service_role from CRM "participants" table if linking occurs
     const futureCodice = body.codice_socio !== undefined ? body.codice_socio : existingProfile?.codice_socio;
-    const futureRole = (body as any).service_role !== undefined ? (body as any).service_role : existingProfile?.service_role;
+    const isStaff = body.is_staff === true;
 
-    if (futureCodice && (!futureRole || !body.scout_group)) {
+    if (isStaff) {
+      if (body.staff_secret !== 'grumbiotto') {
+        return NextResponse.json(
+          { error: 'Codice segreto staff non valido.' },
+          { status: 400 }
+        );
+      }
+      
+      updateData.service_role = 'Staff evento';
+      updateData.role = 'staff'; // Assure database role is set to staff
+      
+      // Update Clerk metadata synchronously to grant admin panel access
+      const client = await clerkClient();
+      await client.users.updateUserMetadata(userId, {
+        publicMetadata: { role: 'staff' }
+      });
+
+      // Bypass CRM check but allow them to save their codice_socio if they typed one
+      if (body.codice_socio) {
+        updateData.codice_socio = body.codice_socio;
+      }
+    } else if (futureCodice) {
       const { data: crmData } = await supabase
         .from('participants')
         .select('ruolo, gruppo, static_group')
         .eq('codice', futureCodice)
         .single();
       
-      if (crmData) {
-        if (!futureRole && crmData.ruolo) {
-          updateData.service_role = crmData.ruolo;
-        }
-        // Always inherit the group if missing from profile payload
-        if (!body.scout_group && crmData.gruppo) {
-          updateData.scout_group = crmData.gruppo;
-        }
-        if (crmData.static_group) {
-          updateData.static_group = crmData.static_group;
-        }
+      if (!crmData) {
+        return NextResponse.json(
+          { error: 'Codice socio non trovato nella lista iscritti BC.' },
+          { status: 400 }
+        );
       }
+      
+      // Override using exclusively CRM values
+      updateData.service_role = crmData.ruolo || null;
+      updateData.scout_group = crmData.gruppo || null;
+      if (crmData.static_group) {
+        updateData.static_group = crmData.static_group;
+      }
+    } else if (body.onboarding_completed) {
+      return NextResponse.json(
+        { error: 'Il Codice Socio è obbligatorio per l\'onboarding.' },
+        { status: 400 }
+      );
     }
 
     let data;

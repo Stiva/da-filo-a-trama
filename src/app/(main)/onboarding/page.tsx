@@ -24,6 +24,8 @@ interface FormData {
   service_role: string;
   preferences: PreferenceTag[];
   avatar_config: AvatarConfig;
+  is_staff: boolean;
+  staff_secret: string;
 }
 
 const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
@@ -45,6 +47,8 @@ export default function OnboardingPage() {
     service_role: '',
     preferences: [],
     avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() },
+    is_staff: false,
+    staff_secret: '',
   });
 
   // Pre-popola con dati Clerk
@@ -82,11 +86,15 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (currentStep === 'info') {
-      if (!formData.name || !formData.surname || !formData.service_role || !formData.codice_socio) {
-        setError('Compila tutti i campi obbligatori (Nome, Cognome, Codice Socio e Ruolo di Servizio).');
+      if (!formData.name || !formData.surname || (!formData.is_staff && !formData.codice_socio)) {
+        setError('Compila tutti i campi obbligatori.');
         return;
       }
-      if (!/^[0-9]{6,8}$/.test(formData.codice_socio)) {
+      if (formData.is_staff && formData.staff_secret !== 'grumbiotto') {
+        setError('La parola chiave Segreta dello Staff non è valida.');
+        return;
+      }
+      if (!formData.is_staff && !/^[0-9]{6,8}$/.test(formData.codice_socio)) {
         setError('Il Codice Socio deve essere un numero composto da 6 a 8 cifre.');
         return;
       }
@@ -256,8 +264,47 @@ export default function OnboardingPage() {
                   />
                 </div>
 
+                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id="is_staff"
+                      checked={formData.is_staff}
+                      onChange={(e) => setFormData(prev => ({...prev, is_staff: e.target.checked}))}
+                      className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="is_staff" className="font-semibold text-agesci-blue cursor-pointer select-none text-base">
+                      🙋‍♂️ Sono un membro dello Staff dell'Evento
+                    </label>
+                    <p className="text-xs text-agesci-blue/70 mt-1">
+                      Seleziona questa opzione se fai parte dell'organizzazione centrale dell'evento Nazionale.
+                    </p>
+                  </div>
+                </div>
+
+                {formData.is_staff && (
+                  <div className="animate-in fade-in slide-in-from-top-2">
+                    <label className="block text-sm font-medium text-agesci-blue mb-1">
+                      Parola Chiave Staff *
+                    </label>
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      value={formData.staff_secret}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, staff_secret: e.target.value.toLowerCase() }))}
+                      className="input w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                      placeholder="Inserisci il codice segreto"
+                      required={formData.is_staff}
+                    />
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-sm font-medium text-agesci-blue mb-1">Codice Socio *</label>
+                  <label className="block text-sm font-medium text-agesci-blue mb-1">
+                    Codice Socio {!formData.is_staff && '*'}
+                  </label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -267,27 +314,17 @@ export default function OnboardingPage() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
                     className="input w-full"
                     placeholder="Da 6 a 8 cifre"
-                    required
+                    required={!formData.is_staff}
                   />
-                  <p className="text-xs text-agesci-blue/60 mt-1">Il tuo identificativo numerico AGESCI univoco.</p>
+                  <p className="text-xs text-agesci-blue/60 mt-1">
+                    {formData.is_staff 
+                      ? "Facoltativo per i membri dello staff."
+                      : "Il tuo identificativo numerico AGESCI univoco."
+                    }
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-agesci-blue mb-1">Ruolo di Servizio *</label>
-                  <select
-                    value={formData.service_role}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, service_role: e.target.value }))}
-                    className="input w-full"
-                    required
-                  >
-                    <option value="" disabled>Seleziona il tuo ruolo di servizio</option>
-                    {serviceRoles.map((r) => (
-                      <option key={r.id} value={r.name}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+
 
               </div>
             )}
@@ -359,9 +396,7 @@ export default function OnboardingPage() {
                     <li>
                       <strong>Nome:</strong> {formData.name} {formData.surname}
                     </li>
-                    <li>
-                      <strong>Ruolo:</strong> {formData.service_role || 'Non specificato'}
-                    </li>
+
                     <li>
                       <strong>Interessi:</strong>{' '}
                       {formData.preferences.length > 0

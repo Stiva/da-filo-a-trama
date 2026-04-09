@@ -13,7 +13,8 @@ export type ServiceRole =
   | 'Incaricato di zona alla Branca L/C'
   | 'Incaricato regionale alla Branca L/C'
   | 'Membro di Pattuglia regionale (compresi referenti)'
-  | 'Assistente ecclesiastico';
+  | 'Assistente ecclesiastico'
+  | 'Staff evento';
 
 export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
   'Capo branco': 'Capo branco',
@@ -22,7 +23,8 @@ export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
   'Incaricato di zona alla Branca L/C': 'Incaricato di zona alla Branca L/C',
   'Incaricato regionale alla Branca L/C': 'Incaricato regionale alla Branca L/C',
   'Membro di Pattuglia regionale (compresi referenti)': 'Membro di Pattuglia regionale (compresi referenti)',
-  'Assistente ecclesiastico': 'Assistente ecclesiastico'
+  'Assistente ecclesiastico': 'Assistente ecclesiastico',
+  'Staff evento': 'Staff evento'
 };
 
 export interface Profile {
@@ -90,6 +92,8 @@ export interface ProfileUpdate {
   onboarding_completed?: boolean;
   avatar_completed?: boolean;
   preferences_set?: boolean;
+  is_staff?: boolean;
+  staff_secret?: string;
 }
 
 // Default avatar configuration (DiceBear)

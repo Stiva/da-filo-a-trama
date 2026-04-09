@@ -99,11 +99,6 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!formData.codice_socio || !/^[0-9]{6,8}$/.test(formData.codice_socio)) {
-      setError('Il Codice Socio deve essere un numero composto da 6 a 8 cifre.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
 
     setIsSaving(true);
     setError(null);
@@ -370,40 +365,28 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ruolo di Servizio
-                    </label>
-                    <select
-                      value={formData.service_role}
-                      onChange={(e) => setFormData(prev => ({ ...prev, service_role: e.target.value as ServiceRole | '' }))}
-                      className="input w-full"
-                    >
-                      <option value="">Nessun ruolo specificato</option>
-                      {Object.entries(SERVICE_ROLE_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Codice Socio *
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={8}
-                      value={formData.codice_socio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
-                      className="input w-full"
-                      placeholder="Da 6 a 8 cifre"
-                      required
-                    />
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-6">
+                  <h3 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Dati Associazione (Lista Iscritti BC)
+                  </h3>
+                  <p className="text-xs text-blue-600/80 mb-4">Questi dati sono estratti automaticamente dal Database Ufficiale AGESCI al momento della registrazione e non possono essere modificati da qui.</p>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <span className="block text-xs font-semibold text-blue-800/60 uppercase tracking-wider mb-1">Codice Socio</span>
+                      <p className="font-semibold text-gray-800 font-mono bg-white inline-block px-3 py-1 rounded-md border border-blue-100 shadow-sm">{formData.codice_socio || 'Non trovato'}</p>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-blue-800/60 uppercase tracking-wider mb-1">Ruolo di Servizio</span>
+                      <p className="font-medium text-gray-800">
+                        {formData.service_role ? (SERVICE_ROLE_LABELS[formData.service_role as ServiceRole] || formData.service_role) : 'Nessun ruolo specifico'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="block text-xs font-semibold text-blue-800/60 uppercase tracking-wider mb-1">Gruppo</span>
+                      <p className="font-medium text-gray-800">{formData.scout_group || 'Nessun gruppo'}</p>
+                    </div>
                   </div>
                 </div>
 
