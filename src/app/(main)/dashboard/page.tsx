@@ -1,7 +1,7 @@
 import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { DashboardContent, UserState } from '@/types/database';
 
 export default async function DashboardPage() {
@@ -19,8 +19,8 @@ export default async function DashboardPage() {
   const role = (clerkUser.publicMetadata as { role?: string })?.role;
   const isAdmin = role === 'admin' || role === 'staff';
 
-  // Verifica se l'onboarding e' completato
-  const supabase = await createServerSupabaseClient();
+  // Verifica se l'onboarding e' completato (usa service role per bypassare RLS)
+  const supabase = createServiceRoleClient();
   const { data: profile } = await supabase
     .from('profiles')
     .select('onboarding_completed, first_name, profile_setup_complete')

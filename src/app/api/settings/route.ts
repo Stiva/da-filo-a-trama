@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createServiceRoleClient();
     
     // La RLS su app_settings permette SELECT a tutti
     const { data: setting, error } = await supabase
