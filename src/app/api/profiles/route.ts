@@ -174,6 +174,10 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     let data;
     let error;
 
+    // Recupera email da Clerk (serve sia per insert che per recovery da 23505)
+    const user = await currentUser();
+    const email = user?.emailAddresses?.[0]?.emailAddress || '';
+
     if (existingProfile) {
       // Profilo esiste, fai update normale
       const result = await supabase
@@ -185,11 +189,8 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
       data = result.data;
       error = result.error;
     } else {
-      // Profilo non esiste, recupera email da Clerk e crea
+      // Profilo non esiste, crea
       console.log('Profilo non trovato, creazione fallback per userId:', userId);
-
-      const user = await currentUser();
-      const email = user?.emailAddresses?.[0]?.emailAddress || '';
 
       const result = await supabase
         .from('profiles')
