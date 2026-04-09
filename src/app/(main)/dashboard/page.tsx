@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     .eq('clerk_id', userId)
     .single();
 
-  if (profile && !profile.onboarding_completed) {
+  if (!profile || !profile.onboarding_completed) {
     redirect('/onboarding');
   }
 
