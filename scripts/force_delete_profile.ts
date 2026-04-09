@@ -4,7 +4,7 @@ async function forceDeleteProfile() {
   const email = process.argv[2];
   
   if (!email) {
-    console.error('Specifica l\\'email del profilo vecchio da cancellare come argomento. Esempio: npx tsx scripts/force_delete_profile.ts tua@email.com');
+    console.error("Specifica l'email del profilo vecchio da cancellare come argomento. Esempio: npx tsx scripts/force_delete_profile.ts tua@email.com");
     process.exit(1);
   }
 
@@ -53,7 +53,7 @@ async function forceDeleteProfile() {
     console.log(`Ora effettua la disconnessione e l'accesso sull'app, e il Webhook ricreerà pulito il tuo profilo!`);
 
   } catch (error) {
-    console.error('Si e\\' verificato un errore:', error);
+    console.error("Si e' verificato un errore:", error);
   }
 }
 
