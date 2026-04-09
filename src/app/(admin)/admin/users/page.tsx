@@ -19,6 +19,8 @@ export default function AdminUsersPage() {
   const [pageSize] = useState(20);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
 
   // Filtri
   const [search, setSearch] = useState('');
@@ -123,6 +125,53 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Toggle selezione singola
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  // Toggle selezione tutti
+  const toggleSelectAll = () => {
+    if (selectedIds.size === users.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(users.map(u => u.id)));
+    }
+  };
+
+  // Aggiorna stato profilo (singolo o massivo)
+  const updateProfileStatus = async (ids: string[], complete: boolean) => {
+    setIsBulkLoading(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileIds: ids,
+          updates: {
+            onboarding_completed: complete,
+            profile_setup_complete: complete,
+            avatar_completed: complete,
+          }
+        }),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Errore aggiornamento');
+      }
+      setSelectedIds(new Set());
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
   const exportCSV = () => {
     const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Ruolo', 'Stato Profilo', 'Data Iscrizione'];
     const rows = users.map((u) => [
@@ -212,6 +261,35 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Barra azioni massive */}
+      {selectedIds.size > 0 && (
+        <div className="bg-agesci-blue text-white rounded-lg shadow-md p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="font-medium">{selectedIds.size} utenti selezionati</span>
+          <div className="flex gap-3">
+            <button
+              onClick={() => updateProfileStatus(Array.from(selectedIds), true)}
+              disabled={isBulkLoading}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              ✅ Segna Completati
+            </button>
+            <button
+              onClick={() => updateProfileStatus(Array.from(selectedIds), false)}
+              disabled={isBulkLoading}
+              className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              ⏳ Segna In Attesa
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              ✕ Deseleziona
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
@@ -245,6 +323,14 @@ export default function AdminUsersPage() {
                   <table className="w-full min-w-[800px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
+                        <th className="px-3 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.size === users.length && users.length > 0}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue"
+                          />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Utente
                         </th>
@@ -267,7 +353,15 @@ export default function AdminUsersPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {users.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
+                        <tr key={user.id} className={`hover:bg-gray-50 ${selectedIds.has(user.id) ? 'bg-blue-50' : ''}`}>
+                          <td className="px-3 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(user.id)}
+                              onChange={() => toggleSelect(user.id)}
+                              className="w-4 h-4 rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue"
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               {user.profile_image_url ? (
@@ -304,15 +398,17 @@ export default function AdminUsersPage() {
                             </select>
                           </td>
                           <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            <button
+                              onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
+                              className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
                                 user.profile_setup_complete
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-green-100 text-green-800 hover:ring-green-400'
+                                  : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
                               }`}
+                              title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
                             >
-                              {user.profile_setup_complete ? 'Completato' : 'In attesa'}
-                            </span>
+                              {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
+                            </button>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {new Date(user.created_at).toLocaleDateString('it-IT', {
@@ -421,15 +517,17 @@ export default function AdminUsersPage() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Stato Profilo</span>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        <button
+                          onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
+                          className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
                             user.profile_setup_complete
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-green-100 text-green-800 hover:ring-green-400'
+                              : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
                           }`}
+                          title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
                         >
-                          {user.profile_setup_complete ? 'Completato' : 'In attesa'}
-                        </span>
+                          {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
+                        </button>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Registrato</span>

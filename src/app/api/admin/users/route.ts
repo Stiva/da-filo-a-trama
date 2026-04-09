@@ -178,3 +178,81 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
     );
   }
 }
+
+/**
+ * PATCH /api/admin/users
+ * Aggiorna stato profilo (singolo o massivo) - admin only
+ * Body: { profileIds: string[], updates: { onboarding_completed?, profile_setup_complete?, avatar_completed? } }
+ */
+export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<{ updated: number }>>> {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(userId);
+    const role = (clerkUser.publicMetadata as { role?: string })?.role;
+
+    if (role !== 'admin' && role !== 'staff') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { profileIds, updates } = body;
+
+    if (!profileIds || !Array.isArray(profileIds) || profileIds.length === 0) {
+      return NextResponse.json(
+        { error: 'profileIds è obbligatorio (array di ID)' },
+        { status: 400 }
+      );
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      return NextResponse.json(
+        { error: 'updates è obbligatorio' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitizza: accetta solo campi di stato consentiti
+    const allowedFields = ['onboarding_completed', 'profile_setup_complete', 'avatar_completed'];
+    const safeUpdates: Record<string, boolean> = {};
+    for (const key of allowedFields) {
+      if (typeof updates[key] === 'boolean') {
+        safeUpdates[key] = updates[key];
+      }
+    }
+
+    if (Object.keys(safeUpdates).length === 0) {
+      return NextResponse.json(
+        { error: 'Nessun campo valido da aggiornare. Campi consentiti: ' + allowedFields.join(', ') },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+
+    const { error: updateError, count } = await supabase
+      .from('profiles')
+      .update(safeUpdates)
+      .in('id', profileIds);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return NextResponse.json({
+      data: { updated: count || profileIds.length },
+      message: `${count || profileIds.length} profili aggiornati`,
+    });
+  } catch (error) {
+    console.error('Errore PATCH /api/admin/users:', error);
+    return NextResponse.json(
+      { error: 'Errore nell\'aggiornamento dello stato' },
+      { status: 500 }
+    );
+  }
+}
