@@ -188,9 +188,9 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
       const result = await supabase
         .from('profiles')
         .insert({
-          ...updateData,
           email,
-          role: 'user',
+          role: 'user', // Default fallback, can be overridden by updateData
+          ...updateData,
         })
         .select()
         .single();
