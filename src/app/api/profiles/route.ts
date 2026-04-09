@@ -213,9 +213,9 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
         userId,
       });
 
-      // Errore specifico per chiave duplicata (profilo creato nel frattempo)
+      // Errore specifico per chiave duplicata (profilo creato nel frattempo o vecchio clerk_id)
       if (error.code === '23505') {
-        // Riprova con update
+        // 1. Riprova con update matching clerk_id (caso webhook concorrente)
         const retryResult = await supabase
           .from('profiles')
           .update(updateData)
@@ -229,6 +229,24 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
             message: 'Profilo aggiornato con successo',
           });
         }
+        
+        // 2. Se fallisce, l'errore 23505 è sull'EMAIL!
+        // Un profilo con questa email ha un VECCHIO clerk_id. Trasferiamo la proprietà del profilo!
+        if (email) {
+          const emailRetryResult = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('email', email)
+            .select()
+            .single();
+
+          if (emailRetryResult.data) {
+            return NextResponse.json({
+              data: emailRetryResult.data as Profile,
+              message: 'Profilo ricollegato e aggiornato con successo',
+            });
+          }
+        }
       }
 
       throw error;
@@ -238,10 +256,18 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
       data: data as Profile,
       message: 'Profilo aggiornato con successo',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Errore PUT /api/profiles - Exception:', error);
     return NextResponse.json(
-      { error: 'Errore interno del server. Controlla i log per dettagli.' },
+      { 
+        error: 'Errore interno del server.',
+        debug: {
+          message: error?.message || String(error),
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+        }
+      },
       { status: 500 }
     );
   }
