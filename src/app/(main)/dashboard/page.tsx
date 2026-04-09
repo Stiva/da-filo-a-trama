@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   const supabase = createServiceRoleClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed, first_name, profile_setup_complete')
+    .select('id, onboarding_completed, first_name, profile_setup_complete')
     .eq('clerk_id', userId)
     .single();
 
@@ -35,11 +35,12 @@ export default async function DashboardPage() {
 
   // Determina lo stato utente
   let userState: UserState = 'new_user';
-  if (profile) {
+  if (profile && profile.id) {
     // Conta le iscrizioni confermate
     const { count: enrollmentCount } = await supabase
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
       .eq('status', 'confirmed');
 
     if ((enrollmentCount || 0) > 0) {
