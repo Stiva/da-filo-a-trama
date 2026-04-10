@@ -25,6 +25,7 @@ interface FormData {
   preferences: PreferenceTag[];
   avatar_config: AvatarConfig;
   is_staff: boolean;
+  is_nazionale: boolean;
   staff_secret: string;
 }
 
@@ -48,6 +49,7 @@ export default function OnboardingPage() {
     preferences: [],
     avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() },
     is_staff: false,
+    is_nazionale: false,
     staff_secret: '',
   });
 
@@ -86,15 +88,15 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (currentStep === 'info') {
-      if (!formData.name || !formData.surname || (!formData.is_staff && !formData.codice_socio)) {
+      if (!formData.name || !formData.surname || (!formData.is_staff && !formData.is_nazionale && !formData.codice_socio)) {
         setError('Compila tutti i campi obbligatori.');
         return;
       }
-      if (formData.is_staff && formData.staff_secret !== 'grumbiotto') {
-        setError('La parola chiave Segreta dello Staff non è valida.');
+      if ((formData.is_staff || formData.is_nazionale) && formData.staff_secret !== 'grumbiotto') {
+        setError('La parola chiave Segreta non è valida.');
         return;
       }
-      if (!formData.is_staff && !/^[0-9]{6,8}$/.test(formData.codice_socio)) {
+      if (!formData.is_staff && !formData.is_nazionale && !/^[0-9]{6,8}$/.test(formData.codice_socio)) {
         setError('Il Codice Socio deve essere un numero composto da 6 a 8 cifre.');
         return;
       }
@@ -270,7 +272,7 @@ export default function OnboardingPage() {
                       type="checkbox" 
                       id="is_staff"
                       checked={formData.is_staff}
-                      onChange={(e) => setFormData(prev => ({...prev, is_staff: e.target.checked}))}
+                      onChange={(e) => setFormData(prev => ({...prev, is_staff: e.target.checked, is_nazionale: false}))}
                       className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
                     />
                   </div>
@@ -284,10 +286,30 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {formData.is_staff && (
+                <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100 flex items-start gap-3">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id="is_nazionale"
+                      checked={formData.is_nazionale}
+                      onChange={(e) => setFormData(prev => ({...prev, is_nazionale: e.target.checked, is_staff: false}))}
+                      className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="is_nazionale" className="font-semibold text-agesci-blue cursor-pointer select-none text-base">
+                      🎪 Gomitolo Team
+                    </label>
+                    <p className="text-xs text-agesci-blue/70 mt-1">
+                      Seleziona se fai parte del Gomitolo Team e sei stato invitato come ospite o referente (non in elenco BC).
+                    </p>
+                  </div>
+                </div>
+
+                {(formData.is_staff || formData.is_nazionale) && (
                   <div className="animate-in fade-in slide-in-from-top-2">
                     <label className="block text-sm font-medium text-agesci-blue mb-1">
-                      Parola Chiave Staff *
+                      Parola Segreta Organizzazione *
                     </label>
                     <input
                       type="text"
@@ -296,14 +318,14 @@ export default function OnboardingPage() {
                       onChange={(e) => setFormData((prev) => ({ ...prev, staff_secret: e.target.value.toLowerCase() }))}
                       className="input w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
                       placeholder="Inserisci il codice segreto"
-                      required={formData.is_staff}
+                      required={formData.is_staff || formData.is_nazionale}
                     />
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-agesci-blue mb-1">
-                    Codice Socio {!formData.is_staff && '*'}
+                    Codice Socio {!(formData.is_staff || formData.is_nazionale) && '*'}
                   </label>
                   <input
                     type="text"
@@ -314,11 +336,11 @@ export default function OnboardingPage() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
                     className="input w-full"
                     placeholder="Da 6 a 8 cifre"
-                    required={!formData.is_staff}
+                    required={!(formData.is_staff || formData.is_nazionale)}
                   />
                   <p className="text-xs text-agesci-blue/60 mt-1">
-                    {formData.is_staff 
-                      ? "Facoltativo per i membri dello staff."
+                    {(formData.is_staff || formData.is_nazionale) 
+                      ? "Facoltativo per staff/esterni."
                       : "Il tuo identificativo numerico AGESCI univoco."
                     }
                   </p>

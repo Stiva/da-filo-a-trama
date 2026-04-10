@@ -125,26 +125,32 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
 
     const futureCodice = body.codice_socio !== undefined ? body.codice_socio : existingProfile?.codice_socio;
     const isStaff = body.is_staff === true;
+    const isNazionale = body.is_nazionale === true;
 
-    if (isStaff) {
+    if (isStaff || isNazionale) {
       if (body.staff_secret !== 'grumbiotto') {
         return NextResponse.json(
-          { error: 'Codice segreto staff non valido.' },
+          { error: 'Codice segreto non valido.' },
           { status: 400 }
         );
       }
       
-      updateData.service_role = 'Staff evento';
-      updateData.role = 'staff'; // Assure database role is set to staff
-      
-      // Update Clerk metadata synchronously to grant admin panel access
-      try {
-        const client = await clerkClient();
-        await client.users.updateUserMetadata(userId, {
-          publicMetadata: { role: 'staff' }
-        });
-      } catch (clerkError) {
-        console.error('Non sono riuscito ad aggiornare i metadata su Clerk:', clerkError);
+      if (isNazionale) {
+        updateData.service_role = 'Gomitolo Team';
+        updateData.role = 'user'; // Assicuriamo che rimanga utente per gli esterni
+      } else {
+        updateData.service_role = 'Staff evento';
+        updateData.role = 'staff'; // Assure database role is set to staff
+        
+        // Update Clerk metadata synchronously to grant admin panel access
+        try {
+          const client = await clerkClient();
+          await client.users.updateUserMetadata(userId, {
+            publicMetadata: { role: 'staff' }
+          });
+        } catch (clerkError) {
+          console.error('Non sono riuscito ad aggiornare i metadata su Clerk:', clerkError);
+        }
       }
 
       // Bypass CRM check but allow them to save their codice_socio if they typed one

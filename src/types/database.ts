@@ -14,7 +14,8 @@ export type ServiceRole =
   | 'Incaricato regionale alla Branca L/C'
   | 'Membro di Pattuglia regionale (compresi referenti)'
   | 'Assistente ecclesiastico'
-  | 'Staff evento';
+  | 'Staff evento'
+  | 'Gomitolo Team';
 
 export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
   'Capo branco': 'Capo branco',
@@ -24,7 +25,8 @@ export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
   'Incaricato regionale alla Branca L/C': 'Incaricato regionale alla Branca L/C',
   'Membro di Pattuglia regionale (compresi referenti)': 'Membro di Pattuglia regionale (compresi referenti)',
   'Assistente ecclesiastico': 'Assistente ecclesiastico',
-  'Staff evento': 'Staff evento'
+  'Staff evento': 'Staff evento',
+  'Gomitolo Team': 'Gomitolo Team'
 };
 
 export interface Profile {
@@ -93,6 +95,7 @@ export interface ProfileUpdate {
   avatar_completed?: boolean;
   preferences_set?: boolean;
   is_staff?: boolean;
+  is_nazionale?: boolean;
   staff_secret?: string;
 }
 
