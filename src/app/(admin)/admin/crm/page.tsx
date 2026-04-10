@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Upload, Search, Download, CheckCircle, XCircle } from 'lucide-react';
+import { Upload, Search, Download, CheckCircle, XCircle, Trash2, ArrowLeftRight } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
 
 export default function CRMPage() {
@@ -40,6 +40,26 @@ export default function CRMPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, activeOnly, fetchParticipants]);
 
+  const handleDelete = async (codice: string, nome: string, cognome: string) => {
+    if (!window.confirm(`Sei sicuro di voler eliminare definitivamente ${nome} ${cognome} (${codice})?`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/admin/crm/participants/${codice}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+         const data = await res.json();
+         throw new Error(data.error || 'Errore durante l\'eliminazione');
+      }
+      setUploadMessage({ type: 'success', text: `Partecipante ${nome} ${cognome} eliminato con successo.` });
+      fetchParticipants();
+    } catch (err: any) {
+      setUploadMessage({ type: 'error', text: err.message });
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setIsUploading(true);
@@ -67,7 +87,7 @@ export default function CRMPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Lista Iscritti BC</h1>
@@ -127,7 +147,13 @@ export default function CRMPage() {
 
       {/* Table */}
       <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="flex justify-end p-2 sm:hidden text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
+          <span className="flex items-center gap-1">
+            <ArrowLeftRight className="w-4 h-4" />
+            Scorri la tabella per vedere tutto
+          </span>
+        </div>
+        <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <table className="min-w-full divide-y border-t border-gray-200 divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -192,9 +218,18 @@ export default function CRMPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
-                      <a href={`/admin/crm/${person.codice}`} className="text-agesci-blue hover:text-agesci-blue-light transition-colors flex items-center justify-end gap-1">
-                        Dettagli <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                      </a>
+                      <div className="flex items-center justify-end gap-3">
+                        <a href={`/admin/crm/${person.codice}`} className="text-agesci-blue hover:text-agesci-blue-light transition-colors flex items-center gap-1">
+                          Dettagli <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </a>
+                        <button 
+                          onClick={() => handleDelete(person.codice, person.nome, person.cognome)}
+                          className="text-red-500 hover:text-red-700 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                          title="Elimina partecipante"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
