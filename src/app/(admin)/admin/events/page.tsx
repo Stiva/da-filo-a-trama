@@ -15,6 +15,10 @@ export default function AdminEventsPage() {
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<'title' | 'start_time' | 'category' | 'max_posti' | 'is_published' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -117,11 +121,47 @@ export default function AdminEventsPage() {
     }
   };
 
-  const filteredEvents = events.filter(event => {
-    if (filter === 'published') return event.is_published;
-    if (filter === 'draft') return !event.is_published;
-    return true;
-  });
+  const handleSort = (field: 'title' | 'start_time' | 'category' | 'max_posti' | 'is_published') => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field) return <span className="ml-1 opacity-20">↕</span>;
+    return <span className="ml-1 text-indigo-500">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const filteredEvents = events
+    .filter(event => {
+      if (filter === 'published') return event.is_published;
+      if (filter === 'draft') return !event.is_published;
+      return true;
+    })
+    .filter(event => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const titleMatch = event.title.toLowerCase().includes(query);
+        const speakerMatch = event.speaker_name?.toLowerCase().includes(query) || false;
+        return titleMatch || speakerMatch;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const multiplier = sortOrder === 'asc' ? 1 : -1;
+      switch (sortField) {
+        case 'title': return a.title.localeCompare(b.title) * multiplier;
+        case 'start_time': return (new Date(a.start_time).getTime() - new Date(b.start_time).getTime()) * multiplier;
+        case 'category': return a.category.localeCompare(b.category) * multiplier;
+        case 'max_posti': return ((a.max_posti || 0) - (b.max_posti || 0)) * multiplier;
+        case 'is_published': return (a.is_published === b.is_published ? 0 : a.is_published ? 1 : -1) * multiplier;
+        default: return 0;
+      }
+    });
 
   const getCategoryColor = (cat: EventCategory) => {
     const colors: Record<EventCategory, string> = {
@@ -174,6 +214,20 @@ export default function AdminEventsPage() {
 
       {/* Filters - Touch friendly */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="flex-1 relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cerca per nome evento o speaker..."
+              className="input w-full pl-10"
+            />
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2 sm:gap-3">
           {[
             { value: 'all' as const, label: 'Tutti' },
@@ -288,20 +342,35 @@ export default function AdminEventsPage() {
                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Evento
+                        <th 
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('title')}
+                        >
+                          Evento <SortIcon field="title" />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Categoria
+                        <th 
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('category')}
+                        >
+                          Categoria <SortIcon field="category" />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Data
+                        <th 
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('start_time')}
+                        >
+                          Data <SortIcon field="start_time" />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Posti
+                        <th 
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('max_posti')}
+                        >
+                          Posti <SortIcon field="max_posti" />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Stato
+                        <th 
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSort('is_published')}
+                        >
+                          Stato <SortIcon field="is_published" />
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Azioni
