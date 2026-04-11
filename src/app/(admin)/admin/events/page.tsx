@@ -154,7 +154,7 @@ export default function AdminEventsPage() {
       if (!sortField) return 0;
       const multiplier = sortOrder === 'asc' ? 1 : -1;
       switch (sortField) {
-        case 'title': return a.title.localeCompare(b.title) * multiplier;
+        case 'title': return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }) * multiplier;
         case 'start_time': return (new Date(a.start_time).getTime() - new Date(b.start_time).getTime()) * multiplier;
         case 'category': return a.category.localeCompare(b.category) * multiplier;
         case 'max_posti': return ((a.max_posti || 0) - (b.max_posti || 0)) * multiplier;
