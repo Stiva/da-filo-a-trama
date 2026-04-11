@@ -224,46 +224,60 @@ export default async function DashboardPage() {
         </section>
 
         {/* Dynamic "Prossimi Passi" Section */}
-        <section className="card bg-gradient-to-r from-agesci-yellow/20 to-lc-green/20 border-agesci-yellow">
-          <div className="card-body">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-agesci-yellow flex items-center justify-center text-2xl flex-shrink-0">
-                🌟
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-agesci-blue text-lg mb-3">
-                  {prossimiPassiContent?.title || 'Prossimi passi'}
-                </h3>
-                {prossimiPassiContent?.content?.steps ? (
-                  <ul className="space-y-2">
-                    {prossimiPassiContent.content.steps.map((step, index) => (
-                      <li key={index} className="flex items-center gap-2 text-agesci-blue/80">
-                        <span className="text-lg flex-shrink-0">{step.icon || <CheckCircle className="w-5 h-5 text-lc-green" />}</span>
-                        <span>{step.text}</span>
+        {(prossimiPassiContent || userState !== 'enrolled') && (
+          <section className="card bg-gradient-to-r from-agesci-yellow/20 to-lc-green/20 border-agesci-yellow">
+            <div className="card-body">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-agesci-yellow flex items-center justify-center text-2xl flex-shrink-0">
+                  🌟
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-agesci-blue text-lg mb-3">
+                    {prossimiPassiContent?.title || 'Prossimi passi'}
+                  </h3>
+                  {prossimiPassiContent?.content?.steps ? (
+                    <ul className="space-y-2">
+                      {prossimiPassiContent.content.steps.map((step: any, index: number) => (
+                        <li key={index} className="flex items-center gap-2 text-agesci-blue/80">
+                          <span className="text-lg flex-shrink-0">{step.icon || <CheckCircle className="w-5 h-5 text-lc-green" />}</span>
+                          <span>{step.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    // Fallback content dinamico basato sullo state
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2 text-agesci-blue/80">
+                        {userState === 'profile_complete' ? (
+                          <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-agesci-blue/30 flex-shrink-0" />
+                        )}
+                        <span className={userState === 'profile_complete' ? 'line-through opacity-70' : ''}>
+                          Completa il tuo profilo con gruppo scout e avatar
+                        </span>
                       </li>
-                    ))}
-                  </ul>
-                ) : (
-                  // Fallback content
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-2 text-agesci-blue/80">
-                      <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
-                      <span>Completa il tuo profilo con gruppo scout e avatar</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-agesci-blue/80">
-                      <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
-                      <span>Imposta le tue preferenze per ricevere suggerimenti</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-agesci-blue/80">
-                      <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
-                      <span>Esplora il programma e iscriviti agli eventi</span>
-                    </li>
-                  </ul>
-                )}
+                      <li className="flex items-center gap-2 text-agesci-blue/80">
+                         {userState === 'profile_complete' ? (
+                          <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full border-2 border-agesci-blue/30 flex-shrink-0" />
+                        )}
+                        <span className={userState === 'profile_complete' ? 'line-through opacity-70' : ''}>
+                          Imposta le tue preferenze per ricevere suggerimenti
+                        </span>
+                      </li>
+                      <li className="flex items-center gap-2 text-agesci-blue/80">
+                        <div className="w-5 h-5 rounded-full border-2 border-agesci-blue/30 flex-shrink-0" />
+                        <span>Esplora il programma e iscriviti agli eventi</span>
+                      </li>
+                    </ul>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
     </main>
   );
