@@ -25,7 +25,11 @@ export default function DailyCalendarView({
     const HOUR_HEIGHT = 72; // px per hour
 
     const sortedEvents = useMemo(() => {
-        return [...events].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+        return [...events].sort((a, b) => {
+            const timeDiff = new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+        });
     }, [events]);
 
     const firstEventDate = sortedEvents.length > 0 ? parseISO(sortedEvents[0].start_time) : new Date();

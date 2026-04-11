@@ -486,7 +486,14 @@ function EventsPageContent() {
                 />
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {events.filter(e => !e.is_placeholder).map((event) => {
+                  {events
+                    .filter(e => !e.is_placeholder)
+                    .sort((a, b) => {
+                      const timeDiff = new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+                      if (timeDiff !== 0) return timeDiff;
+                      return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+                    })
+                    .map((event) => {
                   const spotsLeft = event.max_posti - event.enrollment_count;
                   const isFull = spotsLeft <= 0;
                   const occupancyPercent = event.max_posti > 0

@@ -154,40 +154,41 @@ export default function AdminMapPage() {
 
   return (
     <div className="max-w-6xl mx-auto py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 sm:px-0">
         <div>
-          <h1 className="text-3xl font-bold">Gestione Mappa (Aree)</h1>
-          <p className="text-gray-500 mt-2">Disegna aree (poligoni) sulla mappa per l'evento.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestione Mappa (Aree)</h1>
+          <p className="text-sm sm:text-base text-gray-500 mt-2">Disegna aree (poligoni) sulla mappa per l'evento.</p>
         </div>
-        <form onSubmit={handleSearchAddress} className="flex items-center gap-2">
+        <form onSubmit={handleSearchAddress} className="flex items-center gap-2 w-full md:w-auto">
             <input 
                type="text" 
                placeholder="Cerca via, città..." 
-               className="px-3 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+               className="px-3 py-2 border rounded-lg text-sm flex-1 md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
                value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button type="submit" disabled={isSearching} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={isSearching} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
                 {isSearching ? 'Cerco...' : 'Cerca'}
             </button>
         </form>
       </div>
 
-      <div className="grid grid-cols-4 gap-6">
-          <div className="col-span-1 bg-white p-4 rounded-xl shadow border border-gray-200">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 px-4 sm:px-0">
+          <div className="md:col-span-1 bg-white p-4 rounded-xl shadow border border-gray-200 order-2 md:order-1">
              <h2 className="font-semibold mb-4">Aree configurate</h2>
              <ul className="space-y-2">
                  {pois.filter(p => !!p.area_polygon).map(p => (
                      <li key={p.id} className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 flex justify-between items-center group cursor-pointer" onClick={() => handleEditClick(p)}>
-                         <div>
-                            <p className="text-sm font-semibold truncate leading-tight">{p.nome}</p>
+                         <div className="flex-1 min-w-0 pr-2">
+                            <p className="text-sm font-semibold truncate leading-tight w-full">{p.nome}</p>
                             <p className="text-xs text-gray-400 capitalize">{p.tipo}</p>
                          </div>
                          <button 
-                            className="text-red-500 opacity-0 group-hover:opacity-100 px-2 transition-opacity" 
+                            className="text-red-500 opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 px-2 transition-opacity" 
                             onClick={(e) => { e.stopPropagation(); handleShapeDeleted(p.id); }}
+                            aria-label="Elimina area"
                          >
-                            Elimina
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                          </button>
                      </li>
                  ))}
@@ -196,7 +197,7 @@ export default function AdminMapPage() {
                  )}
              </ul>
           </div>
-          <div className="col-span-3 rounded-xl shadow overflow-hidden border border-gray-200 h-[600px]">
+          <div className="md:col-span-3 rounded-xl shadow overflow-hidden border border-gray-200 h-[450px] md:h-[600px] order-1 md:order-2 z-0 relative">
              <MapContainer 
                pois={pois} 
                selectedPoi={null} 

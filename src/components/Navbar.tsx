@@ -120,7 +120,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-scout-cream border-b-3 border-agesci-blue sticky top-0 z-50">
+      <nav className="bg-scout-cream border-b-3 border-agesci-blue sticky top-0 z-[2000]">
         <div className="container-scout">
           <div className="flex justify-between h-16">
             {/* Logo */}
@@ -202,7 +202,7 @@ export default function Navbar() {
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[2000] lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -211,7 +211,7 @@ export default function Navbar() {
       {/* Mobile Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-72 bg-scout-cream
+          fixed inset-y-0 left-0 z-[2010] w-72 bg-scout-cream
           transform transition-transform duration-300 ease-in-out
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:hidden pt-20 overflow-y-auto shadow-xl border-r border-agesci-blue/10
