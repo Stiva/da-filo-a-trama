@@ -424,6 +424,15 @@ export const PREFERENCE_TAGS = [
   'sostenibilita',
   'internazionale',
   'tradizione',
+  'fantasia',
+  'recitazione',
+  'comunicazione',
+  'cucina',
+  'gioco',
+  'liberta',
+  'coraggio',
+  'fiducia',
+  'promessa',
 ] as const;
 
 export type PreferenceTag = typeof PREFERENCE_TAGS[number];
