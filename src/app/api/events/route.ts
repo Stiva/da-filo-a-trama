@@ -24,11 +24,14 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
 
     const supabase = createServiceRoleClient();
 
-    // Query base: solo eventi pubblicati
+    // Query base: eventi pubblicati e la cui pubblicazione pianificata è già scaduta
+    // Un evento è visibile se: is_published = true E (publish_at IS NULL OR publish_at <= NOW())
+    const now = new Date().toISOString();
     let query = supabase
       .from('events')
       .select('*, poi:location_poi_id ( id, nome, tipo )')
       .eq('is_published', true)
+      .or(`publish_at.is.null,publish_at.lte.${now}`)
       .order('start_time', { ascending: true });
 
     // Filtro visibilita: visitatori vedono solo eventi pubblici

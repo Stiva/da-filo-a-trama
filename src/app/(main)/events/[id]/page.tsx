@@ -26,6 +26,7 @@ export default function EventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
+  const [conflictingEvent, setConflictingEvent] = useState<{ id: string; title: string } | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkinMessage, setCheckinMessage] = useState<string | null>(null);
   const [isFavourited, setIsFavourited] = useState(false);
@@ -60,6 +61,7 @@ export default function EventDetailPage() {
   const handleEnroll = async (forceOptions?: { force: boolean; cancelEventId: string }) => {
     setIsEnrolling(true);
     setEnrollMessage(null);
+    setConflictingEvent(null);
 
     try {
       let url = `/api/events/${eventId}/enroll`;
@@ -73,15 +75,10 @@ export default function EventDetailPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        // Gestione conflitto temporale
+        // Conflitto temporale: mostra UI inline invece di window.confirm
         if (response.status === 409 && result.conflict) {
-          const confirmMessage = `Attenzione! L'evento si sovrappone con "${result.conflictingEvent.title}".\n\nVuoi cancellare l'iscrizione precedente e iscriverti a questo evento?`;
-          if (window.confirm(confirmMessage)) {
-            // Riprova forzando
-            return handleEnroll({ force: true, cancelEventId: result.conflictingEvent.id });
-          } else {
-            return; // Utente ha annullato
-          }
+          setConflictingEvent(result.conflictingEvent);
+          return;
         }
         throw new Error(result.error || 'Errore durante l\'iscrizione');
       }
@@ -93,6 +90,13 @@ export default function EventDetailPage() {
     } finally {
       setIsEnrolling(false);
     }
+  };
+
+  const handleEnrollForce = () => {
+    if (!conflictingEvent) return;
+    const id = conflictingEvent.id;
+    setConflictingEvent(null);
+    handleEnroll({ force: true, cancelEventId: id });
   };
 
   const handleCancelEnrollment = async () => {
@@ -423,8 +427,44 @@ export default function EventDetailPage() {
               {/* Action Buttons & Check-in - Responsive grid or stack */}
               <div className="space-y-4">
 
+                {/* Conflitto temporale: banner di conferma inline */}
+                {conflictingEvent && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-semibold text-amber-900">Conflitto di orario</p>
+                        <p className="text-sm text-amber-800 mt-0.5">
+                          Sei già iscritto a <span className="font-medium">&ldquo;{conflictingEvent.title}&rdquo;</span>, che si sovrappone con questo evento.
+                        </p>
+                        <p className="text-sm text-amber-800 mt-1">
+                          Vuoi iscriverti a questo evento e disiscriverti automaticamente da quello?
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEnrollForce}
+                        disabled={isEnrolling}
+                        className="flex-1 py-2.5 px-3 rounded-lg text-white text-sm font-medium bg-amber-600 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 transition-all min-h-[44px]"
+                      >
+                        {isEnrolling ? 'In corso...' : 'Sì, cambia evento'}
+                      </button>
+                      <button
+                        onClick={() => setConflictingEvent(null)}
+                        disabled={isEnrolling}
+                        className="flex-1 py-2.5 px-3 rounded-lg text-amber-900 text-sm font-medium bg-amber-100 hover:bg-amber-200 active:scale-[0.98] disabled:opacity-50 transition-all min-h-[44px]"
+                      >
+                        No, annulla
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* 1. Unenrolled State */}
-                {!event.is_enrolled && (
+                {!event.is_enrolled && !conflictingEvent && (
                   <div className="space-y-3">
                     <button
                       onClick={() => handleEnroll()}
@@ -489,25 +529,29 @@ export default function EventDetailPage() {
                             <p className="text-sm text-gray-500 mb-2">
                               Check-in disponibile 15 minuti prima dell&apos;evento
                             </p>
-                            <button
-                              onClick={handleCancelEnrollment}
-                              disabled={isEnrolling}
-                              className="w-full py-3 px-4 rounded-lg text-gray-700 font-medium bg-gray-100 hover:bg-red-50 hover:text-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
-                            >
-                              {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
-                            </button>
+                            {!event.auto_enroll_all && (
+                              <button
+                                onClick={handleCancelEnrollment}
+                                disabled={isEnrolling}
+                                className="w-full py-3 px-4 rounded-lg text-gray-700 font-medium bg-gray-100 hover:bg-red-50 hover:text-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
+                              >
+                                {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
                     ) : (
-                      /* No check-in enabled or waitlist, just show cancel button */
-                      <button
-                        onClick={handleCancelEnrollment}
-                        disabled={isEnrolling}
-                        className="w-full py-3 px-4 rounded-lg text-white font-medium bg-red-500 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
-                      >
-                        {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
-                      </button>
+                      /* No check-in enabled or waitlist: show cancel button only if not auto-enrolled */
+                      !event.auto_enroll_all && (
+                        <button
+                          onClick={handleCancelEnrollment}
+                          disabled={isEnrolling}
+                          className="w-full py-3 px-4 rounded-lg text-white font-medium bg-red-500 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
+                        >
+                          {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
+                        </button>
+                      )
                     )}
                   </div>
                 )}
