@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manuale Admin/Staff — Da Filo a Trama</title>
+  <style>
+    /* ─── Reset & Base ──────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f9fa;
+    }
+
+    /* ─── Page layout ───────────────────────────────── */
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 48px 56px;
+      box-shadow: 0 0 40px rgba(0,0,0,.08);
+    }
+
+    /* ─── Cover ─────────────────────────────────────── */
+    .cover {
+      text-align: center;
+      padding: 64px 0 48px;
+      border-bottom: 2px solid #2d6a4f;
+      margin-bottom: 48px;
+    }
+    .cover .logo-circle {
+      width: 72px;
+      height: 72px;
+      background: #2d6a4f;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .cover .logo-circle svg { width: 38px; height: 38px; stroke: #fff; fill: none; }
+    .cover h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1b4332;
+      letter-spacing: -.3px;
+    }
+    .cover .subtitle {
+      font-size: 15px;
+      color: #52796f;
+      margin-top: 6px;
+    }
+    .cover .meta {
+      display: inline-block;
+      margin-top: 18px;
+      padding: 6px 16px;
+      background: #d8f3dc;
+      color: #1b4332;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ─── TOC ────────────────────────────────────────── */
+    .toc {
+      background: #f0faf4;
+      border: 1px solid #b7e4c7;
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 48px;
+    }
+    .toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: #52796f; margin-bottom: 14px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin: 5px 0; }
+    .toc a { color: #2d6a4f; text-decoration: none; font-weight: 500; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ─── Sections ───────────────────────────────────── */
+    section { margin-bottom: 48px; }
+    section + section { border-top: 1px solid #e9ecef; padding-top: 40px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .section-number {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      background: #2d6a4f;
+      color: #fff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    h2.section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1b4332;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #2d6a4f;
+      margin: 24px 0 10px;
+    }
+    h3:first-child { margin-top: 0; }
+
+    p { margin-bottom: 10px; color: #374151; }
+
+    ul, ol { padding-left: 20px; margin-bottom: 12px; }
+    li { margin: 4px 0; color: #374151; }
+
+    /* ─── Tables ─────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 13px;
+    }
+    thead tr { background: #1b4332; color: #fff; }
+    thead th { padding: 10px 14px; text-align: left; font-weight: 600; }
+    tbody tr:nth-child(even) { background: #f0faf4; }
+    tbody td { padding: 9px 14px; border-bottom: 1px solid #e2e8f0; }
+    .check-yes { color: #2d6a4f; font-weight: 700; }
+    .check-no  { color: #9ca3af; }
+
+    /* ─── Callout boxes ──────────────────────────────── */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 14px 0;
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+    }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .callout.info    { background: #eff6ff; border-left: 4px solid #3b82f6; }
+    .callout.warning { background: #fffbeb; border-left: 4px solid #f59e0b; }
+    .callout.success { background: #f0fdf4; border-left: 4px solid #22c55e; }
+    .callout.danger  { background: #fef2f2; border-left: 4px solid #ef4444; }
+    .callout p { margin: 0; color: inherit; }
+
+    /* ─── Code / badge ───────────────────────────────── */
+    code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    .badge-green  { background: #d1fae5; color: #065f46; }
+    .badge-blue   { background: #dbeafe; color: #1e40af; }
+    .badge-orange { background: #ffedd5; color: #9a3412; }
+    .badge-gray   { background: #f3f4f6; color: #374151; }
+
+    /* ─── Step list ──────────────────────────────────── */
+    .steps { counter-reset: step; list-style: none; padding: 0; margin: 12px 0 20px; }
+    .steps li {
+      counter-increment: step;
+      padding: 10px 14px 10px 46px;
+      position: relative;
+      margin-bottom: 8px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 14px;
+      top: 10px;
+      width: 22px;
+      height: 22px;
+      background: #2d6a4f;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* ─── Print ──────────────────────────────────────── */
+    @media print {
+      body { background: #fff; font-size: 12px; }
+      .page { box-shadow: none; padding: 24px 32px; max-width: 100%; }
+      section { page-break-inside: avoid; }
+      .cover { page-break-after: always; padding: 80px 0 60px; }
+      .toc   { page-break-after: always; }
+      h2, h3 { page-break-after: avoid; }
+      table  { page-break-inside: avoid; }
+      .callout { page-break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+
+    @page {
+      margin: 20mm 15mm;
+      @bottom-center {
+        content: "Da Filo a Trama — Manuale Admin/Staff  •  pag. " counter(page);
+        font-size: 10px;
+        color: #9ca3af;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══ COVER ═══════════════════════════════════════ -->
+  <div class="cover">
+    <div class="logo-circle">
+      <svg viewBox="0 0 24 24" stroke-width="1.8">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+      </svg>
+    </div>
+    <h1>Da Filo a Trama</h1>
+    <div class="subtitle">Piattaforma eventi scout</div>
+    <div class="meta">Manuale Admin &amp; Staff</div>
+  </div>
+
+  <!-- ═══ INDICE ════════════════════════════════════════ -->
+  <div class="toc">
+    <h2>Indice</h2>
+    <ol>
+      <li><a href="#s1">Ruoli e permessi</a></li>
+      <li><a href="#s2">Gestione eventi</a></li>
+      <li><a href="#s3">Pubblicazione e pianificazione</a></li>
+      <li><a href="#s4">Finestra di iscrizione</a></li>
+      <li><a href="#s5">Iscrizioni e lista d'attesa</a></li>
+      <li><a href="#s6">Check-in</a></li>
+      <li><a href="#s7">Gruppi di lavoro</a></li>
+      <li><a href="#s8">Notifiche push</a></li>
+    </ol>
+  </div>
+
+  <!-- ═══ 1. RUOLI ══════════════════════════════════════ -->
+  <section id="s1">
+    <div class="section-header">
+      <div class="section-number">1</div>
+      <h2 class="section-title">Ruoli e permessi</h2>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Funzione</th>
+          <th>Staff</th>
+          <th>Admin</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Creare / modificare eventi</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+        <tr><td>Eliminare eventi</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+        <tr><td>Gestire iscrizioni</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+        <tr><td>Check-in QR code</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+        <tr><td>Inviare notifiche push</td><td class="check-yes">✓</td><td class="check-yes">✓</td></tr>
+        <tr><td>Gestire utenti e ruoli</td><td class="check-no">—</td><td class="check-yes">✓</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <p>Admin e staff <strong>non occupano posti</strong> quando si iscrivono a un evento: la loro iscrizione è sempre confermata e non riduce la capienza disponibile per gli utenti.</p>
+    </div>
+  </section>
+
+  <!-- ═══ 2. GESTIONE EVENTI ════════════════════════════ -->
+  <section id="s2">
+    <div class="section-header">
+      <div class="section-number">2</div>
+      <h2 class="section-title">Gestione eventi</h2>
+    </div>
+
+    <h3>Creare un evento</h3>
+    <p>Vai su <strong>Admin → Eventi → Nuovo evento</strong>. I campi obbligatori sono:</p>
+    <ul>
+      <li><strong>Titolo</strong></li>
+      <li><strong>Categoria</strong> (workshop, conferenza, laboratorio, gioco, ecc.)</li>
+      <li><strong>Luogo (POI)</strong> — punto di interesse dalla mappa</li>
+      <li><strong>Data e ora di inizio</strong></li>
+    </ul>
+
+    <h3>Campi facoltativi principali</h3>
+    <table>
+      <thead><tr><th>Campo</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Codice laboratorio</strong></td><td>Visibile solo per la categoria <em>Laboratorio</em>. Serve per ordinare i lab in lista (es. <code>L1</code>, <code>002</code>).</td></tr>
+        <tr><td><strong>Descrizione</strong></td><td>Supporta formattazione rich text: grassetto, liste, link.</td></tr>
+        <tr><td><strong>Speaker</strong></td><td>Nome e biografia del relatore.</td></tr>
+        <tr><td><strong>Tag</strong></td><td>Collegano l'evento alle preferenze degli utenti per le raccomandazioni personalizzate.</td></tr>
+        <tr><td><strong>Posti massimi</strong></td><td>Default 50. Modificabile anche dopo la creazione.</td></tr>
+        <tr><td><strong>Visibilità</strong></td><td><em>Pubblico</em> = visibile anche ai visitatori; <em>Riservato</em> = solo utenti registrati.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Creare eventi ricorrenti</h3>
+    <p>Nella sezione <em>Data e Ora</em>, attiva <strong>Ripeti evento</strong> e inserisci il numero di giorni consecutivi. Verrà creato un evento separato per ogni giorno con titolo e impostazioni identici.</p>
+
+    <h3>Evento segnaposto</h3>
+    <p>Per pause, pranzi o blocchi che non richiedono iscrizioni, spunta <strong>Evento segnaposto</strong> durante la creazione. L'evento apparirà sul calendario in grigio tratteggiato e non permetterà iscrizioni.</p>
+
+    <h3>Modificare un evento</h3>
+    <p>Dalla lista eventi, clicca sull'evento e poi su <strong>Modifica</strong>. Le modifiche sono applicate immediatamente.</p>
+
+    <div class="callout warning">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>Aumento della capienza:</strong> se aumenti i posti massimi, il sistema promuove automaticamente gli utenti in lista d'attesa ai posti liberati e invia loro una notifica in-app.</p>
+    </div>
+
+    <h3>Eliminare un evento</h3>
+    <p>Dalla lista eventi, seleziona uno o più eventi con la spunta e usa <strong>Elimina selezionati</strong>.</p>
+    <div class="callout danger">
+      <div class="callout-icon">🚫</div>
+      <p>L'eliminazione rimuove anche <strong>tutte le iscrizioni associate</strong> ed è irreversibile.</p>
+    </div>
+  </section>
+
+  <!-- ═══ 3. PUBBLICAZIONE ══════════════════════════════ -->
+  <section id="s3">
+    <div class="section-header">
+      <div class="section-number">3</div>
+      <h2 class="section-title">Pubblicazione e pianificazione</h2>
+    </div>
+
+    <h3>Stati di pubblicazione</h3>
+    <table>
+      <thead><tr><th>Stato</th><th>Come si configura</th><th>Cosa vedono gli utenti</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-gray">Bozza</span></td>
+          <td>Toggle <em>Pubblica</em> disattivato</td>
+          <td>Evento non visibile</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">Pubblicato</span></td>
+          <td>Toggle attivo, nessun orario pianificato</td>
+          <td>Evento visibile subito</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">Pianificato</span></td>
+          <td>Toggle attivo + orario di pubblicazione impostato</td>
+          <td>Visibile solo dopo la data/ora indicata</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Pubblicazione pianificata</h3>
+    <p>Con il toggle <strong>Pubblica</strong> attivo, compila il campo <strong>Pianifica orario di pubblicazione</strong>. L'evento resta invisibile agli utenti fino al raggiungimento di quella data e ora.</p>
+    <p>Utile per preparare il programma completo in anticipo e renderlo visibile in un momento preciso (es. apertura iscrizioni alle 9:00 del mattino).</p>
+    <p>Per tornare alla pubblicazione immediata, clicca <em>Rimuovi orario pianificato</em>.</p>
+
+    <h3>Operazioni in blocco</h3>
+    <p>Dalla lista eventi, seleziona più eventi con la spunta e usa i pulsanti:</p>
+    <ul>
+      <li><strong>Pubblica selezionati</strong> — pubblica tutti subito</li>
+      <li><strong>Metti in bozza</strong> — nasconde tutti gli eventi selezionati</li>
+    </ul>
+  </section>
+
+  <!-- ═══ 4. FINESTRA ISCRIZIONE ════════════════════════ -->
+  <section id="s4">
+    <div class="section-header">
+      <div class="section-number">4</div>
+      <h2 class="section-title">Finestra di iscrizione</h2>
+    </div>
+
+    <p>Definisce <strong>quando</strong> gli utenti possono iscriversi, indipendentemente da quando l'evento è pubblicato o inizia.</p>
+
+    <table>
+      <thead><tr><th>Campo</th><th>Se lasciato vuoto</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Apertura iscrizioni</strong></td><td>Le iscrizioni si aprono non appena l'evento è pubblicato</td></tr>
+        <tr><td><strong>Chiusura iscrizioni</strong></td><td>Le iscrizioni restano aperte fino all'inizio dell'evento</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Esempi d'uso</h3>
+    <ul>
+      <li>Aprire le iscrizioni un giorno dopo la pubblicazione del programma, per dare tempo di leggerlo prima di scegliere</li>
+      <li>Chiudere le iscrizioni 24 ore prima dell'evento per stampare le liste di presenza in anticipo</li>
+    </ul>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <p>Se un utente tenta di iscriversi fuori dalla finestra, riceve un messaggio esplicito: <em>"Le iscrizioni non sono ancora aperte"</em> oppure <em>"Le iscrizioni sono chiuse"</em>.</p>
+    </div>
+
+    <p>Per rimuovere un limite, clicca il link <em>Rimuovi</em> sotto il campo corrispondente nel form di modifica.</p>
+  </section>
+
+  <!-- ═══ 5. ISCRIZIONI ═════════════════════════════════ -->
+  <section id="s5">
+    <div class="section-header">
+      <div class="section-number">5</div>
+      <h2 class="section-title">Iscrizioni e lista d'attesa</h2>
+    </div>
+
+    <h3>Iscrizione automatica</h3>
+    <p>Attivando <strong>Iscrizione automatica</strong> nel form dell'evento:</p>
+    <ul>
+      <li>Tutti gli utenti già registrati vengono iscritti immediatamente</li>
+      <li>I nuovi utenti che si registreranno in futuro vengono iscritti in automatico</li>
+    </ul>
+
+    <div class="callout warning">
+      <div class="callout-icon">⚠️</div>
+      <p>Gli utenti <strong>non possono disiscriversi</strong> da eventi con iscrizione automatica. Il pulsante di cancellazione non è visibile nella app e l'API lo blocca. Solo admin e staff possono gestire queste iscrizioni dal pannello.</p>
+    </div>
+
+    <h3>Gestione manuale delle iscrizioni</h3>
+    <p>Vai su <strong>Admin → Evento → Iscrizioni</strong> per visualizzare l'elenco completo suddiviso per stato:</p>
+    <table>
+      <thead><tr><th>Stato</th><th>Descrizione</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-green">Confermate</span></td><td>Utenti con posto garantito</td></tr>
+        <tr><td><span class="badge badge-orange">Lista d'attesa</span></td><td>Utenti in coda, ordinati per posizione</td></tr>
+        <tr><td><span class="badge badge-gray">Cancellate</span></td><td>Iscrizioni annullate</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Promozione automatica dalla lista d'attesa</h3>
+    <p>Quando un utente confermato si disiscrive, il primo in lista d'attesa viene promosso automaticamente e riceve una notifica in-app del tipo <em>"Che fortuna! Sei ora iscritto/a all'evento…"</em>.</p>
+
+    <h3>Conflitti di orario (lato utente)</h3>
+    <p>Se un utente prova a iscriversi a un evento che si sovrappone con uno al quale è già iscritto, la app mostra un banner con il nome dell'evento in conflitto. L'utente può:</p>
+    <ul>
+      <li><strong>Sì, cambia evento</strong> — si disiscrivi dall'evento precedente e si iscrive al nuovo</li>
+      <li><strong>No, annulla</strong> — chiude il banner senza modifiche</li>
+    </ul>
+  </section>
+
+  <!-- ═══ 6. CHECK-IN ════════════════════════════════════ -->
+  <section id="s6">
+    <div class="section-header">
+      <div class="section-number">6</div>
+      <h2 class="section-title">Check-in</h2>
+    </div>
+
+    <h3>Abilitare il check-in</h3>
+    <p>Nel form dell'evento, attiva <strong>Abilita check-in</strong>. Gli utenti potranno registrare la propria presenza tramite QR code a partire da <strong>15 minuti prima</strong> dell'inizio dell'evento.</p>
+
+    <h3>QR Code</h3>
+    <p>Dalla pagina di modifica dell'evento, clicca il pulsante <strong>QR Check-in</strong> per visualizzare e scaricare il QR code da stampare o proiettare all'ingresso.</p>
+
+    <h3>Upload materiali post check-in</h3>
+    <p>Attivando <strong>Upload materiale utenti</strong> nel form, gli utenti che hanno effettuato il check-in possono caricare documenti, PDF o link (Google Drive, Notion, ecc.) nell'area dedicata della pagina evento.</p>
+
+    <div class="callout success">
+      <div class="callout-icon">✅</div>
+      <p>Quando un utente effettua il check-in, il pulsante cambia in <em>"Check-in effettuato"</em> con orario e non è più cliccabile.</p>
+    </div>
+  </section>
+
+  <!-- ═══ 7. GRUPPI ══════════════════════════════════════ -->
+  <section id="s7">
+    <div class="section-header">
+      <div class="section-number">7</div>
+      <h2 class="section-title">Gruppi di lavoro</h2>
+    </div>
+
+    <p>Disponibili per le categorie configurate con l'opzione <em>Gruppi</em> (es. workshop). Si attivano impostando un numero di gruppi maggiore di 0.</p>
+
+    <h3>Modalità di generazione</h3>
+    <table>
+      <thead><tr><th>Modalità</th><th>Descrizione</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Random al check-in</strong></td><td>I gruppi vengono assegnati casualmente al momento del check-in</td></tr>
+        <tr><td><strong>Distribuzione per ruoli</strong></td><td>I gruppi vengono bilanciati per ruolo di servizio tra gli iscritti all'evento</td></tr>
+        <tr><td><strong>Ruoli omogenei</strong></td><td>Persone con lo stesso ruolo vengono raggruppate insieme, con dimensione massima configurabile</td></tr>
+        <tr><td><strong>Copia da evento precedente</strong></td><td>I gruppi vengono replicati da un evento passato selezionato</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Ruoli idonei</h3>
+    <p>Puoi filtrare quali ruoli di servizio partecipano alla composizione dei gruppi. Se non se ne seleziona nessuno, tutti i ruoli sono inclusi.</p>
+
+    <h3>Gestione gruppi</h3>
+    <p>Da <strong>Admin → Evento → Gruppi</strong> puoi:</p>
+    <ul>
+      <li>Rinominare i gruppi</li>
+      <li>Assegnare un <strong>moderatore</strong> per gruppo (che avrà accesso all'area di collaborazione)</li>
+      <li>Aggiungere o rimuovere membri manualmente</li>
+      <li>Generare o rigenerare i gruppi (per le modalità che lo supportano)</li>
+    </ul>
+  </section>
+
+  <!-- ═══ 8. NOTIFICHE ══════════════════════════════════ -->
+  <section id="s8">
+    <div class="section-header">
+      <div class="section-number">8</div>
+      <h2 class="section-title">Notifiche push</h2>
+    </div>
+
+    <p>Vai su <strong>Admin → Notifiche push → Nuova notifica</strong>.</p>
+
+    <h3>Destinatari</h3>
+    <table>
+      <thead><tr><th>Target</th><th>Chi riceve</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">Tutti</span></td><td>Tutti gli utenti che hanno installato la PWA</td></tr>
+        <tr><td><span class="badge badge-orange">Staff</span></td><td>Solo admin e staff</td></tr>
+        <tr><td><span class="badge badge-green">Evento specifico</span></td><td>Solo gli iscritti confermati all'evento selezionato</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Composizione del messaggio</h3>
+    <ul>
+      <li><strong>Titolo</strong> — breve e diretto, visibile nella notifica del dispositivo</li>
+      <li><strong>Messaggio</strong> — supporta formattazione rich text</li>
+      <li><strong>Link azione</strong> — URL a cui l'utente viene portato toccando la notifica (es. <code>/events/[id]</code>)</li>
+    </ul>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <p>La piattaforma pulisce automaticamente le sottoscrizioni non più valide (dispositivi che hanno disinstallato la PWA).</p>
+    </div>
+
+    <h3>Notifiche automatiche del sistema</h3>
+    <p>Oltre alle notifiche manuali, il sistema invia automaticamente:</p>
+    <table>
+      <thead><tr><th>Evento</th><th>Destinatario</th><th>Canale</th></tr></thead>
+      <tbody>
+        <tr><td>Promozione dalla lista d'attesa</td><td>Utente promosso</td><td>In-app</td></tr>
+        <tr><td>Evento imminente (~30 min prima)</td><td>Tutti gli iscritti confermati</td><td>In-app</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div><!-- /page -->
+</body>
+</html>
