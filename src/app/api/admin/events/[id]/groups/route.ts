@@ -104,12 +104,44 @@ export async function GET(
             console.warn('Errore nel recupero POI', poisError);
         }
 
+        // 5. Fetch all confirmed enrollments to find unassigned users
+        const { data: enrollments, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select(`
+                user_id,
+                profile:profiles(id, name, surname, scout_group)
+            `)
+            .eq('event_id', eventId)
+            .eq('status', 'confirmed');
+            
+        if (enrollmentsError) {
+            console.warn('Errore nel recupero iscrizioni', enrollmentsError);
+        }
+
+        // Collect all assigned user IDs across all groups
+        const assignedUserIds = new Set<string>();
+        groups?.forEach(g => {
+            g.members?.forEach((m: any) => assignedUserIds.add(m.user_id));
+        });
+
+        // Compute unassigned users
+        const unassignedUsers = (enrollments || [])
+            .filter((e: any) => !assignedUserIds.has(e.user_id))
+            .map((e: any) => e.profile)
+            .filter(Boolean)
+            .sort((a: any, b: any) => {
+                if (a.surname < b.surname) return -1;
+                if (a.surname > b.surname) return 1;
+                return 0;
+            });
+
         return NextResponse.json({
             data: {
                 event,
                 groups: sortedGroups,
                 staffUsers: staffUsers || [],
                 pois: pois || [],
+                unassignedUsers,
             }
         });
     } catch (error) {

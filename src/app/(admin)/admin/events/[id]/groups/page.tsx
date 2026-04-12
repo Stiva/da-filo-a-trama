@@ -24,6 +24,7 @@ export default function AdminEventGroupsPage() {
 
     const [event, setEvent] = useState<EventInfo | null>(null);
     const [groups, setGroups] = useState<EventGroup[]>([]);
+    const [unassignedUsers, setUnassignedUsers] = useState<Profile[]>([]);
     const [staffUsers, setStaffUsers] = useState<Profile[]>([]);
     const [pois, setPois] = useState<PoiInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +48,7 @@ export default function AdminEventGroupsPage() {
             }
             setEvent(result.data.event);
             setGroups(result.data.groups);
+            setUnassignedUsers(result.data.unassignedUsers || []);
             setStaffUsers(result.data.staffUsers || []);
             setPois(result.data.pois || []);
         } catch (err) {
@@ -59,6 +61,25 @@ export default function AdminEventGroupsPage() {
     const handleAssignModerator = async (groupId: string, userId: string) => {
         try {
             const res = await fetch(`/api/admin/events/${eventId}/groups/${groupId}/moderators`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Errore durante l'assegnazione");
+            }
+            fetchData();
+        } catch (err: unknown) {
+            if (err instanceof Error) alert(err.message);
+            else alert('Errore sconosciuto');
+        }
+    };
+
+    const handleAssignMember = async (userId: string, groupId: string) => {
+        if (!groupId) return;
+        try {
+            const res = await fetch(`/api/admin/events/${eventId}/groups/${groupId}/members`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId }),
@@ -153,6 +174,53 @@ export default function AdminEventGroupsPage() {
                 </div>
             ) : (
                 <div className="space-y-6">
+                    {unassignedUsers && unassignedUsers.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8 xl:col-span-2 shadow-sm">
+                            <h2 className="text-xl font-semibold text-yellow-800 mb-4 flex items-center gap-2">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Utenti non assegnati ({unassignedUsers.length})
+                            </h2>
+                            <p className="text-sm text-yellow-700 mb-4">
+                                I seguenti utenti sono iscritti all'evento ma non risultano associati ad alcun gruppo. Seleziona il gruppo di destinazione per ciascuno per assegnarlo manualmente.
+                            </p>
+                            <div className="bg-white rounded-md border border-yellow-100 overflow-hidden max-h-96 overflow-y-auto">
+                                <div className="divide-y divide-yellow-100">
+                                    {unassignedUsers.map(u => (
+                                        <div key={u.id} className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-yellow-50/50 transition">
+                                            <div>
+                                                <p className="font-medium text-gray-800">{u.name} {u.surname}</p>
+                                                <p className="text-xs text-gray-500">{u.scout_group || 'Nessun gruppo censito'}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    id={`assign-select-${u.id}`}
+                                                    className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded focus:ring-blue-500 focus:border-blue-500 block p-1.5 min-w-[200px]"
+                                                    defaultValue=""
+                                                >
+                                                    <option value="" disabled>Seleziona gruppo...</option>
+                                                    {groups.map(g => (
+                                                        <option key={g.id} value={g.id}>{g.name}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    onClick={() => {
+                                                        const el = document.getElementById(`assign-select-${u.id}`) as HTMLSelectElement;
+                                                        if (el && el.value) handleAssignMember(u.id, el.value);
+                                                    }}
+                                                    className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded shadow-sm transition"
+                                                >
+                                                    Assegna
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {groups.map((group) => (
                         <div key={group.id} className="bg-white rounded-lg shadow-md p-6">
                             <div className="flex justify-between items-center mb-4 pb-2 border-b">

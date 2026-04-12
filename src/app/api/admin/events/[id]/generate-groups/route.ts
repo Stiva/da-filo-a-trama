@@ -59,21 +59,27 @@ export async function POST(
 
         let existingGroups = groups || [];
 
-        if (event.group_creation_mode !== 'static_crm' && (groupsError || existingGroups.length === 0)) {
+        if (event.group_creation_mode !== 'static_crm' && event.group_creation_mode !== 'homogeneous' && (groupsError || existingGroups.length === 0)) {
             return NextResponse.json({ error: 'Nessun gruppo esistente per questo evento. Impossibile assegnare iscritti.' }, { status: 400 });
         }
 
         const groupIds = existingGroups.map(g => g.id);
 
-        // 3. Delete existing members for these groups (reset)
+        // 3. Delete existing members for these groups (reset) or delete groups entirely if homogeneous
         if (groupIds.length > 0) {
-            const { error: deleteError } = await supabase
-                .from('event_group_members')
-                .delete()
-                .in('group_id', groupIds);
-
-            if (deleteError) {
-                throw deleteError;
+            if (event.group_creation_mode === 'homogeneous') {
+                const { error: deleteError } = await supabase
+                    .from('event_groups')
+                    .delete()
+                    .in('id', groupIds);
+                if (deleteError) throw deleteError;
+                existingGroups = [];
+            } else {
+                const { error: deleteError } = await supabase
+                    .from('event_group_members')
+                    .delete()
+                    .in('group_id', groupIds);
+                if (deleteError) throw deleteError;
             }
         }
 
@@ -147,8 +153,17 @@ export async function POST(
 
         participants.forEach((p: any) => {
             const uId = p.user_id;
-            const sr = p.profile?.service_role;
+            let sr = p.profile?.service_role;
             if (sr) {
+                if (event.group_creation_mode === 'homogeneous') {
+                    if (sr.toLowerCase() === 'capo branco' || sr.toLowerCase() === 'capo cerchio') {
+                        sr = 'Capi Branco/Cerchio';
+                    } else if (sr.toLowerCase() === 'capo reparto') {
+                        sr = 'Capi Reparto';
+                    } else {
+                        sr = sr.charAt(0).toUpperCase() + sr.slice(1).toLowerCase();
+                    }
+                }
                 if (!roleMap[sr]) roleMap[sr] = [];
                 roleMap[sr].push(uId);
             } else {
@@ -156,82 +171,71 @@ export async function POST(
             }
         });
 
-        const inserts: { group_id: string; user_id: string }[] = [];
-        let currentGroupIndex = 0;
-
-        // Helper to push and cycle group index
-        const assignUser = (userId: string, groupIndex?: number) => {
-            const idx = groupIndex !== undefined ? groupIndex : currentGroupIndex;
-            inserts.push({
-                group_id: existingGroups[idx].id,
-                user_id: userId
-            });
-            if (groupIndex === undefined) {
-                currentGroupIndex = (currentGroupIndex + 1) % existingGroups.length;
-            }
-        };
+        let inserts: { group_id: string; user_id: string }[] = [];
 
         if (event.group_creation_mode === 'homogeneous') {
-            // Homogeneous logic: keep same roles together, up to max_group_size per group
             const maxGroupSize = event.max_group_size || 10;
             const roles = Object.keys(roleMap);
+            
+            const newGroupsToCreate: { event_id: string, name: string }[] = [];
+            const roleChunks: { role: string, chunkUsers: string[], groupName: string }[] = [];
 
-            // To keep track of how many users are currently assigned to each group
-            const groupFills = new Array(existingGroups.length).fill(0);
-
-            // To optimize finding the least filled group, maintain an array of group indices
-            // sorted by their fill count (ascending). The least filled group is always at index 0.
-            const sortedIndices = new Array(existingGroups.length);
-            for (let i = 0; i < existingGroups.length; i++) sortedIndices[i] = i;
-
-            // Helper to bubble up the modified group index to maintain sorted order
-            const updateSortedIndices = (modifiedGroupIdx: number, newFill: number) => {
-                groupFills[modifiedGroupIdx] = newFill;
-                let j = 0;
-                // Shift indices left until we find the correct sorted position for the modified group
-                while (j < existingGroups.length - 1 && groupFills[sortedIndices[j + 1]] < newFill) {
-                    sortedIndices[j] = sortedIndices[j + 1];
-                    j++;
-                }
-                sortedIndices[j] = modifiedGroupIdx;
-            };
-
-            // For each role, we find an available group (or multiple if the role list is larger than maxGroupSize)
             roles.forEach(role => {
                 const users = roleMap[role];
-                // Process users for this role in chunks of maxGroupSize
+                let groupCounter = 1;
                 for (let i = 0; i < users.length; i += maxGroupSize) {
                     const chunk = users.slice(i, i + maxGroupSize);
-
-                    // Find the group with the most available space (or least filled)
-                    // The least filled group is always the first element in sortedIndices
-                    const bestGroupIdx = sortedIndices[0];
-
-                    // Assign all users in the chunk to this best group
-                    chunk.forEach(userId => {
-                        assignUser(userId, bestGroupIdx);
-                    });
-
-                    // Update the fill count and bubble it up to maintain sort
-                    updateSortedIndices(bestGroupIdx, groupFills[bestGroupIdx] + chunk.length);
+                    const groupName = `${role} ${groupCounter}`;
+                    newGroupsToCreate.push({ event_id: eventId, name: groupName });
+                    roleChunks.push({ role, chunkUsers: chunk, groupName });
+                    groupCounter++;
                 }
             });
 
-            // Distribute unassigned users evenly among the least filled groups
-            unassignedRoleUsers.forEach(userId => {
-                const bestGroupIdx = sortedIndices[0];
-                assignUser(userId, bestGroupIdx);
-                updateSortedIndices(bestGroupIdx, groupFills[bestGroupIdx] + 1);
-            });
+            if (unassignedRoleUsers.length > 0) {
+                let groupCounter = 1;
+                for (let i = 0; i < unassignedRoleUsers.length; i += maxGroupSize) {
+                    const chunk = unassignedRoleUsers.slice(i, i + maxGroupSize);
+                    const groupName = `Misti ${groupCounter}`;
+                    newGroupsToCreate.push({ event_id: eventId, name: groupName });
+                    roleChunks.push({ role: 'Misti', chunkUsers: chunk, groupName });
+                    groupCounter++;
+                }
+            }
 
+            if (newGroupsToCreate.length > 0) {
+                const { data: insertedGroups, error: groupsInsertError } = await supabase
+                    .from('event_groups')
+                    .insert(newGroupsToCreate)
+                    .select('id, name');
+
+                if (groupsInsertError) throw groupsInsertError;
+
+                roleChunks.forEach(chunkInfo => {
+                    const groupId = insertedGroups?.find(g => g.name === chunkInfo.groupName)?.id;
+                    if (groupId) {
+                        chunkInfo.chunkUsers.forEach(uId => {
+                            inserts.push({ group_id: groupId, user_id: uId });
+                        });
+                    }
+                });
+            }
         } else {
-            // Original 'mix_roles' logic: round-robin to distribute roles evenly across ALL groups
+            // Original 'mix_roles' logic: round-robin to distribute roles evenly across ALL existing groups
+            let currentGroupIndex = 0;
+            const assignUser = (userId: string) => {
+                inserts.push({
+                    group_id: existingGroups[currentGroupIndex].id,
+                    user_id: userId
+                });
+                currentGroupIndex = (currentGroupIndex + 1) % existingGroups.length;
+            };
+
             const roles = Object.keys(roleMap).sort((a, b) => roleMap[b].length - roleMap[a].length);
             roles.forEach(role => {
                 roleMap[role].forEach(userId => assignUser(userId));
             });
 
-            // Process users without a role
             unassignedRoleUsers.forEach(userId => assignUser(userId));
         }
 
