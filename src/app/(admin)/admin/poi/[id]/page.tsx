@@ -33,8 +33,11 @@ async function getPoi(id: string): Promise<Poi | null> {
     tipo: data.tipo,
     latitude,
     longitude,
+    area_polygon: typeof data.area_polygon === 'string' ? JSON.parse(data.area_polygon) : data.area_polygon,
+    color: data.color,
     icon_url: data.icon_url,
     is_active: data.is_active,
+    is_fantastic: data.is_fantastic || false,
     created_at: data.created_at,
   };
 }
