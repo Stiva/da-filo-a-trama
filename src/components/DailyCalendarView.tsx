@@ -102,26 +102,28 @@ export default function DailyCalendarView({
             styleClasses = `hover:z-30 hover:shadow-lg ${getCategoryColor(event.category)}`;
         }
 
+        const displayTitle = event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title;
+
         return (
             <div
                 key={event.id}
-                className={`${baseClasses} ${styleClasses}`}
+                className={`absolute rounded-md border p-1.5 shadow-sm flex flex-col overflow-hidden transition-all ${styleClasses}`}
                 style={{
                     top: `${topOffset}px`,
                     height: `${height}px`,
                     width: `calc(${colWidth}% - 8px)`,
                     left: `calc(${colLeft}% + 4px)`,
                 }}
-                title={`${event.title} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
+                title={`${displayTitle} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
             >
                 <div className="flex justify-between items-start gap-1">
                     {isPlaceholder ? (
                         <span className="font-semibold text-xs leading-tight line-clamp-2 flex-1">
-                            {event.title}
+                            {displayTitle}
                         </span>
                     ) : (
                         <Link href={linkHref} className="font-semibold text-xs leading-tight line-clamp-2 hover:underline flex-1">
-                            {event.title}
+                            {displayTitle}
                         </Link>
                     )}
                     
@@ -276,11 +278,11 @@ export default function DailyCalendarView({
                                                         <div>
                                                             {isPlaceholder ? (
                                                                 <span className="font-semibold text-gray-900 leading-tight block opacity-80">
-                                                                    {event.title}
+                                                                    {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
                                                                 </span>
                                                             ) : (
                                                                 <Link href={linkHref} className="font-semibold text-gray-900 leading-tight hover:underline block">
-                                                                    {event.title}
+                                                                    {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
                                                                 </Link>
                                                             )}
                                                             {event.speaker_name && <div className="text-sm text-gray-600 mt-1">{event.speaker_name}</div>}

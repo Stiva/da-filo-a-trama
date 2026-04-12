@@ -229,6 +229,7 @@ export async function PUT(
 
     const eventData = {
       title: body.title,
+      custom_id: body.custom_id || null,
       description: body.description || null,
       category: body.category,
       tags: body.tags || [],
@@ -360,6 +361,7 @@ export async function PATCH(
 
     if (body.is_published !== undefined) updateData.is_published = body.is_published;
     if (body.title !== undefined) updateData.title = body.title;
+    if (body.custom_id !== undefined) updateData.custom_id = body.custom_id;
     if (body.description !== undefined) updateData.description = body.description;
     if (body.category !== undefined) updateData.category = body.category;
     if (body.tags !== undefined) updateData.tags = body.tags;

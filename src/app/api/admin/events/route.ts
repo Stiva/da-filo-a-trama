@@ -99,6 +99,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
 
         eventsToInsert.push({
             title: body.title,
+            custom_id: body.custom_id || null,
             description: body.description || null,
             category: body.category,
             tags: body.tags || [],

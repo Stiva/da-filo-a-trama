@@ -145,16 +145,27 @@ export default function AdminEventsPage() {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const titleMatch = event.title.toLowerCase().includes(query);
+        const idMatch = event.custom_id?.toLowerCase().includes(query) || false;
         const speakerMatch = event.speaker_name?.toLowerCase().includes(query) || false;
-        return titleMatch || speakerMatch;
+        return titleMatch || idMatch || speakerMatch;
       }
       return true;
     })
     .sort((a, b) => {
-      if (!sortField) return 0;
+      if (!sortField) {
+        if (a.category === 'laboratorio' && b.category === 'laboratorio') {
+          return (a.custom_id || '').localeCompare(b.custom_id || '', undefined, { numeric: true, sensitivity: 'base' });
+        }
+        return 0;
+      }
       const multiplier = sortOrder === 'asc' ? 1 : -1;
       switch (sortField) {
-        case 'title': return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }) * multiplier;
+        case 'title': {
+          if (a.category === 'laboratorio' && b.category === 'laboratorio') {
+            return (a.custom_id || '').localeCompare(b.custom_id || '', undefined, { numeric: true, sensitivity: 'base' }) * multiplier;
+          }
+          return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }) * multiplier;
+        }
         case 'start_time': return (new Date(a.start_time).getTime() - new Date(b.start_time).getTime()) * multiplier;
         case 'category': return a.category.localeCompare(b.category) * multiplier;
         case 'max_posti': return ((a.max_posti || 0) - (b.max_posti || 0)) * multiplier;
@@ -390,7 +401,9 @@ export default function AdminEventsPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div>
-                              <p className="font-medium text-gray-900">{event.title}</p>
+                              <p className="font-medium text-gray-900 flex items-center gap-2">
+                                {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
+                              </p>
                               {event.speaker_name && (
                                 <p className="text-sm text-gray-500">con {event.speaker_name}</p>
                               )}
@@ -485,7 +498,9 @@ export default function AdminEventsPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-medium text-gray-900 truncate">{event.title}</h3>
+                          <h3 className="font-medium text-gray-900 truncate">
+                              {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
+                          </h3>
                           <button
                             onClick={() => handleTogglePublish(event.id, event.is_published)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-full flex-shrink-0 ${event.is_published

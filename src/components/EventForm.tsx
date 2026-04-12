@@ -32,6 +32,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
 
   const [formData, setFormData] = useState({
     title: event?.title || '',
+    custom_id: event?.custom_id || '',
     description: event?.description || '',
     category: event?.category || '' as EventCategory,
     tags: event?.tags || [],
@@ -185,6 +186,21 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               placeholder="Titolo dell'evento"
             />
           </div>
+
+          {formData.category === 'laboratorio' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Codice Laboratorio (ID)
+              </label>
+              <input
+                type="text"
+                value={formData.custom_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, custom_id: e.target.value }))}
+                className="input w-full"
+                placeholder="Es. L1, 002 (usato per ordinare i lab in lista)"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

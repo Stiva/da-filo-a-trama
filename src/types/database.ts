@@ -142,6 +142,7 @@ export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogene
 
 export interface Event {
   id: string;
+  custom_id: string | null;
   title: string;
   description: string | null;
   category: EventCategory;

@@ -491,6 +491,9 @@ function EventsPageContent() {
                     .sort((a, b) => {
                       const timeDiff = new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
                       if (timeDiff !== 0) return timeDiff;
+                      if (a.category === 'laboratorio' && b.category === 'laboratorio') {
+                        return (a.custom_id || '').localeCompare(b.custom_id || '', undefined, { numeric: true, sensitivity: 'base' });
+                      }
                       return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
                     })
                     .map((event) => {
@@ -523,7 +526,7 @@ function EventsPageContent() {
                           </button>
                         </div>
                         <h3 className="mt-2 text-lg font-semibold text-gray-900 line-clamp-2">
-                          {event.title}
+                          {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
                         </h3>
                       </div>
 

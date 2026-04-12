@@ -56,7 +56,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
     }
 
     if (search) {
-      query = query.ilike('title', `%${search}%`);
+      query = query.or(`title.ilike.%${search}%,custom_id.ilike.%${search}%`);
     }
 
     // Filtro raccomandati: usa service role per leggere preferenze utente

@@ -68,6 +68,8 @@ export default function AdminPoiPage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore sconosciuto');
     }
+  };
+
   const handleToggleFantastic = async (poi: Poi) => {
     try {
       const response = await fetch(`/api/admin/poi/${poi.id}`, {
