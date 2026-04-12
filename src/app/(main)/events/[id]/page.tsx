@@ -489,25 +489,29 @@ export default function EventDetailPage() {
                             <p className="text-sm text-gray-500 mb-2">
                               Check-in disponibile 15 minuti prima dell&apos;evento
                             </p>
-                            <button
-                              onClick={handleCancelEnrollment}
-                              disabled={isEnrolling}
-                              className="w-full py-3 px-4 rounded-lg text-gray-700 font-medium bg-gray-100 hover:bg-red-50 hover:text-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
-                            >
-                              {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
-                            </button>
+                            {!event.auto_enroll_all && (
+                              <button
+                                onClick={handleCancelEnrollment}
+                                disabled={isEnrolling}
+                                className="w-full py-3 px-4 rounded-lg text-gray-700 font-medium bg-gray-100 hover:bg-red-50 hover:text-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
+                              >
+                                {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
                     ) : (
-                      /* No check-in enabled or waitlist, just show cancel button */
-                      <button
-                        onClick={handleCancelEnrollment}
-                        disabled={isEnrolling}
-                        className="w-full py-3 px-4 rounded-lg text-white font-medium bg-red-500 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
-                      >
-                        {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
-                      </button>
+                      /* No check-in enabled or waitlist: show cancel button only if not auto-enrolled */
+                      !event.auto_enroll_all && (
+                        <button
+                          onClick={handleCancelEnrollment}
+                          disabled={isEnrolling}
+                          className="w-full py-3 px-4 rounded-lg text-white font-medium bg-red-500 hover:bg-red-600 active:scale-[0.98] disabled:opacity-50 min-h-[48px] transition-all"
+                        >
+                          {isEnrolling ? 'Cancellazione...' : 'Cancella iscrizione'}
+                        </button>
+                      )
                     )}
                   </div>
                 )}
