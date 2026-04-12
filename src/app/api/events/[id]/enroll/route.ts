@@ -279,6 +279,23 @@ export async function DELETE(
       );
     }
 
+    // 1b. Verifica che l'evento non abbia iscrizione automatica
+    // Gli utenti non possono disiscriversi da eventi con auto_enroll_all=true
+    if (profile.role === 'user') {
+      const { data: event } = await supabase
+        .from('events')
+        .select('auto_enroll_all')
+        .eq('id', eventId)
+        .single();
+
+      if (event?.auto_enroll_all) {
+        return NextResponse.json(
+          { error: 'Non è possibile disiscriversi da questo evento: l\'iscrizione è automatica e obbligatoria' },
+          { status: 403 }
+        );
+      }
+    }
+
     // 2. Trova e cancella iscrizione attiva
     const { data: cancelled, error: cancelError } = await supabase
       .from('enrollments')
