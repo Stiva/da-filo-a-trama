@@ -110,6 +110,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
             speaker_name: body.speaker_name || null,
             speaker_bio: body.speaker_bio || null,
             is_published: body.is_published ?? false,
+            publish_at: body.publish_at || null,
             auto_enroll_all: isPlaceholder ? false : (body.auto_enroll_all ?? false),
             checkin_enabled: body.checkin_enabled ?? false,
             visibility: body.visibility || 'public',
@@ -119,6 +120,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
             group_eligible_roles: body.group_eligible_roles || [],
             max_group_size: body.max_group_size || 10,
             is_placeholder: isPlaceholder,
+            registrations_open_at: body.registrations_open_at || null,
+            registrations_close_at: body.registrations_close_at || null,
         });
     }
 

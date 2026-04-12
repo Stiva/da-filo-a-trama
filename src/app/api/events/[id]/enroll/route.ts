@@ -51,7 +51,7 @@ export async function POST(
     // 2. Recupera dati evento
     const { data: event } = await supabase
       .from('events')
-      .select('max_posti, start_time, end_time, is_published, title')
+      .select('max_posti, start_time, end_time, is_published, publish_at, title, registrations_open_at, registrations_close_at')
       .eq('id', eventId)
       .single();
 
@@ -62,6 +62,8 @@ export async function POST(
       );
     }
 
+    const now = new Date();
+
     if (!event.is_published) {
       return NextResponse.json(
         { error: 'Evento non ancora disponibile per le iscrizioni' },
@@ -69,9 +71,32 @@ export async function POST(
       );
     }
 
-    if (new Date(event.start_time) <= new Date()) {
+    // Verifica che la pubblicazione pianificata sia già avvenuta
+    if (event.publish_at && new Date(event.publish_at) > now) {
+      return NextResponse.json(
+        { error: 'Evento non ancora disponibile per le iscrizioni' },
+        { status: 400 }
+      );
+    }
+
+    if (new Date(event.start_time) <= now) {
       return NextResponse.json(
         { error: 'L\'evento è già iniziato' },
+        { status: 400 }
+      );
+    }
+
+    // Verifica finestra di iscrizione
+    if (event.registrations_open_at && new Date(event.registrations_open_at) > now) {
+      return NextResponse.json(
+        { error: 'Le iscrizioni non sono ancora aperte' },
+        { status: 400 }
+      );
+    }
+
+    if (event.registrations_close_at && new Date(event.registrations_close_at) < now) {
+      return NextResponse.json(
+        { error: 'Le iscrizioni sono chiuse' },
         { status: 400 }
       );
     }

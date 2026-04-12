@@ -240,6 +240,7 @@ export async function PUT(
       speaker_name: body.speaker_name || null,
       speaker_bio: body.speaker_bio || null,
       is_published: body.is_published ?? false,
+      publish_at: body.publish_at || null,
       auto_enroll_all: body.auto_enroll_all ?? false,
       checkin_enabled: body.checkin_enabled ?? false,
       user_can_upload_assets: body.user_can_upload_assets ?? false,
@@ -248,6 +249,8 @@ export async function PUT(
       group_creation_mode: body.group_creation_mode || 'random',
       group_eligible_roles: body.group_eligible_roles || [],
       max_group_size: body.max_group_size || 10,
+      registrations_open_at: body.registrations_open_at || null,
+      registrations_close_at: body.registrations_close_at || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -360,6 +363,7 @@ export async function PATCH(
     };
 
     if (body.is_published !== undefined) updateData.is_published = body.is_published;
+    if (body.publish_at !== undefined) updateData.publish_at = body.publish_at || null;
     if (body.title !== undefined) updateData.title = body.title;
     if (body.custom_id !== undefined) updateData.custom_id = body.custom_id;
     if (body.description !== undefined) updateData.description = body.description;
@@ -379,6 +383,8 @@ export async function PATCH(
     if (body.group_creation_mode !== undefined) updateData.group_creation_mode = body.group_creation_mode;
     if (body.source_event_id !== undefined) updateData.source_event_id = body.source_event_id;
     if (body.group_eligible_roles !== undefined) updateData.group_eligible_roles = body.group_eligible_roles;
+    if (body.registrations_open_at !== undefined) updateData.registrations_open_at = body.registrations_open_at || null;
+    if (body.registrations_close_at !== undefined) updateData.registrations_close_at = body.registrations_close_at || null;
 
     const { data, error } = await supabase
       .from('events')
