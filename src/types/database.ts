@@ -318,6 +318,7 @@ export interface PoiRaw {
   color: string | null;
   icon_url: string | null;
   is_active: boolean;
+  is_fantastic: boolean;
   floor_level: number;
   opening_hours: Record<string, string> | null;
   created_at: string;
@@ -336,6 +337,7 @@ export interface Poi {
   color?: string | null;
   icon_url: string | null;
   is_active: boolean;
+  is_fantastic: boolean;
   created_at: string;
 }
 

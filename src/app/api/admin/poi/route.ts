@@ -55,6 +55,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
         color: poi.color,
         icon_url: poi.icon_url,
         is_active: poi.is_active,
+        is_fantastic: poi.is_fantastic || false,
         created_at: poi.created_at,
       };
     });
@@ -89,7 +90,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
       icon_url,
       area_polygon,
       color,
-      is_active
+      is_active,
+      is_fantastic
     } = await request.json();
 
     if (!nome || !tipo) {
@@ -104,7 +106,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
       tipo,
       icon_url,
       color,
-      is_active: is_active ?? true
+      is_active: is_active ?? true,
+      is_fantastic: is_fantastic ?? false
     };
 
     if (area_polygon) {
@@ -145,6 +148,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
       color: data.color,
       icon_url: data.icon_url,
       is_active: data.is_active,
+      is_fantastic: data.is_fantastic || false,
       created_at: data.created_at,
     };
 

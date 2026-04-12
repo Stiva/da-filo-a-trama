@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
+import { stripHtml } from '@/lib/stripHtml';
 
 export default function AdminPoiPage() {
   const [pois, setPois] = useState<Poi[]>([]);
@@ -34,7 +35,15 @@ export default function AdminPoiPage() {
         throw new Error(result.error || 'Errore nel caricamento');
       }
 
-      setPois(result.data || []);
+      let data: Poi[] = result.data || [];
+      data.sort((a, b) => {
+        const fantA = a.is_fantastic ? 1 : 0;
+        const fantB = b.is_fantastic ? 1 : 0;
+        if (fantA !== fantB) return fantB - fantA;
+        return a.nome.localeCompare(b.nome);
+      });
+
+      setPois(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
     } finally {
@@ -270,10 +279,13 @@ export default function AdminPoiPage() {
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{poi.nome}</div>
+                        <div className="font-medium text-gray-900 flex items-center gap-1.5">
+                           {poi.is_fantastic && <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>}
+                           {poi.nome}
+                        </div>
                         {poi.descrizione && (
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
-                            {poi.descrizione}
+                          <div className="text-sm text-gray-500 truncate max-w-xs mt-1">
+                            {stripHtml(poi.descrizione)}
                           </div>
                         )}
                       </td>
@@ -345,14 +357,17 @@ export default function AdminPoiPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-medium text-gray-900">{poi.nome}</h3>
+                      <h3 className="font-medium text-gray-900 flex items-center gap-1.5">
+                        {poi.is_fantastic && <svg className="w-4 h-4 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>}
+                        {poi.nome}
+                      </h3>
                       <span className={`flex-shrink-0 px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(poi.tipo)}`}>
                         {POI_TYPE_LABELS[poi.tipo]}
                       </span>
                     </div>
                     {poi.descrizione && (
                       <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-                        {poi.descrizione}
+                        {stripHtml(poi.descrizione)}
                       </p>
                     )}
                   </div>

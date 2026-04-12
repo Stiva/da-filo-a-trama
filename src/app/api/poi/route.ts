@@ -53,6 +53,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Po
         color: poi.color,
         icon_url: poi.icon_url,
         is_active: poi.is_active,
+        is_fantastic: poi.is_fantastic || false,
         created_at: poi.created_at,
       };
     });

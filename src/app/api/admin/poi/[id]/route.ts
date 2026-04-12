@@ -69,6 +69,7 @@ export async function GET(
       color: data.color,
       icon_url: data.icon_url,
       is_active: data.is_active,
+      is_fantastic: data.is_fantastic || false,
       created_at: data.created_at,
     };
 
@@ -118,6 +119,7 @@ export async function PUT(
     if (body.tipo !== undefined) updateData.tipo = body.tipo;
     if (body.icon_url !== undefined) updateData.icon_url = body.icon_url;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.is_fantastic !== undefined) updateData.is_fantastic = body.is_fantastic;
     if (body.color !== undefined) updateData.color = body.color;
     
     // Convertiamo area_polygon GeoJSON in testuale per supabase PostgREST se presente, ma se lo pasiamo come JSON object supabase potrebbe non gestirlo automaticamente per GEOMETRY, quindi lo converto a stringa e faccio usare ST_GeomFromGeoJSON dal DB o passo la stringa.
@@ -166,6 +168,7 @@ export async function PUT(
       color: data.color,
       icon_url: data.icon_url,
       is_active: data.is_active,
+      is_fantastic: data.is_fantastic || false,
       created_at: data.created_at,
     };
 

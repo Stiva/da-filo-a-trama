@@ -54,11 +54,20 @@ function MapPageContent() {
   }, []);
 
   useEffect(() => {
+    let filtered = [...pois];
     if (selectedCategory) {
-      setFilteredPois(pois.filter(p => p.tipo === selectedCategory));
-    } else {
-      setFilteredPois(pois);
+      filtered = filtered.filter(p => p.tipo === selectedCategory);
     }
+    
+    // Ordina prima i luoghi fantastici, poi in ordine alfabetico
+    filtered.sort((a, b) => {
+      const fantA = a.is_fantastic ? 1 : 0;
+      const fantB = b.is_fantastic ? 1 : 0;
+      if (fantA !== fantB) return fantB - fantA;
+      return a.nome.localeCompare(b.nome);
+    });
+    
+    setFilteredPois(filtered);
   }, [pois, selectedCategory]);
 
   useEffect(() => {
@@ -156,9 +165,12 @@ function MapPageContent() {
                       <div className="flex items-start gap-2">
                         <span className="text-lg">{getTypeIcon(poi.tipo)}</span>
                         <div>
-                          <p className="font-medium text-sm">{poi.nome}</p>
+                          <p className="font-medium text-sm flex items-center gap-1.5">
+                            {poi.is_fantastic && <svg className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>}
+                            {poi.nome}
+                          </p>
                           {poi.descrizione && (
-                            <p className="text-xs text-gray-500 line-clamp-1">
+                            <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">
                               {stripHtml(poi.descrizione)}
                             </p>
                           )}
@@ -209,10 +221,16 @@ function MapPageContent() {
               <div className="flex items-start gap-3">
                 <span className="text-2xl">{getTypeIcon(selectedPoi.tipo)}</span>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{selectedPoi.nome}</h3>
+                  <h3 className="font-semibold text-lg flex items-center gap-1.5">
+                    {selectedPoi.is_fantastic && <svg className="w-5 h-5 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>}
+                    {selectedPoi.nome}
+                  </h3>
                   <p className="text-sm text-gray-500">{POI_TYPE_LABELS[selectedPoi.tipo]}</p>
                   {selectedPoi.descrizione && (
-                    <p className="mt-2 text-gray-600">{selectedPoi.descrizione}</p>
+                    <div 
+                      className="mt-3 text-gray-600 text-sm prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: selectedPoi.descrizione }}
+                    />
                   )}
                   <Link
                     href={`/events?poi=${selectedPoi.id}&poiName=${encodeURIComponent(selectedPoi.nome)}`}
