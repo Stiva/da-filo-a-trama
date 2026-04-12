@@ -156,6 +156,8 @@ export interface Event {
   speaker_bio: string | null;
   speaker_image_url: string | null;
   is_published: boolean;
+  /** Se impostata (con is_published=true), l'evento diventa visibile agli utenti solo da questa data/ora in poi. */
+  publish_at: string | null;
   is_featured: boolean;
   auto_enroll_all: boolean;
   checkin_enabled: boolean;
@@ -167,6 +169,10 @@ export interface Event {
   max_group_size: number;
   visibility: EventVisibility;
   is_placeholder: boolean;
+  /** Data/ora di apertura delle iscrizioni. Se null, le iscrizioni sono aperte appena l'evento è pubblicato. */
+  registrations_open_at: string | null;
+  /** Data/ora di chiusura delle iscrizioni. Se null, le iscrizioni restano aperte fino all'inizio dell'evento. */
+  registrations_close_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

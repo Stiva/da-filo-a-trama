@@ -47,6 +47,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     speaker_name: event?.speaker_name || '',
     speaker_bio: event?.speaker_bio || '',
     is_published: event?.is_published || false,
+    publish_at: event?.publish_at ? toLocalDatetimeString(event.publish_at) : '',
     auto_enroll_all: event?.auto_enroll_all || false,
     checkin_enabled: event?.checkin_enabled || false,
     user_can_upload_assets: event?.user_can_upload_assets || false,
@@ -57,6 +58,8 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     max_group_size: event?.max_group_size || 10,
     visibility: event?.visibility || 'public' as EventVisibility,
     is_placeholder: event?.is_placeholder || false,
+    registrations_open_at: event?.registrations_open_at ? toLocalDatetimeString(event.registrations_open_at) : '',
+    registrations_close_at: event?.registrations_close_at ? toLocalDatetimeString(event.registrations_close_at) : '',
   });
 
   const [isRecurring, setIsRecurring] = useState(false);
@@ -131,6 +134,15 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           start_time: new Date(formData.start_time).toISOString(),
           end_time: formData.end_time
             ? new Date(formData.end_time).toISOString()
+            : null,
+          publish_at: formData.publish_at
+            ? new Date(formData.publish_at).toISOString()
+            : null,
+          registrations_open_at: formData.registrations_open_at
+            ? new Date(formData.registrations_open_at).toISOString()
+            : null,
+          registrations_close_at: formData.registrations_close_at
+            ? new Date(formData.registrations_close_at).toISOString()
             : null,
           occurrences: isRecurring && !isEditing ? occurrences : 1,
         }),
@@ -571,6 +583,85 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             />
             <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
           </label>
+        </div>
+
+        {/* Scheduled publish time */}
+        {formData.is_published && (
+          <div className="pl-0 border-l-0 space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Pianifica orario di pubblicazione
+            </label>
+            <p className="text-xs text-gray-500">
+              Lascia vuoto per pubblicare immediatamente. Se impostato, l&apos;evento sarà visibile agli utenti solo a partire da questa data e ora.
+            </p>
+            <input
+              type="datetime-local"
+              value={formData.publish_at}
+              onChange={(e) => setFormData(prev => ({ ...prev, publish_at: e.target.value }))}
+              className="input w-full"
+            />
+            {formData.publish_at && (
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, publish_at: '' }))}
+                className="text-xs text-red-500 hover:text-red-700 mt-1"
+              >
+                Rimuovi orario pianificato
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Registration window */}
+        <div className="space-y-3 pt-2 border-t border-gray-100">
+          <div>
+            <h2 className="text-lg font-semibold">Finestra iscrizioni</h2>
+            <p className="text-sm text-gray-500">
+              Definisci da quando e fino a quando gli utenti possono iscriversi. Lascia vuoti i campi per non applicare limiti.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Apertura iscrizioni
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.registrations_open_at}
+                onChange={(e) => setFormData(prev => ({ ...prev, registrations_open_at: e.target.value }))}
+                className="input w-full"
+              />
+              {formData.registrations_open_at && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, registrations_open_at: '' }))}
+                  className="text-xs text-red-500 hover:text-red-700 mt-1"
+                >
+                  Rimuovi
+                </button>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Chiusura iscrizioni
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.registrations_close_at}
+                onChange={(e) => setFormData(prev => ({ ...prev, registrations_close_at: e.target.value }))}
+                className="input w-full"
+              />
+              {formData.registrations_close_at && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, registrations_close_at: '' }))}
+                  className="text-xs text-red-500 hover:text-red-700 mt-1"
+                >
+                  Rimuovi
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Auto Enroll Toggle */}
