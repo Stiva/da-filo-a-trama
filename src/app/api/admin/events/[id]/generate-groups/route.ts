@@ -87,11 +87,10 @@ export async function POST(
             const eligibleRoles: string[] = event.group_eligible_roles || [];
 
             // Fetch all active BC participants that have a linked app profile.
-            // We join via participant_crm_view and filter by profile.service_role
-            // (not CRM ruolo) to be consistent with the enrollment-based modes.
+            // We join via participant_crm_view and filter by the raw CRM 'ruolo'
             const { data: crmLinked, error: crmError } = await supabase
                 .from('participant_crm_view')
-                .select('linked_profile_id')
+                .select('linked_profile_id, ruolo')
                 .eq('is_active_in_list', true)
                 .not('linked_profile_id', 'is', null);
 
@@ -100,23 +99,13 @@ export async function POST(
                 return NextResponse.json({ error: 'Nessun partecipante CRM con profilo app collegato trovato' }, { status: 404 });
             }
 
-            const profileIds = crmLinked.map((p: any) => p.linked_profile_id as string);
-
-            // Fetch profiles to get service_role for filtering
-            const { data: profilesData, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, service_role')
-                .in('id', profileIds);
-
-            if (profilesError) throw profilesError;
-
-            // Filter by eligible roles (service_role) if configured
-            let usersToDistribute: string[] = (profilesData || [])
+            // Filter by eligible roles (ruolo CRM) se configurato
+            let usersToDistribute: string[] = crmLinked
                 .filter((p: any) => {
                     if (eligibleRoles.length === 0) return true;
-                    return p.service_role && eligibleRoles.includes(p.service_role);
+                    return p.ruolo && eligibleRoles.includes(p.ruolo);
                 })
-                .map((p: any) => p.id as string);
+                .map((p: any) => p.linked_profile_id as string);
 
             if (usersToDistribute.length === 0) {
                 return NextResponse.json({ error: 'Nessun partecipante CRM corrisponde ai ruoli selezionati per la generazione dei gruppi' }, { status: 400 });

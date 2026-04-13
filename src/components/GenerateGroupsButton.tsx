@@ -67,11 +67,16 @@ export default function GenerateGroupsButton({ eventId }: GenerateGroupsButtonPr
                 {isGenerating ? 'In elaborazione...' : 'Rigenera Gruppi'}
             </button>
 
-            {/* Result flash */}
+            {/* Result flash (Toast) */}
             {resultMessage && (
-                <span className={`ml-3 text-sm font-medium ${resultMessage.startsWith('✓') ? 'text-green-700' : 'text-red-600'}`}>
-                    {resultMessage}
-                </span>
+                <div className={`fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-sm ${resultMessage.startsWith('✓') ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                    <span className="text-sm font-medium">
+                        {resultMessage}
+                    </span>
+                    <button onClick={() => setResultMessage(null)} className="ml-2 text-gray-500 hover:text-gray-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
             )}
 
             {/* Confirmation modal */}
