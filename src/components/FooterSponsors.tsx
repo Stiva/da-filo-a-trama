@@ -38,7 +38,7 @@ export default async function FooterSponsors() {
 
   return (
     <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4">
-      <p className="text-sm text-white/80 font-medium">Evento realizzato con il patrocinio di:</p>
+      <p className="text-sm text-white/80 font-medium">Evento realizzato con il contributo di:</p>
       <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
         {sponsors.map((sponsor) => (
           <a

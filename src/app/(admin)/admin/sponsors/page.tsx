@@ -230,11 +230,10 @@ export default function SponsorsPage() {
 
       {/* Status message */}
       {message && (
-        <div className={`mb-6 p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${
-          message.type === 'success'
-            ? 'bg-green-50 text-green-800 border border-green-200'
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
+        <div className={`mb-6 p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${message.type === 'success'
+          ? 'bg-green-50 text-green-800 border border-green-200'
+          : 'bg-red-50 text-red-800 border border-red-200'
+          }`}>
           {message.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
           {message.text}
         </div>
@@ -287,11 +286,10 @@ export default function SponsorsPage() {
                 </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                    newLogoPreview
-                      ? 'border-agesci-blue/40 bg-agesci-blue/5'
-                      : 'border-gray-300 hover:border-agesci-blue/50 hover:bg-gray-50'
-                  }`}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${newLogoPreview
+                    ? 'border-agesci-blue/40 bg-agesci-blue/5'
+                    : 'border-gray-300 hover:border-agesci-blue/50 hover:bg-gray-50'
+                    }`}
                 >
                   {newLogoPreview ? (
                     <div className="flex flex-col items-center gap-2">
@@ -367,78 +365,77 @@ export default function SponsorsPage() {
           {sponsors
             .sort((a, b) => a.sort_order - b.sort_order)
             .map((sponsor, index) => (
-            <div
-              key={sponsor.id}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={() => handleDrop(index)}
-              onDragEnd={handleDragEnd}
-              className={`bg-white rounded-2xl border shadow-sm transition-all ${
-                dragOverIndex === index && dragIndex !== index
+              <div
+                key={sponsor.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+                className={`bg-white rounded-2xl border shadow-sm transition-all ${dragOverIndex === index && dragIndex !== index
                   ? 'border-agesci-blue shadow-md scale-[1.01]'
                   : 'border-gray-200 hover:border-gray-300'
-              } ${dragIndex === index ? 'opacity-50' : 'opacity-100'}`}
-            >
-              <div className="flex items-center gap-4 p-4">
-                {/* Drag handle */}
-                <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors shrink-0">
-                  <GripVertical className="w-5 h-5" />
-                </div>
-
-                {/* Logo preview */}
-                <div className="relative w-20 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                  <Image
-                    src={sponsor.image_url}
-                    alt={sponsor.name}
-                    fill
-                    className="object-contain p-1"
-                    unoptimized
-                  />
-                </div>
-
-                {/* Fields */}
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
-                  <input
-                    type="text"
-                    value={sponsor.name}
-                    onChange={e => handleUpdateSponsor(sponsor.id, 'name', e.target.value)}
-                    onBlur={handleSaveInlineEdit}
-                    placeholder="Nome ente"
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="url"
-                      value={sponsor.url}
-                      onChange={e => handleUpdateSponsor(sponsor.id, 'url', e.target.value)}
-                      onBlur={handleSaveInlineEdit}
-                      placeholder="https://..."
-                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent min-w-0"
-                    />
-                    <a
-                      href={sponsor.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 p-2 text-gray-400 hover:text-agesci-blue transition-colors"
-                      title="Apri sito"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+                  } ${dragIndex === index ? 'opacity-50' : 'opacity-100'}`}
+              >
+                <div className="flex items-center gap-4 p-4">
+                  {/* Drag handle */}
+                  <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors shrink-0">
+                    <GripVertical className="w-5 h-5" />
                   </div>
-                </div>
 
-                {/* Delete */}
-                <button
-                  onClick={() => handleDeleteSponsor(sponsor)}
-                  className="shrink-0 p-2 text-gray-300 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors"
-                  title="Rimuovi patrocinio"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  {/* Logo preview */}
+                  <div className="relative w-20 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                    <Image
+                      src={sponsor.image_url}
+                      alt={sponsor.name}
+                      fill
+                      className="object-contain p-1"
+                      unoptimized
+                    />
+                  </div>
+
+                  {/* Fields */}
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+                    <input
+                      type="text"
+                      value={sponsor.name}
+                      onChange={e => handleUpdateSponsor(sponsor.id, 'name', e.target.value)}
+                      onBlur={handleSaveInlineEdit}
+                      placeholder="Nome ente"
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent"
+                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        value={sponsor.url}
+                        onChange={e => handleUpdateSponsor(sponsor.id, 'url', e.target.value)}
+                        onBlur={handleSaveInlineEdit}
+                        placeholder="https://..."
+                        className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent min-w-0"
+                      />
+                      <a
+                        href={sponsor.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 p-2 text-gray-400 hover:text-agesci-blue transition-colors"
+                        title="Apri sito"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => handleDeleteSponsor(sponsor)}
+                    className="shrink-0 p-2 text-gray-300 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors"
+                    title="Rimuovi patrocinio"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -446,30 +443,30 @@ export default function SponsorsPage() {
       {sponsors.length > 0 && (
         <div className="mt-10 bg-[#1e3a5f] rounded-2xl p-6">
           <p className="text-white/60 text-xs font-medium uppercase tracking-wider mb-4">Anteprima Footer</p>
-          <p className="text-sm text-white/80 font-medium mb-3">Evento realizzato con il patrocinio di:</p>
+          <p className="text-sm text-white/80 font-medium mb-3">Evento realizzato con il contributo di:</p>
           <div className="flex flex-wrap items-center gap-4">
             {sponsors
               .sort((a, b) => a.sort_order - b.sort_order)
               .map(sponsor => (
-              <a
-                key={sponsor.id}
-                href={sponsor.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-transform hover:scale-105 bg-white p-2 rounded-xl h-16 flex items-center justify-center shadow-lg"
-                title={sponsor.name}
-              >
-                <div className="relative h-12 w-20">
-                  <Image
-                    src={sponsor.image_url}
-                    alt={sponsor.name}
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-              </a>
-            ))}
+                <a
+                  key={sponsor.id}
+                  href={sponsor.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-transform hover:scale-105 bg-white p-2 rounded-xl h-16 flex items-center justify-center shadow-lg"
+                  title={sponsor.name}
+                >
+                  <div className="relative h-12 w-20">
+                    <Image
+                      src={sponsor.image_url}
+                      alt={sponsor.name}
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                </a>
+              ))}
           </div>
         </div>
       )}
