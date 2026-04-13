@@ -319,7 +319,7 @@ export default function AdminEventGroupsPage() {
                                     <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">Partecipanti Assegnati</h3>
                                     <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
                                         {[...(group.members || []), ...(group.crm_members || [])].length > 0 ? (
-                                            [...(group.members || []), ...(group.crm_members || [])].map((member) => (
+                                            [...(group.members || []), ...(group.crm_members || [])].map((member: any) => (
                                                 <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
                                                     <div>
                                                         {member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome} 
