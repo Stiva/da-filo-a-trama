@@ -12,7 +12,7 @@ export default function GenerateGroupsButton({ eventId }: GenerateGroupsButtonPr
     const router = useRouter();
 
     const handleGenerate = async () => {
-        if (!confirm('Sei sicuro? Questa operazione rimuoverà gli attuali partecipanti dai gruppi e li ricalcolerà basandosi sugli iscritti attualmente confermati, bilanciando i ruoli di servizio.')) {
+        if (!confirm('Sei sicuro? Questa operazione rimuoverà gli attuali partecipanti dai gruppi e li ricalcolerà in base alla modalità di generazione configurata per l\'evento.')) {
             return;
         }
 
@@ -56,7 +56,7 @@ export default function GenerateGroupsButton({ eventId }: GenerateGroupsButtonPr
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
             )}
-            {isGenerating ? 'In elaborazione...' : 'Genera Gruppi (Iscritti)'}
+            {isGenerating ? 'In elaborazione...' : 'Rigenera Gruppi'}
         </button>
     );
 }

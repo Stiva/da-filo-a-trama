@@ -47,9 +47,7 @@ export async function POST(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        if (event.group_creation_mode !== 'mix_roles' && event.group_creation_mode !== 'homogeneous' && event.group_creation_mode !== 'static_crm') {
-            return NextResponse.json({ error: 'Operazione non valida per questo evento (modalità non supportata)' }, { status: 400 });
-        }
+        // All modes are supported for regeneration
 
         // 2. Fetch Groups for this event
         const { data: groups, error: groupsError } = await supabase
@@ -59,7 +57,7 @@ export async function POST(
 
         let existingGroups = groups || [];
 
-        if (event.group_creation_mode !== 'static_crm' && event.group_creation_mode !== 'homogeneous' && (groupsError || existingGroups.length === 0)) {
+        if (event.group_creation_mode !== 'static_crm' && event.group_creation_mode !== 'homogeneous' && event.group_creation_mode !== 'random_crm' && event.group_creation_mode !== 'random' && event.group_creation_mode !== 'copy' && (groupsError || existingGroups.length === 0)) {
             return NextResponse.json({ error: 'Nessun gruppo esistente per questo evento. Impossibile assegnare iscritti.' }, { status: 400 });
         }
 
@@ -81,6 +79,126 @@ export async function POST(
                     .in('group_id', groupIds);
                 if (deleteError) throw deleteError;
             }
+        }
+
+        // ── random_crm: use the entire CRM participants list ──
+        if (event.group_creation_mode === 'random_crm') {
+            // Fetch active CRM participants
+            const eligibleRoles: string[] = event.group_eligible_roles || [];
+            let crmQuery = supabase.from('participants').select('codice, ruolo').eq('is_active_in_list', true);
+            if (eligibleRoles.length > 0) {
+                crmQuery = crmQuery.in('ruolo', eligibleRoles);
+            }
+            const { data: crmParticipants, error: crmError } = await crmQuery;
+            if (crmError) throw crmError;
+            if (!crmParticipants || crmParticipants.length === 0) {
+                return NextResponse.json({ error: 'Nessun partecipante CRM trovato per i criteri selezionati' }, { status: 404 });
+            }
+
+            // Find linked profile IDs for CRM participants
+            const codices = crmParticipants.map(p => p.codice);
+            const { data: linkedProfiles, error: lpError } = await supabase
+                .from('profiles')
+                .select('id, codice_socio')
+                .in('codice_socio', codices);
+            if (lpError) throw lpError;
+
+            const codeToProfileId = new Map<string, string>();
+            (linkedProfiles || []).forEach(p => {
+                if (p.codice_socio) codeToProfileId.set(p.codice_socio, p.id);
+            });
+
+            // Only keep participants that have a linked profile (they need a user_id for group_members)
+            const usersToDistribute = crmParticipants
+                .filter(p => codeToProfileId.has(p.codice))
+                .map(p => codeToProfileId.get(p.codice)!);
+
+            if (usersToDistribute.length === 0) {
+                return NextResponse.json({ error: 'Nessun partecipante CRM ha un profilo collegato nell\'app' }, { status: 400 });
+            }
+
+            // Shuffle randomly
+            for (let i = usersToDistribute.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [usersToDistribute[i], usersToDistribute[j]] = [usersToDistribute[j], usersToDistribute[i]];
+            }
+
+            // Ensure we have groups; create them if needed
+            if (existingGroups.length === 0) {
+                // Use workshop_groups_count from the event to determine how many groups to create
+                const { data: fullEvent } = await supabase.from('events').select('workshop_groups_count').eq('id', eventId).single();
+                const groupCount = fullEvent?.workshop_groups_count || 4;
+                const newGroups = Array.from({ length: groupCount }, (_, i) => ({ event_id: eventId, name: `Gruppo ${i + 1}` }));
+                const { data: insertedGroups, error: insertErr } = await supabase.from('event_groups').insert(newGroups).select('id, name');
+                if (insertErr) throw insertErr;
+                existingGroups = insertedGroups || [];
+            }
+
+            // Round-robin distribution
+            const inserts = usersToDistribute.map((userId, idx) => ({
+                group_id: existingGroups[idx % existingGroups.length].id,
+                user_id: userId,
+            }));
+
+            if (inserts.length > 0) {
+                const { error: insertError } = await supabase.from('event_group_members').insert(inserts);
+                if (insertError) throw insertError;
+            }
+
+            return NextResponse.json({ message: 'Gruppi random (Lista BC) generati con successo!', count: inserts.length });
+        }
+
+        // ── random / copy: shuffle confirmed enrollees randomly into groups ──
+        if (event.group_creation_mode === 'random' || event.group_creation_mode === 'copy') {
+            const { data: enrollments, error: enrollmentsError } = await supabase
+                .from('enrollments')
+                .select('user_id, profile:profiles(id, role, service_role)')
+                .eq('event_id', eventId)
+                .eq('status', 'confirmed');
+
+            if (enrollmentsError) throw enrollmentsError;
+
+            const eligibleRoles: string[] = event.group_eligible_roles || [];
+            const userIds = (enrollments || [])
+                .filter((e: any) => {
+                    if (e.profile?.role !== 'user') return false;
+                    if (eligibleRoles.length === 0) return true;
+                    return e.profile?.service_role && eligibleRoles.includes(e.profile.service_role);
+                })
+                .map((e: any) => e.user_id as string);
+
+            if (userIds.length === 0) {
+                return NextResponse.json({ message: 'Nessun partecipante confermato da distribuire' });
+            }
+
+            // Fisher-Yates shuffle
+            for (let i = userIds.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [userIds[i], userIds[j]] = [userIds[j], userIds[i]];
+            }
+
+            // Ensure we have groups; create them if needed
+            if (existingGroups.length === 0) {
+                const { data: fullEvent } = await supabase.from('events').select('workshop_groups_count').eq('id', eventId).single();
+                const groupCount = fullEvent?.workshop_groups_count || 4;
+                const newGroups = Array.from({ length: groupCount }, (_, i) => ({ event_id: eventId, name: `Gruppo ${i + 1}` }));
+                const { data: insertedGroups, error: insertErr } = await supabase.from('event_groups').insert(newGroups).select('id, name');
+                if (insertErr) throw insertErr;
+                existingGroups = insertedGroups || [];
+            }
+
+            // Round-robin distribution
+            const inserts = userIds.map((userId, idx) => ({
+                group_id: existingGroups[idx % existingGroups.length].id,
+                user_id: userId,
+            }));
+
+            if (inserts.length > 0) {
+                const { error: insertError } = await supabase.from('event_group_members').insert(inserts);
+                if (insertError) throw insertError;
+            }
+
+            return NextResponse.json({ message: 'Gruppi rigenerati con successo!', count: inserts.length });
         }
 
         const { data: enrollments, error: enrollmentsError } = await supabase

@@ -274,7 +274,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
                   <input
                     type="checkbox"
-                    checked={formData.workshop_groups_count > 0 || formData.group_creation_mode === 'copy' || formData.group_creation_mode === 'homogeneous'}
+                    checked={formData.workshop_groups_count > 0 || formData.group_creation_mode === 'copy' || formData.group_creation_mode === 'homogeneous' || formData.group_creation_mode === 'random_crm'}
                     onChange={(e) => {
                       if (!e.target.checked) {
                         setFormData(prev => ({ ...prev, workshop_groups_count: 0, source_event_id: '', group_eligible_roles: [] }));
@@ -289,7 +289,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               </div>
 
               {/* Group Configuration - Only shown when groups are enabled */}
-              {(formData.workshop_groups_count > 0 || formData.group_creation_mode === 'copy' || formData.group_creation_mode === 'homogeneous') && (
+              {(formData.workshop_groups_count > 0 || formData.group_creation_mode === 'copy' || formData.group_creation_mode === 'homogeneous' || formData.group_creation_mode === 'random_crm') && (
                 <div className="space-y-4 pl-0 sm:pl-4 border-l-0 sm:border-l-2 sm:border-blue-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -339,6 +339,17 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                           className="text-blue-600 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-800 font-medium">Raggruppa ruoli omogenei nello stesso gruppo</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="group_creation_mode"
+                          value="random_crm"
+                          checked={formData.group_creation_mode === 'random_crm'}
+                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'random_crm', source_event_id: '' }))}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-800 font-medium">Random sulla Lista Iscritti BC</span>
                       </label>
                     </div>
                   </div>

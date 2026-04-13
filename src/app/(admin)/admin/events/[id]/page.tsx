@@ -73,7 +73,7 @@ export default async function EditEventPage({ params }: PageProps) {
           {event.checkin_enabled && (
             <CheckinQRCodeDialog eventId={event.id} eventTitle={event.title} />
           )}
-          {event.category === 'workshop' && (
+          {event.workshop_groups_count > 0 && (
             <div className="flex gap-2">
               {event.group_creation_mode === 'copy' && (
                 <CloneGroupsButton
@@ -81,9 +81,7 @@ export default async function EditEventPage({ params }: PageProps) {
                   sourceEventId={event.source_event_id}
                 />
               )}
-              {event.group_creation_mode === 'mix_roles' && (
-                <GenerateGroupsButton eventId={event.id} />
-              )}
+              <GenerateGroupsButton eventId={event.id} />
               <a
                 href={`/admin/events/${event.id}/groups`}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
