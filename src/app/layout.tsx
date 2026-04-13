@@ -39,7 +39,7 @@ const loveYou = localFont({
 
 export const metadata: Metadata = {
   title: 'Da Filo a Trama - Evento Scout 2026',
-  description: 'Piattaforma digitale per l\'evento nazionale scout AGESCI 2026',
+  description: 'Piattaforma digitale per l\'evento nazionale Branca L/C AGESCI 2026',
   manifest: '/manifest.json',
   keywords: ['scout', 'agesci', 'evento', '2026', 'lupetti', 'coccinelle'],
   authors: [{ name: 'AGESCI' }],
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Da Filo a Trama - Evento Scout 2026',
-    description: 'Piattaforma digitale per l\'evento nazionale scout AGESCI 2026',
+    description: 'Piattaforma digitale per l\'evento nazionale Branca L/C AGESCI 2026',
     images: ['/header-da-filo-a-trama_2-1.jpg'],
     type: 'website',
     locale: 'it_IT',

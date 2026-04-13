@@ -1,6 +1,6 @@
-# Da Filo a Trama - Evento Nazionale Scout AGESCI 2026
+# Da Filo a Trama - Evento Nazionale Branca L/C AGESCI 2026
 
-Piattaforma digitale per l'evento nazionale scout AGESCI 2026.
+Piattaforma digitale per l'evento nazionale branca L/C AGESCI 2026.
 Un'applicazione web progressiva (PWA) progettata per gestire le iscrizioni, esplorare la mappa degli eventi, comunicare tramite chat e molto altro.
 
 ## ✨ Caratteristiche Principali

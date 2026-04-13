@@ -18,10 +18,10 @@ interface PoiInfo {
     tipo: string;
 }
 
-function ModeratorAutocomplete({ 
-    groupId, staffUsers, onAssign 
-}: { 
-    groupId: string, staffUsers: Profile[], onAssign: (groupId: string, userId: string) => void 
+function ModeratorAutocomplete({
+    groupId, staffUsers, onAssign
+}: {
+    groupId: string, staffUsers: Profile[], onAssign: (groupId: string, userId: string) => void
 }) {
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -37,13 +37,13 @@ function ModeratorAutocomplete({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filtered = staffUsers.filter(u => 
+    const filtered = staffUsers.filter(u =>
         (u.name + ' ' + u.surname + ' ' + (u.service_role || '')).toLowerCase().includes(search.toLowerCase())
     );
 
     return (
         <div className="relative flex-1" ref={wrapperRef}>
-            <input 
+            <input
                 type="text"
                 className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 h-[38px] transition"
                 placeholder="Cerca per nome o ruolo..."
@@ -202,9 +202,9 @@ export default function AdminEventGroupsPage() {
 
     const exportToCSV = () => {
         if (!groups || groups.length === 0) return;
-        
-        let csvContent = "Gruppo,Nome,Cognome,Gruppo Scout,Ruolo di Servizio,Sorgente\\n";
-        
+
+        let csvContent = "Gruppo,Nome,Cognome,Gruppo Scout,Ruolo di Servizio,Sorgente\r\n";
+
         groups.forEach(group => {
             const allMembers = [...(group.members || []), ...(group.crm_members || [])];
             allMembers.forEach((member: any) => {
@@ -213,7 +213,7 @@ export default function AdminEventGroupsPage() {
                 const scoutGroup = member.profile?.scout_group || member.participant?.gruppo || '';
                 const serviceRole = member.profile?.service_role || member.participant?.ruolo || '';
                 const source = member.crm_codice ? 'CRM (Offline)' : 'App (Registrato)';
-                
+
                 const row = [
                     `"${group.name.replace(/"/g, '""')}"`,
                     `"${name.replace(/"/g, '""')}"`,
@@ -222,8 +222,8 @@ export default function AdminEventGroupsPage() {
                     `"${serviceRole.replace(/"/g, '""')}"`,
                     `"${source}"`
                 ].join(',');
-                
-                csvContent += row + "\\n";
+
+                csvContent += row + "\r\n";
             });
         });
 
@@ -415,10 +415,10 @@ export default function AdminEventGroupsPage() {
 
                                     {(!group.moderators || group.moderators.length < 2) && (
                                         <div className="flex gap-2 mt-2">
-                                            <ModeratorAutocomplete 
-                                                groupId={group.id} 
-                                                staffUsers={staffUsers.filter(u => !(group.moderators || []).some(m => m.user_id === u.id))} 
-                                                onAssign={handleAssignModerator} 
+                                            <ModeratorAutocomplete
+                                                groupId={group.id}
+                                                staffUsers={staffUsers.filter(u => !(group.moderators || []).some(m => m.user_id === u.id))}
+                                                onAssign={handleAssignModerator}
                                             />
                                         </div>
                                     )}
