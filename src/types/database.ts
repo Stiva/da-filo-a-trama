@@ -48,6 +48,7 @@ export interface Profile {
   avatar_completed: boolean;
   preferences_set: boolean;
   profile_setup_complete: boolean;
+  admin_ui_preferences?: { tables?: Record<string, string[]> } | null;
   created_at: string;
   updated_at: string;
 }

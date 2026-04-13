@@ -4,6 +4,18 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import AddEnrollmentModal from '@/components/AddEnrollmentModal';
+import ColumnSelector from '@/components/admin/ColumnSelector';
+import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
+
+const EVENT_ENROLLMENTS_COLUMNS: ColumnDef[] = [
+  { id: 'partecipante', label: 'Partecipante', defaultVisible: true },
+  { id: 'email', label: 'Email', defaultVisible: true },
+  { id: 'ruolo', label: 'Ruolo', defaultVisible: true },
+  { id: 'gruppo', label: 'Gruppo Scout', defaultVisible: true },
+  { id: 'gruppo_lavoro', label: 'Gruppo di Lavoro', defaultVisible: true },
+  { id: 'stato', label: 'Stato', defaultVisible: true },
+  { id: 'data', label: 'Data Iscrizione', defaultVisible: true },
+];
 
 interface Profile {
   id: string;
@@ -41,6 +53,7 @@ export default function EventEnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('event_enrollments', EVENT_ENROLLMENTS_COLUMNS);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -282,6 +295,14 @@ export default function EventEnrollmentsPage() {
           </svg>
           <span className="hidden sm:inline">Esporta</span> Excel
         </button>
+        <div className="flex-1 sm:flex-none">
+          <ColumnSelector 
+            availableColumns={EVENT_ENROLLMENTS_COLUMNS}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            isLoading={isPrefsLoading}
+          />
+        </div>
       </div>
 
       {/* Filter - Touch friendly with scroll */}
@@ -323,27 +344,41 @@ export default function EventEnrollmentsPage() {
               <table className="w-full min-w-[700px]">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Partecipante
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ruolo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Gruppo Scout
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Gruppo Lavoro
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stato
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data Iscrizione
-                    </th>
+                    {visibleColumns.includes('partecipante') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Partecipante
+                      </th>
+                    )}
+                    {visibleColumns.includes('email') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                    )}
+                    {visibleColumns.includes('ruolo') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ruolo
+                      </th>
+                    )}
+                    {visibleColumns.includes('gruppo') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Gruppo Scout
+                      </th>
+                    )}
+                    {visibleColumns.includes('gruppo_lavoro') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Gruppo Lavoro
+                      </th>
+                    )}
+                    {visibleColumns.includes('stato') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Stato
+                      </th>
+                    )}
+                    {visibleColumns.includes('data') && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Data Iscrizione
+                      </th>
+                    )}
                     {event?.checkin_enabled && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Check-in
@@ -361,44 +396,58 @@ export default function EventEnrollmentsPage() {
 
                     return (
                       <tr key={enrollment.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Link href={`/admin/users/${profile?.id}`} className="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">
-                            {fullName}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {profile?.email || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {profile?.service_role || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {profile?.scout_group || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {enrollment.group_name ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                              {enrollment.group_name}
+                        {visibleColumns.includes('partecipante') && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Link href={`/admin/users/${profile?.id}`} className="font-medium text-indigo-600 hover:text-indigo-900 transition-colors">
+                              {fullName}
+                            </Link>
+                          </td>
+                        )}
+                        {visibleColumns.includes('email') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {profile?.email || '-'}
+                          </td>
+                        )}
+                        {visibleColumns.includes('ruolo') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {profile?.service_role || '-'}
+                          </td>
+                        )}
+                        {visibleColumns.includes('gruppo') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {profile?.scout_group || '-'}
+                          </td>
+                        )}
+                        {visibleColumns.includes('gruppo_lavoro') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {enrollment.group_name ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {enrollment.group_name}
+                              </span>
+                            ) : '-'}
+                          </td>
+                        )}
+                        {visibleColumns.includes('stato') && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(enrollment.status)}`}>
+                              {getStatusLabel(enrollment.status)}
+                              {enrollment.status === 'waitlist' && enrollment.waitlist_position && (
+                                <span className="ml-1">(#{enrollment.waitlist_position})</span>
+                              )}
                             </span>
-                          ) : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(enrollment.status)}`}>
-                            {getStatusLabel(enrollment.status)}
-                            {enrollment.status === 'waitlist' && enrollment.waitlist_position && (
-                              <span className="ml-1">(#{enrollment.waitlist_position})</span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(enrollment.registration_time).toLocaleDateString('it-IT', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
+                          </td>
+                        )}
+                        {visibleColumns.includes('data') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(enrollment.registration_time).toLocaleDateString('it-IT', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                        )}
                         {event?.checkin_enabled && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {enrollment.checked_in_at ? (
@@ -459,28 +508,36 @@ export default function EventEnrollmentsPage() {
 
                   {/* Enrollment Details */}
                   <div className="space-y-2 text-sm pt-3 border-t border-gray-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Ruolo</span>
-                      <span className="text-gray-900">{profile?.service_role || '-'}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Gruppo Scout</span>
-                      <span className="text-gray-900">{profile?.scout_group || '-'}</span>
-                    </div>
-                    {enrollment.group_name && (
+                    {visibleColumns.includes('ruolo') && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Ruolo</span>
+                        <span className="text-gray-900">{profile?.service_role || '-'}</span>
+                      </div>
+                    )}
+                    {visibleColumns.includes('gruppo') && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Gruppo Scout</span>
+                        <span className="text-gray-900">{profile?.scout_group || '-'}</span>
+                      </div>
+                    )}
+                    {visibleColumns.includes('gruppo_lavoro') && enrollment.group_name && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Gruppo Lavoro</span>
                         <span className="text-gray-900 font-medium">{enrollment.group_name}</span>
                       </div>
                     )}
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500">Data Iscrizione</span>
-                      <span className="text-gray-900">
-                        {new Date(enrollment.registration_time).toLocaleDateString('it-IT', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                    {visibleColumns.includes('data') && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Data Iscrizione</span>
+                        <span className="text-gray-900">
+                          {new Date(enrollment.registration_time).toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    )}
                       </span>
                     </div>
                     {event?.checkin_enabled && (

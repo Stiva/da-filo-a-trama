@@ -4,6 +4,16 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import type { Profile } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
+import ColumnSelector from '@/components/admin/ColumnSelector';
+import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
+
+const APP_USERS_COLUMNS: ColumnDef[] = [
+  { id: 'utente', label: 'Utente (Foto, Nome, Email)', defaultVisible: true },
+  { id: 'gruppo', label: 'Gruppo Scout', defaultVisible: true },
+  { id: 'ruolo', label: 'Ruolo', defaultVisible: true },
+  { id: 'stato', label: 'Stato Profilo', defaultVisible: true },
+  { id: 'registrato', label: 'Data Registrazione', defaultVisible: true },
+];
 
 interface UsersResponse {
   profiles: Profile[];
@@ -21,6 +31,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkLoading, setIsBulkLoading] = useState(false);
+  const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('app_users', APP_USERS_COLUMNS);
 
   // Filtri
   const [search, setSearch] = useState('');
@@ -214,6 +225,12 @@ export default function AdminUsersPage() {
           </svg>
           Esporta CSV
         </button>
+        <ColumnSelector 
+          availableColumns={APP_USERS_COLUMNS}
+          visibleColumns={visibleColumns}
+          onToggleColumn={toggleColumn}
+          isLoading={isPrefsLoading}
+        />
       </div>
 
       {/* Filters - Touch friendly */}
@@ -332,21 +349,31 @@ export default function AdminUsersPage() {
                             className="w-4 h-4 rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue"
                           />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Utente
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Gruppo Scout
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ruolo
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Stato
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Registrato
-                        </th>
+                        {visibleColumns.includes('utente') && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Utente
+                          </th>
+                        )}
+                        {visibleColumns.includes('gruppo') && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Gruppo Scout
+                          </th>
+                        )}
+                        {visibleColumns.includes('ruolo') && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Ruolo
+                          </th>
+                        )}
+                        {visibleColumns.includes('stato') && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Stato
+                          </th>
+                        )}
+                        {visibleColumns.includes('registrato') && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Registrato
+                          </th>
+                        )}
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Azioni
                         </th>
@@ -363,61 +390,71 @@ export default function AdminUsersPage() {
                               className="w-4 h-4 rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue"
                             />
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              {user.profile_image_url ? (
-                                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                                  <img
-                                    src={user.profile_image_url}
-                                    alt={`${user.name || 'Utente'}`}
-                                    className="w-full h-full object-cover"
-                                  />
+                          {visibleColumns.includes('utente') && (
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {user.profile_image_url ? (
+                                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                                    <img
+                                      src={user.profile_image_url}
+                                      alt={`${user.name || 'Utente'}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <AvatarPreview config={user.avatar_config} size="xs" />
+                                )}
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {user.name || user.first_name || 'N/D'} {user.surname || ''}
+                                  </p>
+                                  <p className="text-sm text-gray-500">{user.email}</p>
                                 </div>
-                              ) : (
-                                <AvatarPreview config={user.avatar_config} size="xs" />
-                              )}
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {user.name || user.first_name || 'N/D'} {user.surname || ''}
-                                </p>
-                                <p className="text-sm text-gray-500">{user.email}</p>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {user.scout_group || '-'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <select
-                              value={user.role}
-                              onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                              className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(user.role)}`}
-                            >
-                              <option value="user">Utente</option>
-                              <option value="staff">Staff</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
-                              className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
-                                user.profile_setup_complete
-                                  ? 'bg-green-100 text-green-800 hover:ring-green-400'
-                                  : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
-                              }`}
-                              title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
-                            >
-                              {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {new Date(user.created_at).toLocaleDateString('it-IT', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </td>
+                            </td>
+                          )}
+                          {visibleColumns.includes('gruppo') && (
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {user.scout_group || '-'}
+                            </td>
+                          )}
+                          {visibleColumns.includes('ruolo') && (
+                            <td className="px-6 py-4">
+                              <select
+                                value={user.role}
+                                onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(user.role)}`}
+                              >
+                                <option value="user">Utente</option>
+                                <option value="staff">Staff</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            </td>
+                          )}
+                          {visibleColumns.includes('stato') && (
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
+                                className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
+                                  user.profile_setup_complete
+                                    ? 'bg-green-100 text-green-800 hover:ring-green-400'
+                                    : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
+                                }`}
+                                title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
+                              >
+                                {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
+                              </button>
+                            </td>
+                          )}
+                          {visibleColumns.includes('registrato') && (
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {new Date(user.created_at).toLocaleDateString('it-IT', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </td>
+                          )}
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
                               <Link
@@ -500,46 +537,54 @@ export default function AdminUsersPage() {
 
                     {/* User Details */}
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Gruppo Scout</span>
-                        <span className="text-gray-900">{user.scout_group || '-'}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Ruolo</span>
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer min-h-[32px] ${getRoleBadgeColor(user.role)}`}
-                        >
-                          <option value="user">Utente</option>
-                          <option value="staff">Staff</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Stato Profilo</span>
-                        <button
-                          onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
-                          className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
-                            user.profile_setup_complete
-                              ? 'bg-green-100 text-green-800 hover:ring-green-400'
-                              : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
-                          }`}
-                          title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
-                        >
-                          {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
-                        </button>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Registrato</span>
-                        <span className="text-gray-900">
-                          {new Date(user.created_at).toLocaleDateString('it-IT', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
+                      {visibleColumns.includes('gruppo') && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Gruppo Scout</span>
+                          <span className="text-gray-900">{user.scout_group || '-'}</span>
+                        </div>
+                      )}
+                      {visibleColumns.includes('ruolo') && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Ruolo</span>
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                            className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer min-h-[32px] ${getRoleBadgeColor(user.role)}`}
+                          >
+                            <option value="user">Utente</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      )}
+                      {visibleColumns.includes('stato') && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Stato Profilo</span>
+                          <button
+                            onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
+                            className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
+                              user.profile_setup_complete
+                                ? 'bg-green-100 text-green-800 hover:ring-green-400'
+                                : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
+                            }`}
+                            title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
+                          >
+                            {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
+                          </button>
+                        </div>
+                      )}
+                      {visibleColumns.includes('registrato') && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Registrato</span>
+                          <span className="text-gray-900">
+                            {new Date(user.created_at).toLocaleDateString('it-IT', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}

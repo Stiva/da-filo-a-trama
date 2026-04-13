@@ -3,8 +3,20 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Upload, Search, Download, CheckCircle, XCircle, Trash2, ArrowLeftRight } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
+import ColumnSelector from '@/components/admin/ColumnSelector';
+import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
+
+const CRM_COLUMNS: ColumnDef[] = [
+  { id: 'codice', label: 'Codice', defaultVisible: true },
+  { id: 'nome', label: 'Nome e Cognome', defaultVisible: true },
+  { id: 'email', label: 'Email', defaultVisible: true },
+  { id: 'gruppo', label: 'Gruppo/Regione', defaultVisible: true },
+  { id: 'app', label: 'Registrato App', defaultVisible: true },
+  { id: 'checkin', label: 'Check-in', defaultVisible: true },
+];
 
 export default function CRMPage() {
+  const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('crm_list', CRM_COLUMNS);
   const [participants, setParticipants] = useState<ParticipantCrmView[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +108,13 @@ export default function CRMPage() {
           </p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <ColumnSelector 
+            availableColumns={CRM_COLUMNS}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            isLoading={isPrefsLoading}
+          />
           <label className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-agesci-blue hover:bg-agesci-blue-light focus:outline-none cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
             <Upload className="w-5 h-5 mr-2" />
             {isUploading ? 'Caricamento...' : 'Carica CSV'}
@@ -157,12 +175,12 @@ export default function CRMPage() {
           <table className="min-w-full divide-y border-t border-gray-200 divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codice</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome e Cognome</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gruppo/Regione</th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Registrato App</th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in</th>
+                {visibleColumns.includes('codice') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codice</th>}
+                {visibleColumns.includes('nome') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome e Cognome</th>}
+                {visibleColumns.includes('email') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>}
+                {visibleColumns.includes('gruppo') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gruppo/Regione</th>}
+                {visibleColumns.includes('app') && <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Registrato App</th>}
+                {visibleColumns.includes('checkin') && <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in</th>}
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
               </tr>
             </thead>
@@ -185,38 +203,50 @@ export default function CRMPage() {
               ) : (
                 participants.map((person) => (
                   <tr key={person.codice} className={`hover:bg-gray-50 transition-colors ${!person.is_active_in_list ? 'bg-red-50/50' : ''}`}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {person.codice}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {person.nome} {person.cognome}
-                      {!person.is_active_in_list && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Rimosso</span>}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {person.email_contatto || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {person.gruppo}<br/>
-                      <span className="text-xs text-gray-400">{person.regione}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                      {person.is_app_registered ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-gray-300 mx-auto" />
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                      {person.is_checked_in ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Presente
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Assente
-                        </span>
-                      )}
-                    </td>
+                    {visibleColumns.includes('codice') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {person.codice}
+                      </td>
+                    )}
+                    {visibleColumns.includes('nome') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {person.nome} {person.cognome}
+                        {!person.is_active_in_list && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Rimosso</span>}
+                      </td>
+                    )}
+                    {visibleColumns.includes('email') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.email_contatto || '-'}
+                      </td>
+                    )}
+                    {visibleColumns.includes('gruppo') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.gruppo}<br/>
+                        <span className="text-xs text-gray-400">{person.regione}</span>
+                      </td>
+                    )}
+                    {visibleColumns.includes('app') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                        {person.is_app_registered ? (
+                          <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-gray-300 mx-auto" />
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.includes('checkin') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                        {person.is_checked_in ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Presente
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Assente
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                       <div className="flex items-center justify-end gap-3">
                         <a href={`/admin/crm/${person.codice}`} className="text-agesci-blue hover:text-agesci-blue-light transition-colors flex items-center gap-1">
