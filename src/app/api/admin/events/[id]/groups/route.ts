@@ -86,11 +86,11 @@ export async function GET(
             return numA - numB;
         });
 
-        // 3. Fetch all Staff/Admin users for dropdown
+        // 3. Fetch all Staff/Admin users (or specific service roles) for dropdown
         const { data: staffUsers, error: staffError } = await supabase
             .from('profiles')
-            .select('id, name, surname, role')
-            .in('role', ['admin', 'staff'])
+            .select('id, name, surname, role, service_role')
+            .or('role.in.(admin,staff),service_role.in.("gomitolo team","Incaricato regionale alla Branca L/C")')
             .order('name');
 
         if (staffError) {
@@ -123,7 +123,7 @@ export async function GET(
             // For CRM mode, fetch unassigned participants from the entire active CRM list
             const { data: crmParticipants, error: crmError } = await supabase
                 .from('participants')
-                .select('codice, nome, cognome, gruppo')
+                .select('codice, nome, cognome, gruppo, ruolo')
                 .eq('is_active_in_list', true);
                 
             if (!crmError && crmParticipants) {
@@ -134,6 +134,7 @@ export async function GET(
                         name: p.nome,
                         surname: p.cognome,
                         scout_group: p.gruppo,
+                        service_role: p.ruolo,
                         is_crm_only: true
                     }));
             }

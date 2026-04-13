@@ -41,6 +41,17 @@ export async function POST(
 
         const supabase = createServiceRoleClient();
 
+        // Check current moderators count
+        const { count, error: countError } = await supabase
+            .from('event_group_moderators')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', groupId);
+
+        if (countError) throw countError;
+        if (count !== null && count >= 2) {
+            return NextResponse.json({ error: 'Raggiunto il limite massimo di 2 moderatori per questo gruppo' }, { status: 400 });
+        }
+
         const { error } = await supabase
             .from('event_group_moderators')
             .insert({ group_id: groupId, user_id: userId });

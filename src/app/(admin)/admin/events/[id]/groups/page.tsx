@@ -198,7 +198,10 @@ export default function AdminEventGroupsPage() {
                                                         </span>
                                                     )}
                                                 </p>
-                                                <p className="text-xs text-gray-500">{u.scout_group || 'Nessun gruppo censito'}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {u.scout_group || 'Nessun gruppo censito'}
+                                                    {u.service_role ? ` - ${u.service_role}` : ''}
+                                                </p>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <select
@@ -287,31 +290,33 @@ export default function AdminEventGroupsPage() {
                                         )}
                                     </div>
 
-                                    <div className="flex gap-2">
-                                        <select
-                                            id={`mod-select-${group.id}`}
-                                            className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
-                                            defaultValue=""
-                                        >
-                                            <option value="" disabled>Seleziona Staff/Admin...</option>
-                                            {staffUsers
-                                                .filter(u => !(group.moderators || []).some(m => m.user_id === u.id))
-                                                .map(user => (
-                                                    <option key={user.id} value={user.id}>
-                                                        {user.name} {user.surname}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                        <button
-                                            onClick={() => {
-                                                const select = document.getElementById(`mod-select-${group.id}`) as HTMLSelectElement;
-                                                if (select.value) handleAssignModerator(group.id, select.value);
-                                            }}
-                                            className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
-                                        >
-                                            Aggiungi
-                                        </button>
-                                    </div>
+                                    {(!group.moderators || group.moderators.length < 2) && (
+                                        <div className="flex gap-2">
+                                            <select
+                                                id={`mod-select-${group.id}`}
+                                                className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
+                                                defaultValue=""
+                                            >
+                                                <option value="" disabled>Seleziona Staff/Moderatore...</option>
+                                                {staffUsers
+                                                    .filter(u => !(group.moderators || []).some(m => m.user_id === u.id))
+                                                    .map(user => (
+                                                        <option key={user.id} value={user.id}>
+                                                            {user.name} {user.surname} {user.service_role ? `(${user.service_role})` : ''}
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                            <button
+                                                onClick={() => {
+                                                    const select = document.getElementById(`mod-select-${group.id}`) as HTMLSelectElement;
+                                                    if (select.value) handleAssignModerator(group.id, select.value);
+                                                }}
+                                                className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                                            >
+                                                Aggiungi
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Membri */}
