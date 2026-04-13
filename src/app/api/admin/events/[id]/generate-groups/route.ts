@@ -103,12 +103,19 @@ export async function POST(
             let usersToDistribute: string[] = crmLinked
                 .filter((p: any) => {
                     if (eligibleRoles.length === 0) return true;
-                    return p.ruolo && eligibleRoles.includes(p.ruolo);
+                    if (!p.ruolo) return false;
+                    const crmRole = p.ruolo.trim().toLowerCase();
+                    return eligibleRoles.map(r => r.trim().toLowerCase()).includes(crmRole);
                 })
                 .map((p: any) => p.linked_profile_id as string);
 
             if (usersToDistribute.length === 0) {
-                return NextResponse.json({ error: 'Nessun partecipante CRM corrisponde ai ruoli selezionati per la generazione dei gruppi' }, { status: 400 });
+                const debugRoles = [...new Set(crmLinked.map((p:any) => p.ruolo))];
+                return NextResponse.json({ 
+                    error: `Debug info: Nessun utente tra i CRM attivi (con app) corrisponde. 
+Ruoli selezionati: ${eligibleRoles.join(', ')}. 
+Ruoli effettivamente presenti nel CRM per questi utenti: ${debugRoles.join(', ')}` 
+                }, { status: 400 });
             }
 
             // Fisher-Yates shuffle
