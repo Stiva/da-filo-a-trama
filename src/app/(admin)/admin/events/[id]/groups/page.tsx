@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import RichTextContent from '@/components/RichTextContent';
@@ -16,6 +16,60 @@ interface PoiInfo {
     id: string;
     nome: string;
     tipo: string;
+}
+
+function ModeratorAutocomplete({ 
+    groupId, staffUsers, onAssign 
+}: { 
+    groupId: string, staffUsers: Profile[], onAssign: (groupId: string, userId: string) => void 
+}) {
+    const [search, setSearch] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = staffUsers.filter(u => 
+        (u.name + ' ' + u.surname + ' ' + (u.service_role || '')).toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div className="relative flex-1" ref={wrapperRef}>
+            <input 
+                type="text"
+                className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 h-[38px] transition"
+                placeholder="Cerca per nome o ruolo..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
+                onFocus={() => setIsOpen(true)}
+            />
+            {isOpen && search.length > 0 && (
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-auto">
+                    {filtered.length > 0 ? filtered.map(u => (
+                        <li key={u.id} className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b last:border-0"
+                            onClick={() => {
+                                onAssign(groupId, u.id);
+                                setSearch('');
+                                setIsOpen(false);
+                            }}>
+                            <div className="font-medium text-gray-800">{u.name} {u.surname}</div>
+                            {u.service_role && <div className="text-xs text-gray-500">{u.service_role}</div>}
+                        </li>
+                    )) : (
+                        <li className="px-3 py-2 text-sm text-gray-500 italic">Nessun match trovato</li>
+                    )}
+                </ul>
+            )}
+        </div>
+    );
 }
 
 export default function AdminEventGroupsPage() {
@@ -129,6 +183,60 @@ export default function AdminEventGroupsPage() {
         }
     };
 
+    const handleRemoveMember = async (groupId: string, userId: string) => {
+        if (!confirm('Vuoi davvero rimuovere questo partecipante dal gruppo?')) return;
+        try {
+            const res = await fetch(`/api/admin/events/${eventId}/groups/${groupId}/members/${userId}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Errore durante la rimozione');
+            }
+            fetchData();
+        } catch (err: unknown) {
+            if (err instanceof Error) alert(err.message);
+            else alert('Errore sconosciuto');
+        }
+    };
+
+    const exportToCSV = () => {
+        if (!groups || groups.length === 0) return;
+        
+        let csvContent = "Gruppo,Nome,Cognome,Gruppo Scout,Ruolo di Servizio,Sorgente\\n";
+        
+        groups.forEach(group => {
+            const allMembers = [...(group.members || []), ...(group.crm_members || [])];
+            allMembers.forEach((member: any) => {
+                const name = member.profile?.name || member.participant?.nome || '';
+                const surname = member.profile?.surname || member.participant?.cognome || '';
+                const scoutGroup = member.profile?.scout_group || member.participant?.gruppo || '';
+                const serviceRole = member.profile?.service_role || member.participant?.ruolo || '';
+                const source = member.crm_codice ? 'CRM (Offline)' : 'App (Registrato)';
+                
+                const row = [
+                    `"${group.name.replace(/"/g, '""')}"`,
+                    `"${name.replace(/"/g, '""')}"`,
+                    `"${surname.replace(/"/g, '""')}"`,
+                    `"${scoutGroup.replace(/"/g, '""')}"`,
+                    `"${serviceRole.replace(/"/g, '""')}"`,
+                    `"${source}"`
+                ].join(',');
+                
+                csvContent += row + "\\n";
+            });
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Gruppi_${event?.title || 'Evento'}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (isLoading) {
         return (
             <div className="p-4 sm:p-8">
@@ -164,8 +272,23 @@ export default function AdminEventGroupsPage() {
                     </svg>
                     Torna all'evento
                 </Link>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestione Gruppi di Lavoro</h1>
-                <p className="text-gray-500 mt-1">{event?.title}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestione Gruppi di Lavoro</h1>
+                        <p className="text-gray-500 mt-1">{event?.title}</p>
+                    </div>
+                    {groups && groups.length > 0 && (
+                        <button
+                            onClick={exportToCSV}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition shadow-sm"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Esporta CSV
+                        </button>
+                    )}
+                </div>
             </div>
 
             {!groups || groups.length === 0 ? (
@@ -291,30 +414,12 @@ export default function AdminEventGroupsPage() {
                                     </div>
 
                                     {(!group.moderators || group.moderators.length < 2) && (
-                                        <div className="flex gap-2">
-                                            <select
-                                                id={`mod-select-${group.id}`}
-                                                className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2"
-                                                defaultValue=""
-                                            >
-                                                <option value="" disabled>Seleziona Staff/Moderatore...</option>
-                                                {staffUsers
-                                                    .filter(u => !(group.moderators || []).some(m => m.user_id === u.id))
-                                                    .map(user => (
-                                                        <option key={user.id} value={user.id}>
-                                                            {user.name} {user.surname} {user.service_role ? `(${user.service_role})` : ''}
-                                                        </option>
-                                                    ))}
-                                            </select>
-                                            <button
-                                                onClick={() => {
-                                                    const select = document.getElementById(`mod-select-${group.id}`) as HTMLSelectElement;
-                                                    if (select.value) handleAssignModerator(group.id, select.value);
-                                                }}
-                                                className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
-                                            >
-                                                Aggiungi
-                                            </button>
+                                        <div className="flex gap-2 mt-2">
+                                            <ModeratorAutocomplete 
+                                                groupId={group.id} 
+                                                staffUsers={staffUsers.filter(u => !(group.moderators || []).some(m => m.user_id === u.id))} 
+                                                onAssign={handleAssignModerator} 
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -327,14 +432,28 @@ export default function AdminEventGroupsPage() {
                                             [...(group.members || []), ...(group.crm_members || [])].map((member: any) => (
                                                 <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
                                                     <div>
-                                                        {member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome} 
-                                                        <span className="text-xs text-gray-400 ml-1">({member.profile?.scout_group || member.participant?.gruppo || 'N/A'})</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-800">{member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome}</span>
+                                                            {member.crm_codice && (
+                                                                <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded">
+                                                                    CRM
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 mt-0.5">
+                                                            {member.profile?.scout_group || member.participant?.gruppo || 'Nessun gruppo'}
+                                                            {(member.profile?.service_role || member.participant?.ruolo) && ` - ${member.profile?.service_role || member.participant?.ruolo}`}
+                                                        </div>
                                                     </div>
-                                                    {member.crm_codice && (
-                                                        <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded ml-2">
-                                                            CRM
-                                                        </span>
-                                                    )}
+                                                    <button
+                                                        onClick={() => handleRemoveMember(group.id, member.user_id || member.crm_codice)}
+                                                        className="text-gray-400 hover:text-red-600 transition p-1 ml-2"
+                                                        title="Rimuovi dal gruppo"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             ))
                                         ) : (

@@ -58,11 +58,11 @@ export async function GET(
         ),
         members:event_group_members(
           group_id, user_id, created_at,
-          profile:profiles(id, name, surname, scout_group)
+          profile:profiles(id, name, surname, scout_group, service_role)
         ),
         crm_members:event_crm_group_members(
           group_id, crm_codice, created_at,
-          participant:participants(codice, nome, cognome, gruppo)
+          participant:participants(codice, nome, cognome, gruppo, ruolo)
         ),
         notes:event_group_notes(
           id, content, created_at,
