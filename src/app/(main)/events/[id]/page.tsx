@@ -558,10 +558,10 @@ export default function EventDetailPage() {
                     )}
                   </div>
                 )}
+                </div>
               )}
 
               {/* Map is now embedded inline in the sidebar via EventLocationMap */}
-              </div>
             </div>
           </div>
         </div>
