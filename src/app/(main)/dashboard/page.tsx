@@ -67,11 +67,11 @@ export default async function DashboardPage() {
 
   const quickActions = [
     {
-      title: 'Eventi Consigliati',
-      description: 'Scopri gli eventi più adatti alle tue preferenze',
+      title: 'Programma',
+      description: "Scopri il programma dell'evento e scegli le attività più adatte alle tue preferenze",
       href: '/events',
       icon: CalendarIcon,
-      buttonText: 'Esplora Eventi',
+      buttonText: 'Vai al Programma',
       variant: 'primary' as const,
     },
     {
@@ -182,12 +182,11 @@ export default async function DashboardPage() {
                 <div key={action.href} className="card-hover">
                   <div className="card-body">
                     <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                        action.variant === 'primary' ? 'bg-agesci-yellow text-agesci-blue' :
-                        action.variant === 'secondary' ? 'bg-agesci-blue text-white' :
-                        action.variant === 'accent' ? 'bg-lc-green text-white' :
-                        'bg-agesci-blue/10 text-agesci-blue'
-                      }`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${action.variant === 'primary' ? 'bg-agesci-yellow text-agesci-blue' :
+                          action.variant === 'secondary' ? 'bg-agesci-blue text-white' :
+                            action.variant === 'accent' ? 'bg-lc-green text-white' :
+                              'bg-agesci-blue/10 text-agesci-blue'
+                        }`}>
                         <Icon className="w-6 h-6" />
                       </div>
                       <div className="flex-1">
@@ -199,15 +198,14 @@ export default async function DashboardPage() {
                         </p>
                         <Link
                           href={action.href}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
-                            action.variant === 'primary'
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all ${action.variant === 'primary'
                               ? 'btn-primary'
                               : action.variant === 'secondary'
-                              ? 'btn-secondary'
-                              : action.variant === 'accent'
-                              ? 'btn-accent'
-                              : 'btn-outline'
-                          }`}
+                                ? 'btn-secondary'
+                                : action.variant === 'accent'
+                                  ? 'btn-accent'
+                                  : 'btn-outline'
+                            }`}
                         >
                           {action.buttonText}
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +256,7 @@ export default async function DashboardPage() {
                         </span>
                       </li>
                       <li className="flex items-center gap-2 text-agesci-blue/80">
-                         {userState === 'profile_complete' ? (
+                        {userState === 'profile_complete' ? (
                           <CheckCircle className="w-5 h-5 text-lc-green flex-shrink-0" />
                         ) : (
                           <div className="w-5 h-5 rounded-full border-2 border-agesci-blue/30 flex-shrink-0" />
