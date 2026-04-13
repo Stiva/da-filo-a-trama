@@ -6,19 +6,19 @@
 CREATE OR REPLACE FUNCTION public.trigger_merge_crm_groups()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Intercettiamo quando l'account viene finalmente "collegato" a un neonato utente app
-    IF OLD.linked_profile_id IS NULL AND NEW.linked_profile_id IS NOT NULL THEN
+    -- Intercettiamo quando in 'profiles' viene inserito o aggiornato il 'codice_socio'
+    IF NEW.codice_socio IS NOT NULL THEN
         
         -- Copiamo l'appartenenza a ogni gruppo dalla tabella temporanea offline a quella ufficiale
         INSERT INTO public.event_group_members (group_id, user_id, created_at)
-        SELECT group_id, NEW.linked_profile_id, created_at
+        SELECT group_id, NEW.id, created_at
         FROM public.event_crm_group_members
-        WHERE crm_codice = NEW.codice
+        WHERE crm_codice = NEW.codice_socio
         ON CONFLICT (group_id, user_id) DO NOTHING;
 
-        -- Pulizia istantanea dalla tabella offline così perderà il badge "Ambra" dalla visualizzazione list
+        -- Pulizia istantanea dalla tabella offline così perderà il badge "Ambra"
         DELETE FROM public.event_crm_group_members
-        WHERE crm_codice = NEW.codice;
+        WHERE crm_codice = NEW.codice_socio;
         
     END IF;
     
@@ -26,12 +26,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Attacchiamo il Trigger alla tabella participants
-DROP TRIGGER IF EXISTS merge_crm_groups_on_profile_link ON public.participants;
+-- Attacchiamo il Trigger alla tabella profiles
+DROP TRIGGER IF EXISTS merge_crm_groups_on_profile_link ON public.profiles;
 CREATE TRIGGER merge_crm_groups_on_profile_link
-    AFTER UPDATE OF linked_profile_id
-    ON public.participants
+    AFTER INSERT OR UPDATE OF codice_socio
+    ON public.profiles
     FOR EACH ROW
-    -- Viene invocato solo e unicamente se hanno toccato attivamente la FK
-    WHEN (OLD.linked_profile_id IS DISTINCT FROM NEW.linked_profile_id)
+    -- Eseguiamo la migrazione solo alla valorizzazione vera e propria del codice
+    WHEN (NEW.codice_socio IS NOT NULL AND (TG_OP = 'INSERT' OR OLD.codice_socio IS DISTINCT FROM NEW.codice_socio))
     EXECUTE FUNCTION public.trigger_merge_crm_groups();
