@@ -105,7 +105,10 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
       updateData.codice_socio = body.codice_socio === '' ? null : body.codice_socio;
     }
     if (body.scout_group !== undefined) updateData.scout_group = body.scout_group;
-    if (body.preferences !== undefined) updateData.preferences = body.preferences;
+    if (body.preferences !== undefined) {
+      updateData.preferences = body.preferences;
+      updateData.preferences_set = body.preferences.length > 0;
+    }
     if (body.avatar_config !== undefined) updateData.avatar_config = body.avatar_config;
     if (body.onboarding_completed !== undefined) {
       updateData.onboarding_completed = body.onboarding_completed;
