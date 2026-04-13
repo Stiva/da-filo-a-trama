@@ -156,6 +156,7 @@ export default function AdminUsersPage() {
             onboarding_completed: complete,
             profile_setup_complete: complete,
             avatar_completed: complete,
+            preferences_set: complete,
           }
         }),
       });

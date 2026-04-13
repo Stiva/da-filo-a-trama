@@ -218,7 +218,7 @@ export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<
     }
 
     // Sanitizza: accetta solo campi di stato consentiti
-    const allowedFields = ['onboarding_completed', 'profile_setup_complete', 'avatar_completed'];
+    const allowedFields = ['onboarding_completed', 'profile_setup_complete', 'avatar_completed', 'preferences_set'];
     const safeUpdates: Record<string, boolean> = {};
     for (const key of allowedFields) {
       if (typeof updates[key] === 'boolean') {
