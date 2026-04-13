@@ -24,7 +24,7 @@ export default function AdminEventGroupsPage() {
 
     const [event, setEvent] = useState<EventInfo | null>(null);
     const [groups, setGroups] = useState<EventGroup[]>([]);
-    const [unassignedUsers, setUnassignedUsers] = useState<Profile[]>([]);
+    const [unassignedUsers, setUnassignedUsers] = useState<(Profile & { is_crm_only?: boolean })[]>([]);
     const [staffUsers, setStaffUsers] = useState<Profile[]>([]);
     const [pois, setPois] = useState<PoiInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
