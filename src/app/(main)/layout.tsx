@@ -2,6 +2,7 @@ import Navbar from '@/components/Navbar';
 import Image from 'next/image';
 import UserSupportChatWidget from '@/components/chat/UserSupportChatWidget';
 import InstallBanner from '@/components/pwa/InstallBanner';
+import FooterSponsors from '@/components/FooterSponsors';
 
 export default function MainLayout({
   children,
@@ -20,20 +21,7 @@ export default function MainLayout({
       <footer className="bg-agesci-blue text-white py-12 mt-16 border-t border-agesci-blue/20">
         <div className="container-scout space-y-8 flex flex-col">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-b border-white/10 pb-8">
-            <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4">
-              <p className="text-sm text-white/80 font-medium">Evento realizzato con il patrocinio di:</p>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                <a href="https://www.comune.castelfranco-emilia.mo.it/" target="_blank" rel="noopener noreferrer" className="transition-transform hover:scale-105 bg-white p-2 rounded-xl h-16 sm:h-20 flex items-center justify-center shadow-lg">
-                  <Image src="/stemma città di Castelfranco.jpg" alt="Comune di Castelfranco Emilia" width={100} height={100} className="max-h-full w-auto object-contain" />
-                </a>
-                <a href="https://www.regione.emilia-romagna.it/" target="_blank" rel="noopener noreferrer" className="transition-transform hover:scale-105 bg-white p-2 rounded-xl h-16 sm:h-20 flex items-center justify-center shadow-lg">
-                  <Image src="/regione.png" alt="Regione Emilia-Romagna" width={100} height={100} className="max-h-full w-auto object-contain" />
-                </a>                
-                <a href="https://agesci.it/" target="_blank" rel="noopener noreferrer" className="transition-transform hover:scale-105 bg-white p-2 rounded-xl h-16 sm:h-20 flex items-center justify-center shadow-lg">
-                  <Image src="/AGESCI.png" alt="AGESCI" width={100} height={100} className="max-h-full w-auto object-contain" />
-                </a>
-              </div>
-            </div>
+            <FooterSponsors />
             
             <div className="flex items-center justify-center shrink-0">
               <Image

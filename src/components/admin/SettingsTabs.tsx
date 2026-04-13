@@ -11,6 +11,7 @@ export default function SettingsTabs() {
     { href: '/admin/service-roles', label: 'Ruoli di Servizio' },
     { href: '/admin/tags', label: 'Tags' },
     { href: '/admin/groups', label: 'Gruppi' },
+    { href: '/admin/sponsors', label: 'Patrocinatori' },
     { href: '/admin/settings', label: 'Impostazioni App' },
   ];
 
