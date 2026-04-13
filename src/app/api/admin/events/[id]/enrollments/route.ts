@@ -247,7 +247,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { profileId, forceConfirmed } = body;
+    const { profileId } = body;
 
     if (!profileId) {
       return NextResponse.json(
@@ -277,34 +277,14 @@ export async function POST(
       );
     }
 
-    // Check event capacity
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('max_posti')
-      .eq('id', eventId)
-      .single();
-
-    if (eventError) {
-      throw eventError;
-    }
-
-    const { count: enrollmentCount } = await supabase
-      .from('enrollments')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_id', eventId)
-      .eq('status', 'confirmed');
-
-    const isFull = (enrollmentCount ?? 0) >= event.max_posti;
-    const finalStatus = (isFull && !forceConfirmed) ? 'waitlist' : 'confirmed';
-
-    // Insert enrollment
+    // Admin enrollment always forces confirmed status, bypassing capacity limits
     const { data, error } = await supabase
       .from('enrollments')
       .insert({
         event_id: eventId,
         user_id: profileId,
-        status: finalStatus,
-        waitlist_position: finalStatus === 'waitlist' ? (enrollmentCount ?? 0) + 1 - event.max_posti : null,
+        status: 'confirmed',
+        waitlist_position: null,
       })
       .select('id')
       .single();
@@ -315,9 +295,7 @@ export async function POST(
 
     return NextResponse.json({
       data: { id: data.id },
-      message: finalStatus === 'waitlist'
-        ? 'Utente aggiunto in lista d\'attesa'
-        : 'Utente iscritto con successo (scavalcando eventuali limiti)',
+      message: 'Utente iscritto con successo',
     });
   } catch (error) {
     console.error('Errore POST /api/admin/events/[id]/enrollments:', error);
