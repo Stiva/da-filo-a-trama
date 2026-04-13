@@ -38,10 +38,10 @@ export async function POST(
     }
 
     const targetUserId = body.userId;
+    const isProfileUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(targetUserId);
     const supabase = createServiceRoleClient();
 
-    // 1. Optional: ensure they are not already in another group for this event to avoid duplicates
-    // We find other groups in this event and delete user from them
+    // 1. Ensure they are not already in another group for this event to avoid duplicates
     const { data: eventGroups } = await supabase
       .from('event_groups')
       .select('id')
@@ -49,20 +49,41 @@ export async function POST(
 
     if (eventGroups && eventGroups.length > 0) {
       const groupIds = eventGroups.map(g => g.id);
-      await supabase
-        .from('event_group_members')
-        .delete()
-        .eq('user_id', targetUserId)
-        .in('group_id', groupIds);
+      
+      if (isProfileUuid) {
+          await supabase
+            .from('event_group_members')
+            .delete()
+            .eq('user_id', targetUserId)
+            .in('group_id', groupIds);
+      } else {
+          await supabase
+            .from('event_crm_group_members')
+            .delete()
+            .eq('crm_codice', targetUserId)
+            .in('group_id', groupIds);
+      }
     }
 
     // 2. Insert into the designated group
-    const { error: insertError } = await supabase
-      .from('event_group_members')
-      .insert({
-        group_id: groupId,
-        user_id: targetUserId
-      });
+    let insertError;
+    if (isProfileUuid) {
+        const { error } = await supabase
+          .from('event_group_members')
+          .insert({
+            group_id: groupId,
+            user_id: targetUserId
+          });
+        insertError = error;
+    } else {
+        const { error } = await supabase
+          .from('event_crm_group_members')
+          .insert({
+            group_id: groupId,
+            crm_codice: targetUserId
+          });
+        insertError = error;
+    }
 
     if (insertError) {
       throw insertError;

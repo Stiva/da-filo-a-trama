@@ -78,6 +78,12 @@ export async function POST(
                     .delete()
                     .in('group_id', groupIds);
                 if (deleteError) throw deleteError;
+
+                const { error: crmDeleteError } = await supabase
+                    .from('event_crm_group_members')
+                    .delete()
+                    .in('group_id', groupIds);
+                if (crmDeleteError) throw crmDeleteError;
             }
         }
 
@@ -86,17 +92,15 @@ export async function POST(
         if (event.group_creation_mode === 'random_crm' || (event.auto_enroll_all && event.group_creation_mode === 'random')) {
             const eligibleRoles: string[] = event.group_eligible_roles || [];
 
-            // Fetch all active BC participants that have a linked app profile.
-            // We join via participant_crm_view and filter by the raw CRM 'ruolo'
+            // Fetch ALL active BC participants (regardless of app profile link)
             const { data: crmLinked, error: crmError } = await supabase
-                .from('participant_crm_view')
-                .select('linked_profile_id, ruolo')
-                .eq('is_active_in_list', true)
-                .not('linked_profile_id', 'is', null);
+                .from('participants')
+                .select('codice, ruolo')
+                .eq('is_active_in_list', true);
 
             if (crmError) throw crmError;
             if (!crmLinked || crmLinked.length === 0) {
-                return NextResponse.json({ error: 'Nessun partecipante CRM con profilo app collegato trovato' }, { status: 404 });
+                return NextResponse.json({ error: 'Nessun partecipante CRM attivo trovato nell\'intero database' }, { status: 404 });
             }
 
             // Filter by eligible roles (ruolo CRM) se configurato
@@ -107,14 +111,14 @@ export async function POST(
                     const crmRole = p.ruolo.trim().toLowerCase();
                     return eligibleRoles.map(r => r.trim().toLowerCase()).includes(crmRole);
                 })
-                .map((p: any) => p.linked_profile_id as string);
+                .map((p: any) => p.codice as string);
 
             if (usersToDistribute.length === 0) {
                 const debugRoles = [...new Set(crmLinked.map((p:any) => p.ruolo))];
                 return NextResponse.json({ 
-                    error: `Debug info: Nessun utente tra i CRM attivi (con app) corrisponde. 
+                    error: `Debug info: Nessun utente tra l'intera lista CRM (anche non registrati) corrisponde. 
 Ruoli selezionati: ${eligibleRoles.join(', ')}. 
-Ruoli effettivamente presenti nel CRM per questi utenti: ${debugRoles.join(', ')}` 
+Ruoli effettivamente presenti nel CRM: ${debugRoles.join(', ')}` 
                 }, { status: 400 });
             }
 
@@ -134,18 +138,18 @@ Ruoli effettivamente presenti nel CRM per questi utenti: ${debugRoles.join(', ')
                 existingGroups = insertedGroups || [];
             }
 
-            // Round-robin distribution
-            const inserts = usersToDistribute.map((userId: string, idx: number) => ({
+            // Round-robin distribution based on CRM Codice
+            const crmInserts = usersToDistribute.map((codice: string, idx: number) => ({
                 group_id: existingGroups[idx % existingGroups.length].id,
-                user_id: userId,
+                crm_codice: codice,
             }));
 
-            if (inserts.length > 0) {
-                const { error: insertError } = await supabase.from('event_group_members').insert(inserts);
+            if (crmInserts.length > 0) {
+                const { error: insertError } = await supabase.from('event_crm_group_members').insert(crmInserts);
                 if (insertError) throw insertError;
             }
 
-            return NextResponse.json({ message: 'Gruppi random (Lista BC) generati con successo!', count: inserts.length });
+            return NextResponse.json({ message: 'Gruppi CRM (lista intera) generati con successo!', count: crmInserts.length });
         }
 
         // ── random / copy (no auto_enroll_all): shuffle confirmed app enrollees randomly into groups ──

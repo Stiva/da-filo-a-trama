@@ -205,10 +205,17 @@ export interface EventGroup {
   name: string;
   location_poi_id: string | null;
   created_at: string;
-  moderators?: EventGroupModerator[];
   members?: EventGroupMember[];
+  crm_members?: EventCrmGroupMember[];
   notes?: EventGroupNote[];
   attachments?: EventGroupAttachment[];
+}
+
+export interface EventCrmGroupMember {
+  group_id: string;
+  crm_codice: string;
+  created_at: string;
+  participant?: Participant;
 }
 
 export interface EventGroupModerator {

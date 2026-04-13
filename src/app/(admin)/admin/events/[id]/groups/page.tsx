@@ -190,7 +190,14 @@ export default function AdminEventGroupsPage() {
                                     {unassignedUsers.map(u => (
                                         <div key={u.id} className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-yellow-50/50 transition">
                                             <div>
-                                                <p className="font-medium text-gray-800">{u.name} {u.surname}</p>
+                                                <p className="font-medium text-gray-800">
+                                                    {u.name} {u.surname}
+                                                    {u.is_crm_only && (
+                                                        <span className="ml-2 text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100 px-1.5 py-0.5 rounded">
+                                                            CRM
+                                                        </span>
+                                                    )}
+                                                </p>
                                                 <p className="text-xs text-gray-500">{u.scout_group || 'Nessun gruppo censito'}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -226,7 +233,7 @@ export default function AdminEventGroupsPage() {
                             <div className="flex justify-between items-center mb-4 pb-2 border-b">
                                 <h2 className="text-xl font-semibold text-gray-800">{group.name}</h2>
                                 <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                    {group.members?.length || 0} Membri
+                                    {(group.members?.length || 0) + (group.crm_members?.length || 0)} Membri
                                 </span>
                             </div>
 
@@ -311,10 +318,18 @@ export default function AdminEventGroupsPage() {
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">Partecipanti Assegnati</h3>
                                     <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
-                                        {group.members && group.members.length > 0 ? (
-                                            group.members.map((member) => (
-                                                <div key={member.user_id} className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
-                                                    {member.profile?.name} {member.profile?.surname} <span className="text-xs text-gray-400">({member.profile?.scout_group || 'N/A'})</span>
+                                        {[...(group.members || []), ...(group.crm_members || [])].length > 0 ? (
+                                            [...(group.members || []), ...(group.crm_members || [])].map((member) => (
+                                                <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
+                                                    <div>
+                                                        {member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome} 
+                                                        <span className="text-xs text-gray-400 ml-1">({member.profile?.scout_group || member.participant?.gruppo || 'N/A'})</span>
+                                                    </div>
+                                                    {member.crm_codice && (
+                                                        <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded ml-2">
+                                                            CRM
+                                                        </span>
+                                                    )}
                                                 </div>
                                             ))
                                         ) : (

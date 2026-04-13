@@ -39,7 +39,7 @@ export async function GET(
         // 1. Fetch Event
         const { data: event, error: eventError } = await supabase
             .from('events')
-            .select('id, title, category')
+            .select('id, title, category, group_creation_mode')
             .eq('id', eventId)
             .single();
 
@@ -47,7 +47,7 @@ export async function GET(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        // 2. Fetch Groups with members and moderators
+        // 2. Fetch Groups with members, crm_members and moderators
         const { data: groups, error: groupsError } = await supabase
             .from('event_groups')
             .select(`
@@ -59,6 +59,10 @@ export async function GET(
         members:event_group_members(
           group_id, user_id, created_at,
           profile:profiles(id, name, surname, scout_group)
+        ),
+        crm_members:event_crm_group_members(
+          group_id, crm_codice, created_at,
+          participant:participants(codice, nome, cognome, gruppo)
         ),
         notes:event_group_notes(
           id, content, created_at,
@@ -104,36 +108,60 @@ export async function GET(
             console.warn('Errore nel recupero POI', poisError);
         }
 
-        // 5. Fetch all confirmed enrollments to find unassigned users
-        const { data: enrollments, error: enrollmentsError } = await supabase
-            .from('enrollments')
-            .select(`
-                user_id,
-                profile:profiles(id, name, surname, scout_group)
-            `)
-            .eq('event_id', eventId)
-            .eq('status', 'confirmed');
-            
-        if (enrollmentsError) {
-            console.warn('Errore nel recupero iscrizioni', enrollmentsError);
-        }
-
-        // Collect all assigned user IDs across all groups
+        // Collect all assigned user IDs and Codices across all groups
         const assignedUserIds = new Set<string>();
+        const assignedCodices = new Set<string>();
         groups?.forEach(g => {
             g.members?.forEach((m: any) => assignedUserIds.add(m.user_id));
+            g.crm_members?.forEach((m: any) => assignedCodices.add(m.crm_codice));
         });
 
-        // Compute unassigned users
-        const unassignedUsers = (enrollments || [])
-            .filter((e: any) => !assignedUserIds.has(e.user_id))
-            .map((e: any) => e.profile)
-            .filter(Boolean)
-            .sort((a: any, b: any) => {
-                if (a.surname < b.surname) return -1;
-                if (a.surname > b.surname) return 1;
-                return 0;
-            });
+        // 5. Compute unassigned users based on mode
+        let unassignedUsers: any[] = [];
+        
+        if (event.group_creation_mode === 'random_crm') {
+            // For CRM mode, fetch unassigned participants from the entire active CRM list
+            const { data: crmParticipants, error: crmError } = await supabase
+                .from('participants')
+                .select('codice, nome, cognome, gruppo')
+                .eq('is_active_in_list', true);
+                
+            if (!crmError && crmParticipants) {
+                unassignedUsers = crmParticipants
+                    .filter((p: any) => !assignedCodices.has(p.codice))
+                    .map((p: any) => ({
+                        id: p.codice, // using codice as ID for the UI
+                        name: p.nome,
+                        surname: p.cognome,
+                        scout_group: p.gruppo,
+                        is_crm_only: true
+                    }));
+            }
+        } else {
+            // Standard mode: fetch from enrollments
+            const { data: enrollments, error: enrollmentsError } = await supabase
+                .from('enrollments')
+                .select(`
+                    user_id,
+                    profile:profiles(id, name, surname, scout_group)
+                `)
+                .eq('event_id', eventId)
+                .eq('status', 'confirmed');
+                
+            if (!enrollmentsError && enrollments) {
+                unassignedUsers = enrollments
+                    .filter((e: any) => !assignedUserIds.has(e.user_id))
+                    .map((e: any) => e.profile)
+                    .filter(Boolean);
+            }
+        }
+
+        // Sort them
+        unassignedUsers.sort((a: any, b: any) => {
+            if (a.surname < b.surname) return -1;
+            if (a.surname > b.surname) return 1;
+            return 0;
+        });
 
         return NextResponse.json({
             data: {
