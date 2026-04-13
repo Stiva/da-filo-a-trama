@@ -205,6 +205,7 @@ export interface EventGroup {
   name: string;
   location_poi_id: string | null;
   created_at: string;
+  moderators?: EventGroupModerator[];
   members?: EventGroupMember[];
   crm_members?: EventCrmGroupMember[];
   notes?: EventGroupNote[];
