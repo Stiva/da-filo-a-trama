@@ -538,8 +538,7 @@ export default function EventEnrollmentsPage() {
                         </span>
                       </div>
                     )}
-                      </span>
-                    </div>
+
                     {event?.checkin_enabled && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Check-in</span>
