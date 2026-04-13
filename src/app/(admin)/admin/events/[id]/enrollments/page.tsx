@@ -207,8 +207,8 @@ export default function EventEnrollmentsPage() {
         <div className="bg-red-100 text-red-700 p-6 rounded-lg">
           <h2 className="text-xl font-bold mb-2">Errore</h2>
           <p>{error}</p>
-          <Link href="/admin/events" className="text-red-600 hover:underline mt-4 inline-block">
-            Torna agli eventi
+          <Link href={`/admin/events/${eventId}`} className="text-red-600 hover:underline mt-4 inline-block">
+            Torna all'evento
           </Link>
         </div>
       </div>
@@ -219,11 +219,11 @@ export default function EventEnrollmentsPage() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <Link href="/admin/events" className="text-agesci-blue hover:underline inline-flex items-center gap-1 mb-4 min-h-[44px]">
+        <Link href={`/admin/events/${eventId}`} className="text-agesci-blue hover:underline inline-flex items-center gap-1 mb-4 min-h-[44px]">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Torna agli eventi
+          Torna all'evento
         </Link>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Iscrizioni</h1>
         <p className="text-gray-500 mt-1">{event?.title}</p>

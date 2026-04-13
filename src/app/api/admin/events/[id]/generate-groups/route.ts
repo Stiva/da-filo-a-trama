@@ -39,7 +39,7 @@ export async function POST(
         // 1. Fetch Event
         const { data: event, error: eventError } = await supabase
             .from('events')
-            .select('id, category, group_creation_mode, group_eligible_roles, max_group_size')
+            .select('id, category, group_creation_mode, group_eligible_roles, max_group_size, auto_enroll_all')
             .eq('id', eventId)
             .single();
 
@@ -82,42 +82,47 @@ export async function POST(
         }
 
         // ── random_crm: use the entire CRM participants list ──
-        if (event.group_creation_mode === 'random_crm') {
-            // Fetch active CRM participants
+        // ── auto_enroll_all + random: also uses BC list directly ──
+        if (event.group_creation_mode === 'random_crm' || (event.auto_enroll_all && event.group_creation_mode === 'random')) {
             const eligibleRoles: string[] = event.group_eligible_roles || [];
-            let crmQuery = supabase.from('participants').select('codice, ruolo').eq('is_active_in_list', true);
-            if (eligibleRoles.length > 0) {
-                crmQuery = crmQuery.in('ruolo', eligibleRoles);
-            }
-            const { data: crmParticipants, error: crmError } = await crmQuery;
+
+            // Fetch all active BC participants that have a linked app profile.
+            // We join via participant_crm_view and filter by profile.service_role
+            // (not CRM ruolo) to be consistent with the enrollment-based modes.
+            const { data: crmLinked, error: crmError } = await supabase
+                .from('participant_crm_view')
+                .select('linked_profile_id')
+                .eq('is_active_in_list', true)
+                .not('linked_profile_id', 'is', null);
+
             if (crmError) throw crmError;
-            if (!crmParticipants || crmParticipants.length === 0) {
-                return NextResponse.json({ error: 'Nessun partecipante CRM trovato per i criteri selezionati' }, { status: 404 });
+            if (!crmLinked || crmLinked.length === 0) {
+                return NextResponse.json({ error: 'Nessun partecipante CRM con profilo app collegato trovato' }, { status: 404 });
             }
 
-            // Find linked profile IDs for CRM participants
-            const codices = crmParticipants.map(p => p.codice);
-            const { data: linkedProfiles, error: lpError } = await supabase
+            const profileIds = crmLinked.map((p: any) => p.linked_profile_id as string);
+
+            // Fetch profiles to get service_role for filtering
+            const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, codice_socio')
-                .in('codice_socio', codices);
-            if (lpError) throw lpError;
+                .select('id, service_role')
+                .in('id', profileIds);
 
-            const codeToProfileId = new Map<string, string>();
-            (linkedProfiles || []).forEach(p => {
-                if (p.codice_socio) codeToProfileId.set(p.codice_socio, p.id);
-            });
+            if (profilesError) throw profilesError;
 
-            // Only keep participants that have a linked profile (they need a user_id for group_members)
-            const usersToDistribute = crmParticipants
-                .filter(p => codeToProfileId.has(p.codice))
-                .map(p => codeToProfileId.get(p.codice)!);
+            // Filter by eligible roles (service_role) if configured
+            let usersToDistribute: string[] = (profilesData || [])
+                .filter((p: any) => {
+                    if (eligibleRoles.length === 0) return true;
+                    return p.service_role && eligibleRoles.includes(p.service_role);
+                })
+                .map((p: any) => p.id as string);
 
             if (usersToDistribute.length === 0) {
-                return NextResponse.json({ error: 'Nessun partecipante CRM ha un profilo collegato nell\'app' }, { status: 400 });
+                return NextResponse.json({ error: 'Nessun partecipante CRM corrisponde ai ruoli selezionati per la generazione dei gruppi' }, { status: 400 });
             }
 
-            // Shuffle randomly
+            // Fisher-Yates shuffle
             for (let i = usersToDistribute.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [usersToDistribute[i], usersToDistribute[j]] = [usersToDistribute[j], usersToDistribute[i]];
@@ -125,9 +130,8 @@ export async function POST(
 
             // Ensure we have groups; create them if needed
             if (existingGroups.length === 0) {
-                // Use workshop_groups_count from the event to determine how many groups to create
                 const { data: fullEvent } = await supabase.from('events').select('workshop_groups_count').eq('id', eventId).single();
-                const groupCount = fullEvent?.workshop_groups_count || 4;
+                const groupCount = (fullEvent as any)?.workshop_groups_count || 4;
                 const newGroups = Array.from({ length: groupCount }, (_, i) => ({ event_id: eventId, name: `Gruppo ${i + 1}` }));
                 const { data: insertedGroups, error: insertErr } = await supabase.from('event_groups').insert(newGroups).select('id, name');
                 if (insertErr) throw insertErr;
@@ -135,7 +139,7 @@ export async function POST(
             }
 
             // Round-robin distribution
-            const inserts = usersToDistribute.map((userId, idx) => ({
+            const inserts = usersToDistribute.map((userId: string, idx: number) => ({
                 group_id: existingGroups[idx % existingGroups.length].id,
                 user_id: userId,
             }));
@@ -148,7 +152,7 @@ export async function POST(
             return NextResponse.json({ message: 'Gruppi random (Lista BC) generati con successo!', count: inserts.length });
         }
 
-        // ── random / copy: shuffle confirmed enrollees randomly into groups ──
+        // ── random / copy (no auto_enroll_all): shuffle confirmed app enrollees randomly into groups ──
         if (event.group_creation_mode === 'random' || event.group_creation_mode === 'copy') {
             const { data: enrollments, error: enrollmentsError } = await supabase
                 .from('enrollments')
@@ -180,7 +184,7 @@ export async function POST(
             // Ensure we have groups; create them if needed
             if (existingGroups.length === 0) {
                 const { data: fullEvent } = await supabase.from('events').select('workshop_groups_count').eq('id', eventId).single();
-                const groupCount = fullEvent?.workshop_groups_count || 4;
+                const groupCount = (fullEvent as any)?.workshop_groups_count || 4;
                 const newGroups = Array.from({ length: groupCount }, (_, i) => ({ event_id: eventId, name: `Gruppo ${i + 1}` }));
                 const { data: insertedGroups, error: insertErr } = await supabase.from('event_groups').insert(newGroups).select('id, name');
                 if (insertErr) throw insertErr;
@@ -200,6 +204,7 @@ export async function POST(
 
             return NextResponse.json({ message: 'Gruppi rigenerati con successo!', count: inserts.length });
         }
+
 
         const { data: enrollments, error: enrollmentsError } = await supabase
             .from('enrollments')
