@@ -487,7 +487,6 @@ function EventsPageContent() {
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {events
-                    .filter(e => !e.is_placeholder)
                     .sort((a, b) => {
                       const timeDiff = new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
                       if (timeDiff !== 0) return timeDiff;
@@ -589,7 +588,9 @@ function EventsPageContent() {
                       <div className="px-4 py-3 bg-gray-50">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-sm text-gray-600">
-                            {isFull ? (
+                            {event.is_placeholder ? (
+                              <span className="text-gray-500 italic">Evento riservato/Plenaria</span>
+                            ) : isFull ? (
                               <span className="text-red-600 font-medium">Completo</span>
                             ) : (
                               <>{event.enrollment_count}/{event.max_posti} iscritti</>

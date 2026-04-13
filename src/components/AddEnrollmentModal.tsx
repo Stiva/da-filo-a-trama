@@ -25,6 +25,7 @@ export default function AddEnrollmentModal({
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [forceConfirmed, setForceConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,7 +82,7 @@ export default function AddEnrollmentModal({
       const response = await fetch(`/api/admin/events/${eventId}/enrollments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId: selectedProfile.id }),
+        body: JSON.stringify({ profileId: selectedProfile.id, forceConfirmed }),
       });
 
       const result = await response.json();
@@ -182,26 +183,41 @@ export default function AddEnrollmentModal({
 
           {/* Selected Profile */}
           {selectedProfile && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-green-800 truncate">
-                    {getFullName(selectedProfile)}
-                  </p>
-                  <p className="text-sm text-green-600 truncate">
-                    {selectedProfile.email}
-                    {selectedProfile.scout_group && ` - ${selectedProfile.scout_group}`}
-                  </p>
+            <div className="mb-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-green-800 truncate">
+                      {getFullName(selectedProfile)}
+                    </p>
+                    <p className="text-sm text-green-600 truncate">
+                      {selectedProfile.email}
+                      {selectedProfile.scout_group && ` - ${selectedProfile.scout_group}`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedProfile(null)}
+                    className="flex-shrink-0 p-2 text-green-600 hover:text-green-800 hover:bg-green-100 active:bg-green-200 rounded-full transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+                    aria-label="Rimuovi selezione"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedProfile(null)}
-                  className="flex-shrink-0 p-2 text-green-600 hover:text-green-800 hover:bg-green-100 active:bg-green-200 rounded-full transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
-                  aria-label="Rimuovi selezione"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+              </div>
+              
+              <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="forceConfirmed"
+                  checked={forceConfirmed}
+                  onChange={(e) => setForceConfirmed(e.target.checked)}
+                  className="w-5 h-5 text-agesci-blue border-gray-300 rounded focus:ring-agesci-blue cursor-pointer"
+                />
+                <label htmlFor="forceConfirmed" className="text-sm text-gray-700 cursor-pointer select-none">
+                  Forza iscrizione in stato &quot;Confermato&quot; ignorando l'eventuale limite massimo di posti
+                </label>
               </div>
             </div>
           )}

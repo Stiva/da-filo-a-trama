@@ -87,7 +87,7 @@ export default function DailyCalendarView({
         const colWidth = 100 / overlapping.length;
         const colLeft = colWidth * idx;
 
-        const linkHref = isAdmin ? `/admin/events/${event.id}` : (event.is_placeholder ? '#' : `/events/${event.id}`);
+        const linkHref = isAdmin ? `/admin/events/${event.id}` : `/events/${event.id}`;
         const isFavourited = event.is_favourited;
         const isEnrolled = event.is_enrolled;
         const isFull = event.max_posti && event.enrollment_count >= event.max_posti;
@@ -117,15 +117,9 @@ export default function DailyCalendarView({
                 title={`${displayTitle} (${format(start, 'HH:mm')} - ${format(end, 'HH:mm')})`}
             >
                 <div className="flex justify-between items-start gap-1">
-                    {isPlaceholder ? (
-                        <span className="font-semibold text-xs leading-tight line-clamp-2 flex-1">
-                            {displayTitle}
-                        </span>
-                    ) : (
-                        <Link href={linkHref} className="font-semibold text-xs leading-tight line-clamp-2 hover:underline flex-1">
-                            {displayTitle}
-                        </Link>
-                    )}
+                    <Link href={linkHref} className="font-semibold text-xs leading-tight line-clamp-2 hover:underline flex-1">
+                        {displayTitle}
+                    </Link>
                     
                     {!isAdmin && !isPlaceholder && (onToggleFavourite || onToggleSubscribe) && height > 40 && colWidth > 30 && (
                         <div className="flex items-center gap-1 flex-shrink-0 bg-white/50 rounded-md px-1 py-0.5" onClick={(e) => e.stopPropagation()}>

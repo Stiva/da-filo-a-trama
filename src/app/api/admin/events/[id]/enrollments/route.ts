@@ -247,7 +247,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { profileId } = body;
+    const { profileId, forceConfirmed } = body;
 
     if (!profileId) {
       return NextResponse.json(
@@ -295,6 +295,7 @@ export async function POST(
       .eq('status', 'confirmed');
 
     const isFull = (enrollmentCount ?? 0) >= event.max_posti;
+    const finalStatus = (isFull && !forceConfirmed) ? 'waitlist' : 'confirmed';
 
     // Insert enrollment
     const { data, error } = await supabase
@@ -302,8 +303,8 @@ export async function POST(
       .insert({
         event_id: eventId,
         user_id: profileId,
-        status: isFull ? 'waitlist' : 'confirmed',
-        waitlist_position: isFull ? (enrollmentCount ?? 0) + 1 - event.max_posti : null,
+        status: finalStatus,
+        waitlist_position: finalStatus === 'waitlist' ? (enrollmentCount ?? 0) + 1 - event.max_posti : null,
       })
       .select('id')
       .single();
@@ -314,9 +315,9 @@ export async function POST(
 
     return NextResponse.json({
       data: { id: data.id },
-      message: isFull
+      message: finalStatus === 'waitlist'
         ? 'Utente aggiunto in lista d\'attesa'
-        : 'Utente iscritto con successo',
+        : 'Utente iscritto con successo (scavalcando eventuali limiti)',
     });
   } catch (error) {
     console.error('Errore POST /api/admin/events/[id]/enrollments:', error);
