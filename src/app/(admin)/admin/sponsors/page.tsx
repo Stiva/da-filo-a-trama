@@ -14,16 +14,28 @@ interface Sponsor {
   sort_order: number;
 }
 
+interface SponsorSection {
+  id: string;
+  title: string;
+  sponsors: Sponsor[];
+}
+
+const DEFAULT_SECTIONS: SponsorSection[] = [
+  { id: '1', title: 'Evento realizzato con il contributo di:', sponsors: [] },
+  { id: '2', title: '', sponsors: [] },
+  { id: '3', title: '', sponsors: [] }
+];
+
 export default function SponsorsPage() {
   const { isLoaded, userId } = useAuth();
 
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [sections, setSections] = useState<SponsorSection[]>(DEFAULT_SECTIONS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Form per nuovo sponsor
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [addingToSectionId, setAddingToSectionId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
@@ -31,29 +43,44 @@ export default function SponsorsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Drag state
+  // Drag state scoped per section
+  const [dragSectionId, setDragSectionId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (isLoaded && userId) {
-      loadSponsors();
+      loadSettings();
     }
   }, [isLoaded, userId]);
 
-  async function loadSponsors() {
+  async function loadSettings() {
     try {
       const res = await fetch('/api/admin/settings?key=footer_sponsors');
       if (res.ok) {
         const json = await res.json();
-        if (json.data && Array.isArray(json.data.value?.sponsors)) {
-          setSponsors(json.data.value.sponsors);
-        } else {
-          setSponsors([]);
+        const data = json.data?.value;
+        if (data) {
+          if (Array.isArray(data.sections)) {
+            // Uniamo le sezioni con il template default (garantisce sempre 3 sezioni nella UI)
+            const loaded = data.sections as SponsorSection[];
+            const merged = DEFAULT_SECTIONS.map(def => {
+              const sf = loaded.find(s => s.id === def.id);
+              return sf ? { ...sf, sponsors: sf.sponsors || [] } : def;
+            });
+            setSections(merged);
+          } else if (Array.isArray(data.sponsors)) {
+            // Retrocompatibilità
+            setSections([
+              { id: '1', title: 'Evento realizzato con il contributo di:', sponsors: data.sponsors },
+              { id: '2', title: '', sponsors: [] },
+              { id: '3', title: '', sponsors: [] }
+            ]);
+          }
         }
       }
     } catch (e) {
-      console.error('Failed to load sponsors:', e);
+      console.error('Failed to load sections:', e);
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +99,7 @@ export default function SponsorsPage() {
   }
 
   async function handleAddSponsor() {
-    if (!newName.trim() || !newUrl.trim() || !newLogoFile) {
+    if (!addingToSectionId || !newName.trim() || !newUrl.trim() || !newLogoFile) {
       setMessage({ type: 'error', text: 'Nome, URL e logo sono obbligatori.' });
       return;
     }
@@ -94,27 +121,27 @@ export default function SponsorsPage() {
       }
       const { data: { url: imageUrl } } = await uploadRes.json();
 
-      // 2. Add to list
+      // 2. Add to targeted section
       const newSponsor: Sponsor = {
         id: crypto.randomUUID(),
         name: newName.trim(),
         url: newUrl.trim().startsWith('http') ? newUrl.trim() : `https://${newUrl.trim()}`,
         image_url: imageUrl,
-        sort_order: sponsors.length,
+        sort_order: sections.find(s => s.id === addingToSectionId)?.sponsors.length || 0,
       };
-      const updatedSponsors = [...sponsors, newSponsor];
-      setSponsors(updatedSponsors);
 
-      // 3. Save to settings
-      await saveSponsors(updatedSponsors);
+      const updatedSections = sections.map(sec => {
+        if (sec.id === addingToSectionId) {
+          return { ...sec, sponsors: [...sec.sponsors, newSponsor] };
+        }
+        return sec;
+      });
+
+      setSections(updatedSections);
+      await saveSections(updatedSections);
 
       // Reset form
-      setNewName('');
-      setNewUrl('');
-      setNewLogoFile(null);
-      setNewLogoPreview(null);
-      setShowAddForm(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      closeAddForm();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -122,10 +149,18 @@ export default function SponsorsPage() {
     }
   }
 
-  async function handleDeleteSponsor(sponsor: Sponsor) {
+  function closeAddForm() {
+    setAddingToSectionId(null);
+    setNewName('');
+    setNewUrl('');
+    setNewLogoFile(null);
+    setNewLogoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function handleDeleteSponsor(sectionId: string, sponsor: Sponsor) {
     if (!confirm(`Rimuovere il patrocinio "${sponsor.name}"? Il logo verrà eliminato dallo storage.`)) return;
 
-    // Delete logo from storage
     try {
       await fetch(`/api/admin/sponsors?url=${encodeURIComponent(sponsor.image_url)}`, {
         method: 'DELETE',
@@ -134,21 +169,43 @@ export default function SponsorsPage() {
       console.error('Could not delete logo from storage:', e);
     }
 
-    const updated = sponsors.filter(s => s.id !== sponsor.id).map((s, i) => ({ ...s, sort_order: i }));
-    setSponsors(updated);
-    await saveSponsors(updated);
+    const updatedSections = sections.map(sec => {
+      if (sec.id === sectionId) {
+        const updatedSponsors = sec.sponsors
+          .filter(s => s.id !== sponsor.id)
+          .map((s, i) => ({ ...s, sort_order: i }));
+        return { ...sec, sponsors: updatedSponsors };
+      }
+      return sec;
+    });
+
+    setSections(updatedSections);
+    await saveSections(updatedSections);
   }
 
-  async function handleUpdateSponsor(id: string, field: 'name' | 'url', value: string) {
-    const updated = sponsors.map(s => s.id === id ? { ...s, [field]: value } : s);
-    setSponsors(updated);
+  async function handleUpdateSponsor(sectionId: string, sponsorId: string, field: 'name' | 'url', value: string) {
+    const updated = sections.map(sec => {
+      if (sec.id === sectionId) {
+        return {
+          ...sec,
+          sponsors: sec.sponsors.map(s => s.id === sponsorId ? { ...s, [field]: value } : s)
+        };
+      }
+      return sec;
+    });
+    setSections(updated);
+  }
+
+  async function handleUpdateSectionTitle(sectionId: string, value: string) {
+    const updated = sections.map(sec => sec.id === sectionId ? { ...sec, title: value } : sec);
+    setSections(updated);
   }
 
   async function handleSaveInlineEdit() {
-    await saveSponsors(sponsors);
+    await saveSections(sections);
   }
 
-  async function saveSponsors(list: Sponsor[]) {
+  async function saveSections(list: SponsorSection[]) {
     setIsSaving(true);
     try {
       const res = await fetch('/api/admin/settings', {
@@ -156,8 +213,8 @@ export default function SponsorsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key: 'footer_sponsors',
-          value: { sponsors: list },
-          description: 'Loghi e link dei patrocini mostrati nel footer del sito',
+          value: { sections: list },
+          description: 'Sezioni sponsor e loghi dei patrocini mostrati nel footer',
         }),
       });
       if (!res.ok) {
@@ -173,29 +230,39 @@ export default function SponsorsPage() {
     }
   }
 
-  // Drag-and-drop reorder
-  function handleDragStart(index: number) {
+  // Drag-and-drop reorder limitato all'interno della stessa sezione
+  function handleDragStart(sectionId: string, index: number) {
+    setDragSectionId(sectionId);
     setDragIndex(index);
   }
 
-  function handleDragOver(e: React.DragEvent, index: number) {
+  function handleDragOver(e: React.DragEvent, sectionId: string, index: number) {
     e.preventDefault();
-    setDragOverIndex(index);
+    if (dragSectionId === sectionId) {
+      setDragOverIndex(index);
+    }
   }
 
-  function handleDrop(targetIndex: number) {
-    if (dragIndex === null || dragIndex === targetIndex) return;
-    const reordered = [...sponsors];
-    const [moved] = reordered.splice(dragIndex, 1);
-    reordered.splice(targetIndex, 0, moved);
-    const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
-    setSponsors(withOrder);
-    setDragIndex(null);
-    setDragOverIndex(null);
-    saveSponsors(withOrder);
+  function handleDrop(sectionId: string, targetIndex: number) {
+    if (dragSectionId !== sectionId || dragIndex === null || dragIndex === targetIndex) return;
+    
+    const updatedSections = [...sections];
+    const secIndex = updatedSections.findIndex(s => s.id === sectionId);
+    if (secIndex === -1) return;
+
+    const reorderedSponsors = [...updatedSections[secIndex].sponsors];
+    const [moved] = reorderedSponsors.splice(dragIndex, 1);
+    reorderedSponsors.splice(targetIndex, 0, moved);
+    
+    updatedSections[secIndex].sponsors = reorderedSponsors.map((s, i) => ({ ...s, sort_order: i }));
+
+    setSections(updatedSections);
+    handleDragEnd();
+    saveSections(updatedSections);
   }
 
   function handleDragEnd() {
+    setDragSectionId(null);
     setDragIndex(null);
     setDragOverIndex(null);
   }
@@ -212,23 +279,14 @@ export default function SponsorsPage() {
     <div className="max-w-4xl mx-auto py-8">
       <SettingsTabs />
 
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Loghi Patrocinatori</h1>
-          <p className="mt-2 text-gray-600">
-            Gestisci i loghi e i link dei patrocini mostrati nel footer del sito. Trascina per riordinare.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-agesci-blue text-white rounded-xl font-medium text-sm hover:bg-agesci-blue/90 transition-colors shadow-sm shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Aggiungi Logo
-        </button>
+      <div className="mb-8 flex flex-col gap-2">
+        <h1 className="text-3xl font-bold text-gray-900">Sezioni Patrocini</h1>
+        <p className="text-gray-600">
+          Configura tre diverse sezioni di sponsor e patrocini. Ogni sezione è mostrata 
+          sul sito solo se possiede almeno un logo al suo interno.
+        </p>
       </div>
 
-      {/* Status message */}
       {message && (
         <div className={`mb-6 p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${message.type === 'success'
           ? 'bg-green-50 text-green-800 border border-green-200'
@@ -239,14 +297,126 @@ export default function SponsorsPage() {
         </div>
       )}
 
+      {/* Rendering 3 Sezioni */}
+      <div className="space-y-12">
+        {sections.map((section, secIndex) => (
+          <div key={section.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-200 p-5 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+              <div className="flex-1">
+                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                    SEZIONE {secIndex + 1}
+                 </label>
+                 <input
+                    type="text"
+                    value={section.title}
+                    onChange={e => handleUpdateSectionTitle(section.id, e.target.value)}
+                    onBlur={handleSaveInlineEdit}
+                    placeholder="Es: Evento realizzato con il contributo di:"
+                    className="w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:ring-0 focus:border-agesci-blue p-0 text-lg font-semibold text-gray-900 placeholder:text-gray-300"
+                 />
+              </div>
+              <button
+                onClick={() => setAddingToSectionId(section.id)}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors shadow-sm shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                Aggiungi Logo
+              </button>
+            </div>
+
+            <div className="p-5">
+              {section.sponsors.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-sm text-gray-400 font-medium">Questa sezione è attualmente invisibile</p>
+                  <p className="text-xs text-gray-300 mt-1">Aggiungi un logo per abilitarla nel sito</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {section.sponsors
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((sponsor, index) => (
+                      <div
+                        key={sponsor.id}
+                        draggable
+                        onDragStart={() => handleDragStart(section.id, index)}
+                        onDragOver={(e) => handleDragOver(e, section.id, index)}
+                        onDrop={() => handleDrop(section.id, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`bg-white rounded-xl border shadow-sm transition-all ${dragOverIndex === index && dragIndex !== index && dragSectionId === section.id
+                          ? 'border-agesci-blue shadow-md scale-[1.01]'
+                          : 'border-gray-200 hover:border-gray-300'
+                          } ${dragIndex === index && dragSectionId === section.id ? 'opacity-50' : 'opacity-100'}`}
+                      >
+                        <div className="flex items-center gap-4 p-3">
+                          <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors shrink-0">
+                            <GripVertical className="w-5 h-5" />
+                          </div>
+
+                          <div className="relative w-16 h-10 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden px-1">
+                            <Image
+                              src={sponsor.image_url}
+                              alt={sponsor.name}
+                              fill
+                              className="object-contain"
+                              unoptimized
+                            />
+                          </div>
+
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+                            <input
+                              type="text"
+                              value={sponsor.name}
+                              onChange={e => handleUpdateSponsor(section.id, sponsor.id, 'name', e.target.value)}
+                              onBlur={handleSaveInlineEdit}
+                              placeholder="Nome ente"
+                              className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent"
+                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="url"
+                                value={sponsor.url}
+                                onChange={e => handleUpdateSponsor(section.id, sponsor.id, 'url', e.target.value)}
+                                onBlur={handleSaveInlineEdit}
+                                placeholder="https://..."
+                                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent min-w-0"
+                              />
+                              <a
+                                href={sponsor.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 p-1.5 text-gray-400 hover:text-agesci-blue transition-colors"
+                                title="Apri sito"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleDeleteSponsor(section.id, sponsor)}
+                            className="shrink-0 p-1.5 text-gray-300 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Rimuovi"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Add form modal */}
-      {showAddForm && (
+      {addingToSectionId && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">Aggiungi Patrocinio</h2>
+               <h2 className="text-lg font-semibold text-gray-900">Aggiungi Logo</h2>
               <button
-                onClick={() => { setShowAddForm(false); setNewName(''); setNewUrl(''); setNewLogoFile(null); setNewLogoPreview(null); }}
+                onClick={closeAddForm}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -262,7 +432,7 @@ export default function SponsorsPage() {
                   type="text"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  placeholder="Es. Comune di Castelfranco Emilia"
+                  placeholder="Es. Sponsor Tecnico"
                   className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent"
                 />
               </div>
@@ -319,7 +489,7 @@ export default function SponsorsPage() {
 
             <div className="flex gap-3 p-6 border-t border-gray-100">
               <button
-                onClick={() => { setShowAddForm(false); setNewName(''); setNewUrl(''); setNewLogoFile(null); setNewLogoPreview(null); }}
+                onClick={closeAddForm}
                 className="flex-1 px-4 py-2.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
               >
                 Annulla
@@ -349,131 +519,9 @@ export default function SponsorsPage() {
         </div>
       )}
 
-      {/* Sponsors list */}
-      {sponsors.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-16 text-center">
-          <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <p className="text-gray-500 font-medium">Nessun patrocinio configurato</p>
-          <p className="text-sm text-gray-400 mt-1">Aggiungi il primo logo con il pulsante in alto</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {sponsors
-            .sort((a, b) => a.sort_order - b.sort_order)
-            .map((sponsor, index) => (
-              <div
-                key={sponsor.id}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={() => handleDrop(index)}
-                onDragEnd={handleDragEnd}
-                className={`bg-white rounded-2xl border shadow-sm transition-all ${dragOverIndex === index && dragIndex !== index
-                  ? 'border-agesci-blue shadow-md scale-[1.01]'
-                  : 'border-gray-200 hover:border-gray-300'
-                  } ${dragIndex === index ? 'opacity-50' : 'opacity-100'}`}
-              >
-                <div className="flex items-center gap-4 p-4">
-                  {/* Drag handle */}
-                  <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors shrink-0">
-                    <GripVertical className="w-5 h-5" />
-                  </div>
-
-                  {/* Logo preview */}
-                  <div className="relative w-20 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                    <Image
-                      src={sponsor.image_url}
-                      alt={sponsor.name}
-                      fill
-                      className="object-contain p-1"
-                      unoptimized
-                    />
-                  </div>
-
-                  {/* Fields */}
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
-                    <input
-                      type="text"
-                      value={sponsor.name}
-                      onChange={e => handleUpdateSponsor(sponsor.id, 'name', e.target.value)}
-                      onBlur={handleSaveInlineEdit}
-                      placeholder="Nome ente"
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent"
-                    />
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="url"
-                        value={sponsor.url}
-                        onChange={e => handleUpdateSponsor(sponsor.id, 'url', e.target.value)}
-                        onBlur={handleSaveInlineEdit}
-                        placeholder="https://..."
-                        className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-agesci-blue focus:border-transparent min-w-0"
-                      />
-                      <a
-                        href={sponsor.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 p-2 text-gray-400 hover:text-agesci-blue transition-colors"
-                        title="Apri sito"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Delete */}
-                  <button
-                    onClick={() => handleDeleteSponsor(sponsor)}
-                    className="shrink-0 p-2 text-gray-300 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors"
-                    title="Rimuovi patrocinio"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* Preview section */}
-      {sponsors.length > 0 && (
-        <div className="mt-10 bg-[#1e3a5f] rounded-2xl p-6">
-          <p className="text-white/60 text-xs font-medium uppercase tracking-wider mb-4">Anteprima Footer</p>
-          <p className="text-sm text-white/80 font-medium mb-3">Evento realizzato con il contributo di:</p>
-          <div className="flex flex-wrap items-center gap-4">
-            {sponsors
-              .sort((a, b) => a.sort_order - b.sort_order)
-              .map(sponsor => (
-                <a
-                  key={sponsor.id}
-                  href={sponsor.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="transition-transform hover:scale-105 bg-white p-2 rounded-xl h-16 flex items-center justify-center shadow-lg"
-                  title={sponsor.name}
-                >
-                  <div className="relative h-12 w-20">
-                    <Image
-                      src={sponsor.image_url}
-                      alt={sponsor.name}
-                      fill
-                      className="object-contain"
-                      unoptimized
-                    />
-                  </div>
-                </a>
-              ))}
-          </div>
-        </div>
-      )}
-
       {/* Save indicator */}
       {isSaving && (
-        <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-lg border border-gray-200 px-4 py-3 flex items-center gap-2 text-sm text-gray-700">
+        <div className="fixed bottom-6 right-6 bg-white rounded-xl shadow-lg border border-gray-200 px-4 py-3 flex items-center gap-2 text-sm text-gray-700 z-40">
           <svg className="animate-spin w-4 h-4 text-agesci-blue" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
