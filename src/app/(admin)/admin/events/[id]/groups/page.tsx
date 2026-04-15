@@ -427,39 +427,51 @@ export default function AdminEventGroupsPage() {
                                 {/* Membri */}
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">Partecipanti Assegnati</h3>
-                                    <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
-                                        {[...(group.members || []), ...(group.crm_members || [])].length > 0 ? (
-                                            [...(group.members || []), ...(group.crm_members || [])].map((member: any) => (
-                                                <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-gray-800">{member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome}</span>
-                                                            {member.crm_codice && (
-                                                                <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded">
-                                                                    CRM
-                                                                </span>
-                                                            )}
+                                    {event?.group_creation_mode === 'static_crm' ? (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                            <p className="text-sm text-amber-800 mb-2 font-medium">I partecipanti di questo gruppo afferiscono in modo statico al gruppo:</p>
+                                            <Link href="/admin/static-groups" className="inline-flex items-center gap-2 font-bold text-amber-900 hover:text-amber-700 transition">
+                                                <span className="text-lg">{group.name}</span>
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                </svg>
+                                            </Link>
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+                                            {[...(group.members || []), ...(group.crm_members || [])].length > 0 ? (
+                                                [...(group.members || []), ...(group.crm_members || [])].map((member: any) => (
+                                                    <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-gray-800">{member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome}</span>
+                                                                {member.crm_codice && (
+                                                                    <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded">
+                                                                        CRM
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 mt-0.5">
+                                                                {member.profile?.scout_group || member.participant?.gruppo || 'Nessun gruppo'}
+                                                                {(member.profile?.service_role || member.participant?.ruolo) && ` - ${member.profile?.service_role || member.participant?.ruolo}`}
+                                                            </div>
                                                         </div>
-                                                        <div className="text-xs text-gray-500 mt-0.5">
-                                                            {member.profile?.scout_group || member.participant?.gruppo || 'Nessun gruppo'}
-                                                            {(member.profile?.service_role || member.participant?.ruolo) && ` - ${member.profile?.service_role || member.participant?.ruolo}`}
-                                                        </div>
+                                                        <button
+                                                            onClick={() => handleRemoveMember(group.id, member.user_id || member.crm_codice)}
+                                                            className="text-gray-400 hover:text-red-600 transition p-1 ml-2"
+                                                            title="Rimuovi dal gruppo"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleRemoveMember(group.id, member.user_id || member.crm_codice)}
-                                                        className="text-gray-400 hover:text-red-600 transition p-1 ml-2"
-                                                        title="Rimuovi dal gruppo"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <p className="text-sm text-gray-500 italic">Nessun partecipante assegnato</p>
-                                        )}
-                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-gray-500 italic">Nessun partecipante assegnato</p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

@@ -120,6 +120,39 @@ export default async function DashboardPage() {
           </div>
         </header>
 
+        {/* Dynamic Alerts / Avvisi Generici */}
+        {dynamicContent
+          ?.filter((c) => !c.key.startsWith('prossimi_passi'))
+          .map((avviso) => (
+            <section key={avviso.id} className="mb-8">
+              <div className="card bg-blue-50 border border-blue-200 text-agesci-blue shadow-sm">
+                <div className="card-body p-4 sm:p-6 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-2xl">
+                    📣
+                  </div>
+                  <div className="flex-1">
+                    {avviso.title && (
+                      <h3 className="font-display font-bold text-lg mb-2">{avviso.title}</h3>
+                    )}
+                    {avviso.content?.text && (
+                      <p className="text-agesci-blue/80 whitespace-pre-wrap">{avviso.content.text}</p>
+                    )}
+                    {avviso.content?.steps && avviso.content.steps.length > 0 && (
+                      <ul className="mt-3 space-y-2">
+                        {avviso.content.steps.map((step, index) => (
+                          <li key={index} className="flex items-center gap-2 text-agesci-blue/80">
+                            <span className="text-lg flex-shrink-0">{step.icon || '👉'}</span>
+                            <span>{step.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          ))}
+
         {/* Admin Section - Visible only to admins/staff */}
         {isAdmin && (
           <section className="mb-8">

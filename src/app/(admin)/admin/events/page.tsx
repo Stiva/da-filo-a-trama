@@ -562,7 +562,7 @@ export default function AdminEventsPage() {
                               </Link>
                               {event.category === 'workshop' && (
                                 <Link
-                                  href={event.group_creation_mode === 'static_crm' ? '/admin/static-groups' : `/admin/events/${event.id}/groups`}
+                                  href={`/admin/events/${event.id}/groups`}
                                   className="flex items-center gap-1 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-colors"
                                   title="Gestisci gruppi"
                                 >
