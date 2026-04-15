@@ -79,7 +79,7 @@ export default function AdminEventGroupsPage() {
 
     const [event, setEvent] = useState<EventInfo | null>(null);
     const [groups, setGroups] = useState<EventGroup[]>([]);
-    const [unassignedUsers, setUnassignedUsers] = useState<(Profile & { is_crm_only?: boolean })[]>([]);
+    const [unassignedUsers, setUnassignedUsers] = useState<(Profile & { is_crm_only?: boolean; static_group?: string })[]>([]);
     const [staffUsers, setStaffUsers] = useState<Profile[]>([]);
     const [pois, setPois] = useState<PoiInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -326,6 +326,15 @@ export default function AdminEventGroupsPage() {
                                                     {u.scout_group || 'Nessun gruppo censito'}
                                                     {u.service_role ? ` - ${u.service_role}` : ''}
                                                 </p>
+                                                {event?.group_creation_mode === 'static_crm' && (
+                                                    <p className="text-xs mt-0.5">
+                                                        {u.static_group ? (
+                                                            <span className="text-indigo-600 font-medium">Gruppo statico: {u.static_group}</span>
+                                                        ) : (
+                                                            <span className="text-red-500 italic">Nessun gruppo statico assegnato</span>
+                                                        )}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <select
@@ -431,7 +440,7 @@ export default function AdminEventGroupsPage() {
                                     {event?.group_creation_mode === 'static_crm' ? (
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                                             <p className="text-sm text-amber-800 mb-2 font-medium">I partecipanti di questo gruppo afferiscono in modo statico al gruppo:</p>
-                                            <Link href="/admin/static-groups" className="inline-flex items-center gap-2 font-bold text-amber-900 hover:text-amber-700 transition">
+                                            <Link href={`/admin/static-groups/${encodeURIComponent(group.name)}`} className="inline-flex items-center gap-2 font-bold text-amber-900 hover:text-amber-700 transition">
                                                 <span className="text-lg">{group.name}</span>
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

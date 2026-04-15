@@ -119,11 +119,11 @@ export async function GET(
         // 5. Compute unassigned users based on mode
         let unassignedUsers: any[] = [];
         
-        if (event.group_creation_mode === 'random_crm') {
+        if (event.group_creation_mode === 'random_crm' || event.group_creation_mode === 'static_crm') {
             // For CRM mode, fetch unassigned participants from the entire active CRM list
             const { data: crmParticipants, error: crmError } = await supabase
                 .from('participants')
-                .select('codice, nome, cognome, gruppo, ruolo')
+                .select('codice, nome, cognome, gruppo, ruolo, static_group')
                 .eq('is_active_in_list', true);
                 
             if (!crmError && crmParticipants) {
@@ -135,6 +135,7 @@ export async function GET(
                         surname: p.cognome,
                         scout_group: p.gruppo,
                         service_role: p.ruolo,
+                        static_group: p.static_group,
                         is_crm_only: true
                     }));
             }
