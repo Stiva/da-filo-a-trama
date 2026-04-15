@@ -10,6 +10,7 @@ interface EventInfo {
     id: string;
     title: string;
     category: string;
+    group_creation_mode?: string;
 }
 
 interface PoiInfo {
