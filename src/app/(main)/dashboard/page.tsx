@@ -139,7 +139,7 @@ export default async function DashboardPage() {
                     )}
                     {avviso.content?.steps && avviso.content.steps.length > 0 && (
                       <ul className="mt-3 space-y-2">
-                        {avviso.content.steps.map((step, index) => (
+                        {avviso.content.steps.map((step: { icon?: string; text?: string }, index: number) => (
                           <li key={index} className="flex items-center gap-2 text-agesci-blue/80">
                             <span className="text-lg flex-shrink-0">{step.icon || '👉'}</span>
                             <span>{step.text}</span>
