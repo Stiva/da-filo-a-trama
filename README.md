@@ -1,6 +1,6 @@
-# Da Filo a Trama - Evento Nazionale Branca L/C AGESCI 2026
+# Da Filo a Trama - Convegno Nazionale sull'Ambiente Fantastico - AGESCI Branca L/C 2026
 
-Piattaforma digitale per l'evento nazionale branca L/C AGESCI 2026.
+Piattaforma digitale per il convegno nazionale branca L/C AGESCI 2026.
 Un'applicazione web progressiva (PWA) progettata per gestire le iscrizioni, esplorare la mappa degli eventi, comunicare tramite chat e molto altro.
 
 ## ✨ Caratteristiche Principali

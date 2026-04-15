@@ -27,13 +27,13 @@ export default async function HomePage() {
             />
           </div>
           <p className="text-xl md:text-2xl mb-10 font-semibold" style={{ color: 'var(--scout-azure)' }}>
-            Evento Nazionale Branca L/C AGESCI - 2026
+            Convegno Nazionale sull'Ambiente Fantastico - AGESCI Branca L/C 2026
           </p>
 
           {/* Descrizione in a stylized card */}
           <div className="bg-white/80 backdrop-blur-md p-8 rounded-3xl shadow-sm border border-black/5 mb-12 text-gray-700 w-full">
             <p className="text-lg md:text-xl font-medium mb-3">
-              Unisciti a <b className="text-agesci-blue">1.500 scout</b> da tutta Italia per un&apos;esperienza unica.
+              Unisciti a <b className="text-agesci-blue">800 Capi Scout</b> da tutta Italia per un&apos;esperienza unica.
             </p>
             <p className="text-base text-gray-500">
               Esplora gli eventi, partecipa ai laboratori e scopri le attivita&apos; pensate per te.
