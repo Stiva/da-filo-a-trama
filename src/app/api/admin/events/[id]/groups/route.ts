@@ -47,6 +47,141 @@ export async function GET(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
+        // 3. Fetch all Staff/Admin users (or specific service roles) for dropdown
+        const { data: staffUsers, error: staffError } = await supabase
+            .from('profiles')
+            .select('id, name, surname, role, service_role')
+            .or('role.in.(admin,staff),service_role.in.("gomitolo team","Incaricato regionale alla Branca L/C")')
+            .order('name');
+
+        if (staffError) {
+            throw staffError;
+        }
+
+        // 4. Fetch all active POIs for location selection
+        const { data: pois, error: poisError } = await supabase
+            .from('poi')
+            .select('id, nome, tipo')
+            .eq('is_active', true)
+            .order('nome');
+
+        if (poisError) {
+            console.warn('Errore nel recupero POI', poisError);
+        }
+
+        // ── SPECIAL PATH: static_crm mode ──
+        // Groups are derived from CRM static_group assignments, not from event_crm_group_members
+        if (event.group_creation_mode === 'static_crm') {
+            // Fetch all active CRM participants with their static_group
+            const { data: crmParticipants, error: crmError } = await supabase
+                .from('participants')
+                .select('codice, nome, cognome, gruppo, ruolo, static_group')
+                .eq('is_active_in_list', true);
+
+            if (crmError) throw crmError;
+            const allCrm = crmParticipants || [];
+
+            // Get unique static group names (only those that are assigned)
+            const uniqueStaticGroups = [...new Set(allCrm.filter(p => !!p.static_group).map(p => p.static_group as string))].sort();
+
+            // Fetch existing event_groups for this event (for moderators, location, notes, attachments)
+            const { data: existingGroups } = await supabase
+                .from('event_groups')
+                .select(`
+                    id, event_id, name, location_poi_id, created_at,
+                    moderators:event_group_moderators(
+                      group_id, user_id, created_at,
+                      profile:profiles(id, name, surname, scout_group)
+                    ),
+                    notes:event_group_notes(
+                      id, content, created_at,
+                      profile:profiles(id, name, surname)
+                    ),
+                    attachments:event_group_attachments(
+                      id, file_url, file_name, created_at,
+                      profile:profiles(id, name, surname)
+                    )
+                `)
+                .eq('event_id', eventId);
+
+            const existingMap = new Map((existingGroups || []).map(g => [g.name, g]));
+
+            // Auto-create missing event_groups for static group names
+            const missingNames = uniqueStaticGroups.filter(name => !existingMap.has(name));
+            if (missingNames.length > 0) {
+                const newRows = missingNames.map(name => ({ event_id: eventId, name }));
+                const { data: inserted, error: insertErr } = await supabase
+                    .from('event_groups')
+                    .insert(newRows)
+                    .select(`
+                        id, event_id, name, location_poi_id, created_at,
+                        moderators:event_group_moderators(
+                          group_id, user_id, created_at,
+                          profile:profiles(id, name, surname, scout_group)
+                        ),
+                        notes:event_group_notes(
+                          id, content, created_at,
+                          profile:profiles(id, name, surname)
+                        ),
+                        attachments:event_group_attachments(
+                          id, file_url, file_name, created_at,
+                          profile:profiles(id, name, surname)
+                        )
+                    `);
+                if (insertErr) throw insertErr;
+                (inserted || []).forEach(g => existingMap.set(g.name, g));
+            }
+
+            // Build virtual groups with members computed from CRM static_group
+            const virtualGroups = uniqueStaticGroups.map(sgName => {
+                const eventGroup = existingMap.get(sgName);
+                const members = allCrm
+                    .filter(p => p.static_group === sgName)
+                    .map(p => ({
+                        crm_codice: p.codice,
+                        created_at: eventGroup?.created_at || new Date().toISOString(),
+                        participant: { codice: p.codice, nome: p.nome, cognome: p.cognome, gruppo: p.gruppo, ruolo: p.ruolo },
+                    }));
+                return {
+                    id: eventGroup?.id || sgName,
+                    event_id: eventId,
+                    name: sgName,
+                    location_poi_id: eventGroup?.location_poi_id || null,
+                    created_at: eventGroup?.created_at || new Date().toISOString(),
+                    moderators: eventGroup?.moderators || [],
+                    members: [],
+                    crm_members: members,
+                    notes: eventGroup?.notes || [],
+                    attachments: eventGroup?.attachments || [],
+                };
+            });
+
+            // Unassigned = participants without a static_group
+            const unassignedUsers = allCrm
+                .filter(p => !p.static_group)
+                .map(p => ({
+                    id: p.codice,
+                    name: p.nome,
+                    surname: p.cognome,
+                    scout_group: p.gruppo,
+                    service_role: p.ruolo,
+                    static_group: null as string | null,
+                    is_crm_only: true,
+                }))
+                .sort((a, b) => (a.surname || '').localeCompare(b.surname || ''));
+
+            return NextResponse.json({
+                data: {
+                    event,
+                    groups: virtualGroups,
+                    staffUsers: staffUsers || [],
+                    pois: pois || [],
+                    unassignedUsers,
+                }
+            });
+        }
+
+        // ── STANDARD PATH: all other modes ──
         // 2. Fetch Groups with members, crm_members and moderators
         const { data: groups, error: groupsError } = await supabase
             .from('event_groups')
@@ -86,28 +221,6 @@ export async function GET(
             return numA - numB;
         });
 
-        // 3. Fetch all Staff/Admin users (or specific service roles) for dropdown
-        const { data: staffUsers, error: staffError } = await supabase
-            .from('profiles')
-            .select('id, name, surname, role, service_role')
-            .or('role.in.(admin,staff),service_role.in.("gomitolo team","Incaricato regionale alla Branca L/C")')
-            .order('name');
-
-        if (staffError) {
-            throw staffError;
-        }
-
-        // 4. Fetch all active POIs for location selection
-        const { data: pois, error: poisError } = await supabase
-            .from('poi')
-            .select('id, nome, tipo')
-            .eq('is_active', true)
-            .order('nome');
-
-        if (poisError) {
-            console.warn('Errore nel recupero POI', poisError);
-        }
-
         // Collect all assigned user IDs and Codices across all groups
         const assignedUserIds = new Set<string>();
         const assignedCodices = new Set<string>();
@@ -119,7 +232,7 @@ export async function GET(
         // 5. Compute unassigned users based on mode
         let unassignedUsers: any[] = [];
         
-        if (event.group_creation_mode === 'random_crm' || event.group_creation_mode === 'static_crm') {
+        if (event.group_creation_mode === 'random_crm') {
             // For CRM mode, fetch unassigned participants from the entire active CRM list
             const { data: crmParticipants, error: crmError } = await supabase
                 .from('participants')
@@ -130,7 +243,7 @@ export async function GET(
                 unassignedUsers = crmParticipants
                     .filter((p: any) => !assignedCodices.has(p.codice))
                     .map((p: any) => ({
-                        id: p.codice, // using codice as ID for the UI
+                        id: p.codice,
                         name: p.nome,
                         surname: p.cognome,
                         scout_group: p.gruppo,

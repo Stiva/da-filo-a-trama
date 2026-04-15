@@ -307,7 +307,9 @@ export default function AdminEventGroupsPage() {
                                 Utenti non assegnati ({unassignedUsers.length})
                             </h2>
                             <p className="text-sm text-yellow-700 mb-4">
-                                I seguenti utenti sono iscritti all'evento ma non risultano associati ad alcun gruppo. Seleziona il gruppo di destinazione per ciascuno per assegnarlo manualmente.
+                                {event?.group_creation_mode === 'static_crm'
+                                    ? 'I seguenti partecipanti CRM non hanno un gruppo statico assegnato. Puoi assegnarli manualmente ad uno dei gruppi oppure configurare il gruppo statico dalla sezione Gruppi Statici.'
+                                    : "I seguenti utenti sono iscritti all'evento ma non risultano associati ad alcun gruppo. Seleziona il gruppo di destinazione per ciascuno per assegnarlo manualmente."}
                             </p>
                             <div className="bg-white rounded-md border border-yellow-100 overflow-hidden max-h-96 overflow-y-auto">
                                 <div className="divide-y divide-yellow-100">
