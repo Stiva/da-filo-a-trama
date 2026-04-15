@@ -81,6 +81,20 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<a
 
     const groups = Array.from({ length: N }, (_, i) => generateGroupName(i));
 
+    // ── STEP 0: Clear ALL existing static_group assignments to avoid stale data ──
+    const { error: clearErr } = await supabase
+      .from('participants')
+      .update({ static_group: null })
+      .eq('is_active_in_list', true)
+      .not('static_group', 'is', null);
+    if (clearErr) throw clearErr;
+    
+    const { error: clearProfilesErr } = await supabase
+      .from('profiles')
+      .update({ static_group: null })
+      .not('static_group', 'is', null);
+    if (clearProfilesErr) throw clearProfilesErr;
+
     // Distribute participants
     const updates = participants.map((p, index) => {
       const g = groups[index % N];
