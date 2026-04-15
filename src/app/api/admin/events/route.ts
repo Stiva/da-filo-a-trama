@@ -29,7 +29,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<Event[]>>> {
 
     const { data, error } = await supabase
       .from('events')
-      .select('*')
+      .select('*, poi:location_poi_id(nome)')
       .order('start_time', { ascending: true });
 
     if (error) {

@@ -152,6 +152,46 @@ Ruoli effettivamente presenti nel CRM: ${debugRoles.join(', ')}`
             return NextResponse.json({ message: 'Gruppi CRM (lista intera) generati con successo!', count: crmInserts.length });
         }
 
+        // ── auto_enroll_all + static_crm: source from entire CRM participant list based on static_groups ──
+        if (event.auto_enroll_all && event.group_creation_mode === 'static_crm') {
+            const { data: crmLinked, error: crmError } = await supabase
+                .from('participants')
+                .select('codice, static_group')
+                .eq('is_active_in_list', true);
+
+            if (crmError) throw crmError;
+            if (!crmLinked || crmLinked.length === 0) {
+                return NextResponse.json({ error: 'Nessun partecipante CRM attivo trovato nell\'intero database' }, { status: 404 });
+            }
+
+            const crmWithGroup = crmLinked.filter(p => !!p.static_group);
+            if (crmWithGroup.length === 0) {
+                return NextResponse.json({ error: 'Nessun partecipante CRM in lista possiede un gruppo statico configurato' }, { status: 400 });
+            }
+
+            const uniqueStaticGroups = [...new Set(crmWithGroup.map(p => p.static_group))] as string[];
+
+            const missingGroups = uniqueStaticGroups.filter(sg => !existingGroups.some(eg => eg.name === sg));
+            if (missingGroups.length > 0) {
+                const newGroups = missingGroups.map(sg => ({ event_id: eventId, name: sg }));
+                const { data: insertedGroups, error: insertError } = await supabase.from('event_groups').insert(newGroups).select('id, name');
+                if (insertError) throw insertError;
+                existingGroups = [...existingGroups, ...(insertedGroups || [])];
+            }
+
+            const crmInserts = crmWithGroup.map(p => {
+                const group = existingGroups.find(g => g.name === p.static_group);
+                return { group_id: group!.id, crm_codice: p.codice };
+            });
+
+            if (crmInserts.length > 0) {
+                const { error: insertError } = await supabase.from('event_crm_group_members').insert(crmInserts);
+                if (insertError) throw insertError;
+            }
+
+            return NextResponse.json({ message: 'Gruppi statici rigenerati tramite CRM con successo!', count: crmInserts.length });
+        }
+
         // ── random / copy (no auto_enroll_all): shuffle confirmed app enrollees randomly into groups ──
         if (event.group_creation_mode === 'random' || event.group_creation_mode === 'copy') {
             const { data: enrollments, error: enrollmentsError } = await supabase

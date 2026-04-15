@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Event, EventCategory } from '@/types/database';
 import DailyCalendarView from '@/components/DailyCalendarView';
 import MassEventImport from '@/components/admin/MassEventImport';
+import { stripHtml } from '@/lib/stripHtml';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -14,6 +15,17 @@ export default function AdminEventsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+
+  // Column visibility
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    evento: true,
+    categoria: true,
+    data: true,
+    posti: true,
+    stato: true,
+    luogo: true,
+  });
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'title' | 'start_time' | 'category' | 'max_posti' | 'is_published' | null>(null);
@@ -121,6 +133,33 @@ export default function AdminEventsPage() {
     }
   };
 
+  const exportToCSV = () => {
+    const headers = ['Titolo', 'Data/Ora', 'Descrizione', 'Relatore', 'Biografia Relatore', 'Tipologia (Categoria)', 'Luogo'];
+    let csvContent = headers.join(',') + '\r\n';
+
+    filteredEvents.forEach(event => {
+       const row = [
+          `"${(event.title || '').replace(/"/g, '""')}"`,
+          `"${new Date(event.start_time).toLocaleString('it-IT')}"`,
+          `"${stripHtml(event.description || '').replace(/"/g, '""')}"`,
+          `"${(event.speaker_name || '').replace(/"/g, '""')}"`,
+          `"${stripHtml(event.speaker_bio || '').replace(/"/g, '""')}"`,
+          `"${(event.category || '').replace(/"/g, '""')}"`,
+          `"${(event.poi?.nome || '').replace(/"/g, '""')}"`
+       ];
+       csvContent += row.join(',') + '\r\n';
+    });
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Eventi_AGESCI_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSort = (field: 'title' | 'start_time' | 'category' | 'max_posti' | 'is_published') => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -211,6 +250,17 @@ export default function AdminEventsPage() {
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <MassEventImport onImportSuccess={fetchEvents} />
           
+          <button
+            onClick={exportToCSV}
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] w-full sm:w-auto mt-2 sm:mt-0"
+            title="Esporta in CSV"
+          >
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Esporta CSV
+          </button>
+
           <Link
             href="/admin/events/new"
             className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors min-h-[44px] w-full sm:w-auto mt-2 sm:mt-0"
@@ -256,7 +306,38 @@ export default function AdminEventsPage() {
               {option.label}
             </button>
           ))}
-          <div className="flex items-center ml-auto border-l pl-4 border-gray-200">
+          <div className="flex items-center ml-auto gap-3 border-l pl-4 border-gray-200">
+            {/* Column Toggler */}
+            {viewMode === 'list' && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  title="Scegli Colonne"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                  </svg>
+                  Colonne
+                </button>
+                {isColumnDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+                    {Object.keys(visibleColumns).map((col) => (
+                      <label key={col} className="flex flex-row items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns[col]}
+                          onChange={(e) => setVisibleColumns({ ...visibleColumns, [col]: e.target.checked })}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-gray-700 capitalize">{col}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="flex bg-gray-100 p-1 rounded-lg">
               <button
                 onClick={() => setViewMode('list')}
@@ -353,36 +434,51 @@ export default function AdminEventsPage() {
                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           />
                         </th>
-                        <th 
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleSort('title')}
-                        >
-                          Evento <SortIcon field="title" />
-                        </th>
-                        <th 
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleSort('category')}
-                        >
-                          Categoria <SortIcon field="category" />
-                        </th>
-                        <th 
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleSort('start_time')}
-                        >
-                          Data <SortIcon field="start_time" />
-                        </th>
-                        <th 
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleSort('max_posti')}
-                        >
-                          Posti <SortIcon field="max_posti" />
-                        </th>
-                        <th 
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleSort('is_published')}
-                        >
-                          Stato <SortIcon field="is_published" />
-                        </th>
+                        {visibleColumns.evento && (
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('title')}
+                          >
+                            Evento <SortIcon field="title" />
+                          </th>
+                        )}
+                        {visibleColumns.categoria && (
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('category')}
+                          >
+                            Categoria <SortIcon field="category" />
+                          </th>
+                        )}
+                        {visibleColumns.data && (
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('start_time')}
+                          >
+                            Data <SortIcon field="start_time" />
+                          </th>
+                        )}
+                        {visibleColumns.posti && (
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('max_posti')}
+                          >
+                            Posti <SortIcon field="max_posti" />
+                          </th>
+                        )}
+                        {visibleColumns.stato && (
+                          <th 
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('is_published')}
+                          >
+                            Stato <SortIcon field="is_published" />
+                          </th>
+                        )}
+                        {visibleColumns.luogo && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                            Luogo
+                          </th>
+                        )}
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Azioni
                         </th>
@@ -399,38 +495,59 @@ export default function AdminEventsPage() {
                               className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                             />
                           </td>
-                          <td className="px-6 py-4">
-                            <div>
-                              <p className="font-medium text-gray-900 flex items-center gap-2">
-                                {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
-                              </p>
-                              {event.speaker_name && (
-                                <p className="text-sm text-gray-500">con {event.speaker_name}</p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
-                              {event.category}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {formatDate(event.start_time)}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {event.max_posti}
-                          </td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => handleTogglePublish(event.id, event.is_published)}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${event.is_published
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300'
-                                : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 active:bg-yellow-300'
-                                }`}
-                            >
-                              {event.is_published ? 'Pubblicato' : 'Bozza'}
-                            </button>
-                          </td>
+                          {visibleColumns.evento && (
+                            <td className="px-6 py-4">
+                              <div>
+                                <p className="font-medium text-gray-900 flex items-center gap-2">
+                                  {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
+                                </p>
+                                {event.speaker_name && (
+                                  <p className="text-sm text-gray-500">con {event.speaker_name}</p>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                          {visibleColumns.categoria && (
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
+                                {event.category}
+                              </span>
+                            </td>
+                          )}
+                          {visibleColumns.data && (
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {formatDate(event.start_time)}
+                            </td>
+                          )}
+                          {visibleColumns.posti && (
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {event.max_posti}
+                            </td>
+                          )}
+                          {visibleColumns.stato && (
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={() => handleTogglePublish(event.id, event.is_published)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${event.is_published
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300'
+                                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 active:bg-yellow-300'
+                                  }`}
+                              >
+                                {event.is_published ? 'Pubblicato' : 'Bozza'}
+                              </button>
+                            </td>
+                          )}
+                          {visibleColumns.luogo && (
+                            <td className="px-6 py-4 text-sm font-medium text-gray-700">
+                              <span className="flex items-center gap-1">
+                                <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {event.poi?.nome || <span className="text-gray-300 italic">Non Assegnato</span>}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-1">
                               <Link
