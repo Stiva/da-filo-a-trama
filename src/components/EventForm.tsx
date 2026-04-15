@@ -274,7 +274,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
                   <input
                     type="checkbox"
-                    checked={formData.workshop_groups_count > 0 || formData.group_creation_mode === 'copy' || formData.group_creation_mode === 'homogeneous' || formData.group_creation_mode === 'random_crm'}
+                    checked={formData.workshop_groups_count > 0 || ['copy', 'homogeneous', 'random_crm', 'static_crm'].includes(formData.group_creation_mode)}
                     onChange={(e) => {
                       if (!e.target.checked) {
                         setFormData(prev => ({ ...prev, workshop_groups_count: 0, source_event_id: '', group_eligible_roles: [] }));
@@ -288,8 +288,8 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 </label>
               </div>
 
-              {/* Group Configuration - Only shown when groups are enabled */}
-              {(formData.workshop_groups_count > 0 || formData.group_creation_mode === 'copy' || formData.group_creation_mode === 'homogeneous' || formData.group_creation_mode === 'random_crm') && (
+              {/* Dettagli Gruppi - Mostrati solo se il toggle e attivo */}
+              {((formData.workshop_groups_count ?? 0) > 0 || ['copy', 'homogeneous', 'random_crm', 'static_crm'].includes(formData.group_creation_mode)) && (
                 <div className="space-y-4 pl-0 sm:pl-4 border-l-0 sm:border-l-2 sm:border-blue-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -351,6 +351,17 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                         />
                         <span className="text-sm text-gray-800 font-medium">Random sulla Lista Iscritti BC</span>
                       </label>
+                      <label className="flex items-center gap-2 cursor-pointer mt-2 pt-2 border-t border-gray-100">
+                        <input
+                          type="radio"
+                          name="group_creation_mode"
+                          value="static_crm"
+                          checked={formData.group_creation_mode === 'static_crm'}
+                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'static_crm', source_event_id: '' }))}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-800 font-medium">Usa i Gruppi Statici del CRM</span>
+                      </label>
                     </div>
                   </div>
 
@@ -394,7 +405,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                     </div>
                   )}
 
-                  {formData.group_creation_mode !== 'copy' && (
+                  {formData.group_creation_mode !== 'copy' && formData.group_creation_mode !== 'static_crm' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Numero di gruppi di lavoro da creare
@@ -413,34 +424,36 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                   )}
 
                   {/* Ruoli di servizio idonei */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ruoli di servizio da includere nei gruppi
-                    </label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Se nessuno è selezionato, tutti i ruoli saranno inclusi.
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {serviceRoles.map((role) => (
-                        <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
-                          <input
-                            type="checkbox"
-                            checked={formData.group_eligible_roles.includes(role.name)}
-                            onChange={(e) => {
-                              setFormData(prev => ({
-                                ...prev,
-                                group_eligible_roles: e.target.checked
-                                  ? [...prev.group_eligible_roles, role.name]
-                                  : prev.group_eligible_roles.filter(r => r !== role.name),
-                              }));
-                            }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                          />
-                          <span className="text-sm text-gray-800">{role.name}</span>
-                        </label>
-                      ))}
+                  {formData.group_creation_mode !== 'static_crm' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ruoli di servizio da includere nei gruppi
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Se nessuno è selezionato, tutti i ruoli saranno inclusi.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {serviceRoles.map((role) => (
+                          <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              checked={formData.group_eligible_roles.includes(role.name)}
+                              onChange={(e) => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  group_eligible_roles: e.target.checked
+                                    ? [...prev.group_eligible_roles, role.name]
+                                    : prev.group_eligible_roles.filter(r => r !== role.name),
+                                }));
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                            />
+                            <span className="text-sm text-gray-800">{role.name}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
