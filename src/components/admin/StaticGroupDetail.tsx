@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Plus, Search, Check, RefreshCw } from 'lucide-react';
 
@@ -22,6 +22,11 @@ interface StaticGroupDetailProps {
 export default function StaticGroupDetail({ groupName, allParticipants }: StaticGroupDetailProps) {
     const router = useRouter();
     const [participants, setParticipants] = useState(allParticipants);
+
+    // Sync with server data changes
+    useEffect(() => {
+        setParticipants(allParticipants);
+    }, [allParticipants]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [savingCodice, setSavingCodice] = useState<string | null>(null);

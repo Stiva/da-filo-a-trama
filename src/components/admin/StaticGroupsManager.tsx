@@ -23,13 +23,18 @@ interface StaticGroupsManagerProps {
 export default function StaticGroupsManager({ initialParticipants, availableRoles }: StaticGroupsManagerProps) {
     const router = useRouter();
     const [participants, setParticipants] = useState(initialParticipants);
+    
+    // Sync with server data changes
+    useEffect(() => {
+        setParticipants(initialParticipants);
+    }, [initialParticipants]);
     const [numberOfGroups, setNumberOfGroups] = useState<number>(4);
     const [averageSize, setAverageSize] = useState<string>('');
     const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-    
+
     const [isGenerating, setIsGenerating] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
-    
+
     // For manual edits
     const [editingCodice, setEditingCodice] = useState<string | null>(null);
     const [editGroupValue, setEditGroupValue] = useState<string>('');
@@ -63,7 +68,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                 'Gruppo Statico': p.static_group || 'Nessuno',
                 'Registrato in App': p.is_app_registered ? 'Sì' : 'No'
             }));
-            
+
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(data);
             XLSX.utils.book_append_sheet(wb, ws, 'Iscritti_Gruppi');
@@ -89,7 +94,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
     };
 
     const toggleRole = (role: string) => {
-        setSelectedRoles(prev => 
+        setSelectedRoles(prev =>
             prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
         );
     };
@@ -121,7 +126,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
-            
+
         } catch (err: any) {
             setErrorMsg(err.message);
             setIsGenerating(false);
@@ -147,10 +152,10 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
             }
 
             // update local state
-            setParticipants(prev => prev.map(p => 
+            setParticipants(prev => prev.map(p =>
                 p.codice === codice ? { ...p, static_group: editGroupValue || null } : p
             ));
-            
+
             setEditingCodice(null);
             router.refresh();
         } catch (err) {
@@ -174,7 +179,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                         {/* Selected Roles */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Filtro Ruoli da includere 
+                                Filtro Ruoli da includere
                                 <span className="block text-xs font-normal text-gray-500 mb-2">
                                     Lascia vuoto per includere tutti i partecipanti attivi ({participants.length}). Selezionatati: {selectedRoles.length > 0 ? activeParticipantsCount : 'Tutti'}.
                                 </span>
@@ -182,8 +187,8 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                             <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded border border-gray-200">
                                 {availableRoles.map(role => (
                                     <label key={role} className="flex items-center space-x-2 text-sm cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={selectedRoles.includes(role)}
                                             onChange={() => toggleRole(role)}
                                             className="rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue w-4 h-4"
@@ -200,8 +205,8 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                                     Q.tà Gruppi
                                 </label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     min="1"
                                     value={numberOfGroups}
                                     onChange={(e) => handleGroupsChange(e.target.value)}
@@ -212,8 +217,8 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                                     Media persone
                                 </label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     min="1"
                                     value={averageSize}
                                     onChange={(e) => handleAverageSizeChange(e.target.value)}
@@ -232,9 +237,8 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                         <button
                             onClick={handleGenerate}
                             disabled={isGenerating}
-                            className={`w-full py-3 px-4 flex items-center justify-center gap-2 rounded-lg font-bold text-white transition-all shadow-md ${
-                                isGenerating ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-agesci-blue to-blue-700 hover:shadow-lg hover:from-blue-700 hover:to-blue-800'
-                            }`}
+                            className={`w-full py-3 px-4 flex items-center justify-center gap-2 rounded-lg font-bold text-white transition-all shadow-md ${isGenerating ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-agesci-blue to-blue-700 hover:shadow-lg hover:from-blue-700 hover:to-blue-800'
+                                }`}
                         >
                             {isGenerating ? (
                                 <><RefreshCw className="w-5 h-5 animate-spin" /> Generazione in corso...</>
@@ -267,7 +271,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-4">
                         <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
                             <Users className="w-5 h-5 text-agesci-blue" />
-                            Tabella Assegnazioni 
+                            Tabella Assegnazioni
                             <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-auto">
                                 {participants.length} iscritti CRM
                             </span>
@@ -326,38 +330,38 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                              {editingCodice === p.codice ? (
-                                                  <input 
-                                                    type="text" 
-                                                    value={editGroupValue} 
-                                                    onChange={e => setEditGroupValue(e.target.value)} 
-                                                    className="border border-gray-300 rounded px-2 py-1 text-sm w-24"
-                                                    disabled={isSavingEdit}
-                                                  />
-                                              ) : (
-                                                  p.static_group ? (
-                                                      <span className="inline-block bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded shadow-sm text-sm border border-blue-200">
-                                                          {p.static_group}
-                                                      </span>
-                                                  ) : (
-                                                      <span className="text-xs italic text-gray-400">Nessuno</span>
-                                                  )
-                                              )}
+                                                {editingCodice === p.codice ? (
+                                                    <input
+                                                        type="text"
+                                                        value={editGroupValue}
+                                                        onChange={e => setEditGroupValue(e.target.value)}
+                                                        className="border border-gray-300 rounded px-2 py-1 text-sm w-24"
+                                                        disabled={isSavingEdit}
+                                                    />
+                                                ) : (
+                                                    p.static_group ? (
+                                                        <span className="inline-block bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded shadow-sm text-sm border border-blue-200">
+                                                            {p.static_group}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs italic text-gray-400">Nessuno</span>
+                                                    )
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 {editingCodice === p.codice ? (
-                                                  <div className="flex justify-end gap-2">
-                                                    <button onClick={() => saveEdit(p.codice)} disabled={isSavingEdit} className="text-green-600 hover:text-green-900 bg-green-50 p-1 rounded transition-colors">
-                                                      <Check className="w-4 h-4" />
-                                                    </button>
-                                                    <button onClick={() => setEditingCodice(null)} disabled={isSavingEdit} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded transition-colors">
-                                                      <X className="w-4 h-4" />
-                                                    </button>
-                                                  </div>
+                                                    <div className="flex justify-end gap-2">
+                                                        <button onClick={() => saveEdit(p.codice)} disabled={isSavingEdit} className="text-green-600 hover:text-green-900 bg-green-50 p-1 rounded transition-colors">
+                                                            <Check className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => setEditingCodice(null)} disabled={isSavingEdit} className="text-red-500 hover:text-red-700 bg-red-50 p-1 rounded transition-colors">
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
                                                 ) : (
-                                                  <button onClick={() => startEditing(p)} className="text-gray-500 hover:text-agesci-blue bg-gray-50 p-1 rounded transition-colors">
-                                                    <Pencil className="w-4 h-4" />
-                                                  </button>
+                                                    <button onClick={() => startEditing(p)} className="text-gray-500 hover:text-agesci-blue bg-gray-50 p-1 rounded transition-colors">
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
                                                 )}
                                             </td>
                                         </tr>
