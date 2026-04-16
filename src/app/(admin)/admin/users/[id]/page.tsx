@@ -313,6 +313,15 @@ export default function AdminUserDetailPage({
                     </div>
                   </div>
                 )}
+                
+                {user.static_group && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Statico Assegnato</label>
+                    <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md text-sm text-purple-700 font-bold inline-block">
+                      {user.static_group}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>

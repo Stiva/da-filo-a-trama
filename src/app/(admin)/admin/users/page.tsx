@@ -185,12 +185,13 @@ export default function AdminUsersPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Ruolo', 'Stato Profilo', 'Data Iscrizione'];
+    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Gruppo Statico', 'Ruolo', 'Stato Profilo', 'Data Iscrizione'];
     const rows = users.map((u) => [
       u.name || '',
       u.surname || '',
       u.email,
       u.scout_group || '',
+      u.static_group || 'Nessuno',
       u.role,
       u.profile_setup_complete ? 'Completato' : 'In attesa',
       new Date(u.created_at).toLocaleDateString('it-IT'),
