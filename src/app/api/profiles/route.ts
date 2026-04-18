@@ -119,6 +119,10 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
       }
     }
 
+    // Safety fields
+    if (body.is_medical_staff !== undefined) updateData.is_medical_staff = body.is_medical_staff;
+    if (body.fire_warden_level !== undefined) updateData.fire_warden_level = body.fire_warden_level || null;
+
     // Fetch existing profile
     const { data: existingProfile } = await supabase
       .from('profiles')

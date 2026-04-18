@@ -14,7 +14,7 @@ import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
 import Autocomplete from '@/components/Autocomplete';
 
-type OnboardingStep = 'info' | 'preferences' | 'avatar' | 'complete';
+type OnboardingStep = 'info' | 'safety' | 'preferences' | 'avatar' | 'complete';
 
 interface FormData {
   name: string;
@@ -27,6 +27,8 @@ interface FormData {
   is_staff: boolean;
   is_nazionale: boolean;
   staff_secret: string;
+  is_medical_staff: boolean;
+  fire_warden_level: string;
 }
 
 const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
@@ -51,6 +53,8 @@ export default function OnboardingPage() {
     is_staff: false,
     is_nazionale: false,
     staff_secret: '',
+    is_medical_staff: false,
+    fire_warden_level: '',
   });
 
   // Pre-popola con dati Clerk
@@ -79,6 +83,7 @@ export default function OnboardingPage() {
 
   const steps: { id: OnboardingStep; label: string }[] = [
     { id: 'info', label: 'Info' },
+    { id: 'safety', label: 'Sicurezza' },
     { id: 'preferences', label: 'Preferenze' },
     { id: 'avatar', label: 'Avatar' },
     { id: 'complete', label: 'Fine' },
@@ -348,6 +353,57 @@ export default function OnboardingPage() {
 
 
 
+              </div>
+            )}
+
+            {/* Step: Safety */}
+            {currentStep === 'safety' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-display font-semibold text-agesci-blue mb-4">
+                  Informazioni di Sicurezza
+                </h2>
+                <p className="text-agesci-blue/60 mb-6 text-sm">
+                  Queste informazioni sono necessarie per garantire la massima sicurezza durante l'evento.
+                </p>
+
+                <div className="bg-green-50/50 p-4 rounded-xl border border-green-100 flex items-start gap-3">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id="is_medical_staff"
+                      checked={formData.is_medical_staff}
+                      onChange={(e) => setFormData(prev => ({...prev, is_medical_staff: e.target.checked}))}
+                      className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="is_medical_staff" className="font-semibold text-agesci-blue cursor-pointer select-none text-base">
+                      🩺 Sono Medico o Infermiere
+                    </label>
+                    <p className="text-xs text-agesci-blue/70 mt-1">
+                      Seleziona se hai una qualifica professionale in ambito sanitario.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-agesci-blue mb-1">
+                    🔥 Addetto Antincendio
+                  </label>
+                  <select
+                    value={formData.fire_warden_level}
+                    onChange={(e) => setFormData(prev => ({...prev, fire_warden_level: e.target.value}))}
+                    className="input w-full"
+                  >
+                    <option value="">Nessuno / Non addetto</option>
+                    <option value="basso">Rischio Basso (Livello 1)</option>
+                    <option value="medio">Rischio Medio (Livello 2)</option>
+                    <option value="alto">Rischio Alto (Livello 3)</option>
+                  </select>
+                  <p className="text-xs text-agesci-blue/60 mt-1">
+                    Indica il livello di formazione antincendio in tuo possesso, se applicabile.
+                  </p>
+                </div>
               </div>
             )}
 

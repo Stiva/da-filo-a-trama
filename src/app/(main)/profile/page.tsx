@@ -52,6 +52,8 @@ export default function ProfilePage() {
     service_role: '' as ServiceRole | '',
     preferences: [] as PreferenceTag[],
     avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() } as AvatarConfig,
+    is_medical_staff: false,
+    fire_warden_level: '',
   });
 
   useEffect(() => {
@@ -90,6 +92,8 @@ export default function ProfilePage() {
         service_role: result.data.service_role || '',
         preferences: result.data.preferences || [],
         avatar_config: migrateAvatarConfig(result.data.avatar_config || {}),
+        is_medical_staff: result.data.is_medical_staff || false,
+        fire_warden_level: result.data.fire_warden_level || '',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -111,6 +115,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           ...formData,
           service_role: formData.service_role || null, // convert empty to null
+          fire_warden_level: formData.fire_warden_level || null,
         }),
       });
 
@@ -309,6 +314,11 @@ export default function ProfilePage() {
                   Gruppo Statico Assegnato: {profile.static_group}
                 </p>
               )}
+              {profile?.is_medical_staff && (
+                <p className="text-sm font-bold text-green-700 mt-1 flex items-center gap-1">
+                  🩺 Personale Medico/Infermieristico
+                </p>
+              )}
             </div>
           </div>
 
@@ -365,27 +375,43 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-6">
-                  <h3 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Dati Associazione (Lista Iscritti BC)
+                  </div>
+                </div>
+
+                <div className="bg-green-50/30 border border-green-100 rounded-xl p-5">
+                  <h3 className="text-sm font-medium text-green-800 mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    Sicurezza
                   </h3>
-                  <p className="text-xs text-blue-600/80 mb-4">Questi dati sono estratti automaticamente dal Database Ufficiale AGESCI al momento della registrazione e non possono essere modificati da qui.</p>
                   
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <span className="block text-xs font-semibold text-blue-800/60 uppercase tracking-wider mb-1">Codice Socio</span>
-                      <p className="font-semibold text-gray-800 font-mono bg-white inline-block px-3 py-1 rounded-md border border-blue-100 shadow-sm">{formData.codice_socio || 'Non trovato'}</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-green-100">
+                      <input 
+                        type="checkbox" 
+                        id="is_medical_staff_profile"
+                        checked={formData.is_medical_staff}
+                        onChange={(e) => setFormData(prev => ({...prev, is_medical_staff: e.target.checked}))}
+                        className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                      />
+                      <label htmlFor="is_medical_staff_profile" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                        🩺 Sono Medico o Infermiere
+                      </label>
                     </div>
+
                     <div>
-                      <span className="block text-xs font-semibold text-blue-800/60 uppercase tracking-wider mb-1">Ruolo di Servizio</span>
-                      <p className="font-medium text-gray-800">
-                        {formData.service_role ? (SERVICE_ROLE_LABELS[formData.service_role as ServiceRole] || formData.service_role) : 'Nessun ruolo specifico'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-semibold text-blue-800/60 uppercase tracking-wider mb-1">Gruppo</span>
-                      <p className="font-medium text-gray-800">{formData.scout_group || 'Nessun gruppo'}</p>
+                      <label className="block text-xs font-semibold text-green-800/60 uppercase tracking-wider mb-1">
+                        🔥 Addetto Antincendio
+                      </label>
+                      <select
+                        value={formData.fire_warden_level}
+                        onChange={(e) => setFormData(prev => ({ ...prev, fire_warden_level: e.target.value }))}
+                        className="input w-full bg-white text-sm"
+                      >
+                        <option value="">Nessuno / Non addetto</option>
+                        <option value="basso">Rischio Basso (Livello 1)</option>
+                        <option value="medio">Rischio Medio (Livello 2)</option>
+                        <option value="alto">Rischio Alto (Livello 3)</option>
+                      </select>
                     </div>
                   </div>
                 </div>

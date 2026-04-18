@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import type { Profile } from '@/types/database';
+import { FIRE_WARDEN_LABELS } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import ColumnSelector from '@/components/admin/ColumnSelector';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
@@ -11,6 +12,7 @@ const APP_USERS_COLUMNS: ColumnDef[] = [
   { id: 'utente', label: 'Utente (Foto, Nome, Email)', defaultVisible: true },
   { id: 'gruppo', label: 'Gruppo Scout', defaultVisible: true },
   { id: 'ruolo', label: 'Ruolo', defaultVisible: true },
+  { id: 'sicurezza', label: 'Sicurezza', defaultVisible: false },
   { id: 'stato', label: 'Stato Profilo', defaultVisible: true },
   { id: 'registrato', label: 'Data Registrazione', defaultVisible: true },
 ];
@@ -185,7 +187,7 @@ export default function AdminUsersPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Gruppo Statico', 'Ruolo', 'Stato Profilo', 'Data Iscrizione'];
+    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Gruppo Statico', 'Ruolo', 'Medico/Inf.', 'Antincendio', 'Stato Profilo', 'Data Iscrizione'];
     const rows = users.map((u) => [
       u.name || '',
       u.surname || '',
@@ -193,6 +195,8 @@ export default function AdminUsersPage() {
       u.scout_group || '',
       u.static_group || 'Nessuno',
       u.role,
+      u.is_medical_staff ? 'Sì' : 'No',
+      u.fire_warden_level ? (FIRE_WARDEN_LABELS[u.fire_warden_level] || u.fire_warden_level) : 'No',
       u.profile_setup_complete ? 'Completato' : 'In attesa',
       new Date(u.created_at).toLocaleDateString('it-IT'),
     ]);
@@ -365,6 +369,11 @@ export default function AdminUsersPage() {
                             Ruolo
                           </th>
                         )}
+                        {visibleColumns.includes('sicurezza') && (
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Sicurezza
+                          </th>
+                        )}
                         {visibleColumns.includes('stato') && (
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Stato
@@ -430,6 +439,25 @@ export default function AdminUsersPage() {
                                 <option value="staff">Staff</option>
                                 <option value="admin">Admin</option>
                               </select>
+                            </td>
+                          )}
+                          {visibleColumns.includes('sicurezza') && (
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-1">
+                                {user.is_medical_staff && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 w-fit">
+                                    🩺 Medico
+                                  </span>
+                                )}
+                                {user.fire_warden_level && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 w-fit">
+                                    🔥 {FIRE_WARDEN_LABELS[user.fire_warden_level] || user.fire_warden_level}
+                                  </span>
+                                )}
+                                {!user.is_medical_staff && !user.fire_warden_level && (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </div>
                             </td>
                           )}
                           {visibleColumns.includes('stato') && (

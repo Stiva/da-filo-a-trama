@@ -41,6 +41,8 @@ export default function AdminUserDetailPage({
     onboarding_completed: false,
     avatar_completed: false,
     preferences_set: false,
+    is_medical_staff: false,
+    fire_warden_level: '',
   });
   const [scoutGroups, setScoutGroups] = useState<{ id: string, name: string }[]>([]);
 
@@ -82,6 +84,8 @@ export default function AdminUserDetailPage({
         onboarding_completed: userData.onboarding_completed,
         avatar_completed: userData.avatar_completed,
         preferences_set: userData.preferences_set,
+        is_medical_staff: userData.is_medical_staff || false,
+        fire_warden_level: userData.fire_warden_level || '',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -106,6 +110,8 @@ export default function AdminUserDetailPage({
           onboarding_completed: formData.onboarding_completed,
           avatar_completed: formData.avatar_completed,
           preferences_set: formData.preferences_set,
+          is_medical_staff: formData.is_medical_staff,
+          fire_warden_level: formData.fire_warden_level || null,
         }),
       });
 
@@ -334,6 +340,42 @@ export default function AdminUserDetailPage({
                     <option value="staff">Staff</option>
                     <option value="admin">Admin</option>
                   </select>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    Sicurezza e Emergenza
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <input 
+                        type="checkbox" 
+                        id="is_medical_staff_admin"
+                        checked={formData.is_medical_staff}
+                        onChange={(e) => setFormData({ ...formData, is_medical_staff: e.target.checked })}
+                        className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                      />
+                      <label htmlFor="is_medical_staff_admin" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                        🩺 Medico / Infermiere
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Addetto Antincendio</label>
+                      <select
+                        value={formData.fire_warden_level}
+                        onChange={(e) => setFormData({ ...formData, fire_warden_level: e.target.value })}
+                        className="input w-full text-sm"
+                      >
+                        <option value="">Nessuno / Non addetto</option>
+                        <option value="basso">Rischio Basso (Livello 1)</option>
+                        <option value="medio">Rischio Medio (Livello 2)</option>
+                        <option value="alto">Rischio Alto (Livello 3)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

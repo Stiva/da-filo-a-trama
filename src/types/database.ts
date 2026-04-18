@@ -29,6 +29,14 @@ export const SERVICE_ROLE_LABELS: Record<ServiceRole, string> = {
   'Gomitolo Team': 'Gomitolo Team'
 };
 
+export type FireWardenLevel = 'basso' | 'medio' | 'alto';
+
+export const FIRE_WARDEN_LABELS: Record<FireWardenLevel, string> = {
+  basso: 'Rischio Basso',
+  medio: 'Rischio Medio',
+  alto: 'Rischio Alto',
+};
+
 export interface Profile {
   id: string;
   clerk_id: string;
@@ -48,6 +56,8 @@ export interface Profile {
   avatar_completed: boolean;
   preferences_set: boolean;
   profile_setup_complete: boolean;
+  is_medical_staff: boolean;
+  fire_warden_level: FireWardenLevel | null;
   admin_ui_preferences?: { tables?: Record<string, string[]> } | null;
   created_at: string;
   updated_at: string;
@@ -98,6 +108,8 @@ export interface ProfileUpdate {
   is_staff?: boolean;
   is_nazionale?: boolean;
   staff_secret?: string;
+  is_medical_staff?: boolean;
+  fire_warden_level?: FireWardenLevel | null;
 }
 
 // Default avatar configuration (DiceBear)

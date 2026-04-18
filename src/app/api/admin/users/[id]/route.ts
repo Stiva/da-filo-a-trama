@@ -147,6 +147,8 @@ export async function PUT(
       'onboarding_completed',
       'avatar_completed',
       'preferences_set',
+      'is_medical_staff',
+      'fire_warden_level',
     ];
 
     const updateData: Partial<ProfileUpdate> = {};
