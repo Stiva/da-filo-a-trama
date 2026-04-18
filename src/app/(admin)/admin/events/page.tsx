@@ -179,8 +179,6 @@ export default function AdminEventsPage() {
       if (filter === 'draft') return !event.is_published;
       return true;
     })
-      return true;
-    })
     .filter(event => {
       // Apply column filters (client-side)
       return Object.values(filters).every(filter => {

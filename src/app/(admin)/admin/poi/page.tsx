@@ -322,6 +322,7 @@ export default function AdminPoiPage() {
           {/* Desktop: Table View */}
           <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
             <div className="table-responsive">
+              <table className="w-full min-w-[700px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left w-12 text-center">

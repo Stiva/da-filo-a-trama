@@ -375,8 +375,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                  </div>
-                </div>
 
                 <div className="bg-green-50/30 border border-green-100 rounded-xl p-5">
                   <h3 className="text-sm font-medium text-green-800 mb-4 flex items-center gap-2">

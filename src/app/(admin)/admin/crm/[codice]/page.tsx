@@ -257,8 +257,6 @@ export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
                </dd>
             </div>
             
-            </div>
-            
             {/* Campi Sicurezza (v053) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                <div>

@@ -49,6 +49,7 @@ export default function CRMPage() {
   const fetchParticipants = useCallback(async () => {
     setIsLoading(true);
     try {
+      const qs = new URLSearchParams({
         search: searchTerm,
         activeOnly: activeOnly.toString(),
         limit: '100'
