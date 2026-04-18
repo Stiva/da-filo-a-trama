@@ -5,6 +5,8 @@ import { Upload, Search, Download, CheckCircle, XCircle, Trash2, ArrowLeftRight 
 import type { ParticipantCrmView } from '@/types/database';
 import ColumnSelector from '@/components/admin/ColumnSelector';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
+import { useTableFilters } from '@/hooks/useTableFilters';
+import ColumnFilter from '@/components/admin/ColumnFilter';
 
 const CRM_COLUMNS: ColumnDef[] = [
   { id: 'codice', label: 'Codice', defaultVisible: true },
@@ -21,18 +23,24 @@ export default function CRMPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeOnly, setActiveOnly] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const { filters, setFilter, clearFilters, hasFilters, getApiParams } = useTableFilters();
 
   const fetchParticipants = useCallback(async () => {
     setIsLoading(true);
     try {
-      const qs = new URLSearchParams({
         search: searchTerm,
         activeOnly: activeOnly.toString(),
         limit: '100'
       });
+
+      // Add column filters
+      const apiFilters = getApiParams();
+      Object.entries(apiFilters).forEach(([key, value]) => {
+        qs.set(key, String(value));
+      });
+
       const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`);
       if (!res.ok) throw new Error('Errore nel caricamento dei dati');
       const json = await res.json();
@@ -50,7 +58,7 @@ export default function CRMPage() {
       fetchParticipants();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, activeOnly, fetchParticipants]);
+  }, [searchTerm, activeOnly, filters, fetchParticipants]);
 
   const handleDelete = async (codice: string, nome: string, cognome: string) => {
     if (!window.confirm(`Sei sicuro di voler eliminare definitivamente ${nome} ${cognome} (${codice})?`)) {
@@ -115,6 +123,14 @@ export default function CRMPage() {
             onToggleColumn={toggleColumn}
             isLoading={isPrefsLoading}
           />
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs text-red-600 hover:text-red-700 font-medium underline px-2"
+            >
+              Pulisci filtri
+            </button>
+          )}
           <label className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-agesci-blue hover:bg-agesci-blue-light focus:outline-none cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
             <Upload className="w-5 h-5 mr-2" />
             {isUploading ? 'Caricamento...' : 'Carica CSV'}
@@ -175,12 +191,90 @@ export default function CRMPage() {
           <table className="min-w-full divide-y border-t border-gray-200 divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {visibleColumns.includes('codice') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Codice</th>}
-                {visibleColumns.includes('nome') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome e Cognome</th>}
-                {visibleColumns.includes('email') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>}
-                {visibleColumns.includes('gruppo') && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gruppo/Regione</th>}
-                {visibleColumns.includes('app') && <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Registrato App</th>}
-                {visibleColumns.includes('checkin') && <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in</th>}
+                {visibleColumns.includes('codice') && (
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center">
+                      Codice
+                      <ColumnFilter 
+                        columnId="codice" 
+                        label="Codice" 
+                        type="text" 
+                        value={filters.codice?.value} 
+                        onChange={(val) => setFilter('codice', val)} 
+                      />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('nome') && (
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center">
+                      Nome e Cognome
+                      <ColumnFilter 
+                        columnId="nome" 
+                        label="Nome" 
+                        type="text" 
+                        value={filters.nome?.value} 
+                        onChange={(val) => setFilter('nome', val)} 
+                      />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('email') && (
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center">
+                      Email
+                      <ColumnFilter 
+                        columnId="email" 
+                        label="Email" 
+                        type="text" 
+                        value={filters.email?.value} 
+                        onChange={(val) => setFilter('email', val)} 
+                      />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('gruppo') && (
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center">
+                      Gruppo/Regione
+                      <ColumnFilter 
+                        columnId="gruppo_regione" 
+                        label="Gruppo/Regione" 
+                        type="text" 
+                        value={filters.gruppo_regione?.value} 
+                        onChange={(val) => setFilter('gruppo_regione', val)} 
+                      />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('app') && (
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-center">
+                      Registrato App
+                      <ColumnFilter 
+                        columnId="is_registered_in_app" 
+                        label="App" 
+                        type="boolean" 
+                        value={filters.is_registered_in_app?.value} 
+                        onChange={(val) => setFilter('is_registered_in_app', val, 'boolean')} 
+                      />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('checkin') && (
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center justify-center">
+                      Check-in
+                      <ColumnFilter 
+                        columnId="checkin_done" 
+                        label="Check-in" 
+                        type="boolean" 
+                        value={filters.checkin_done?.value} 
+                        onChange={(val) => setFilter('checkin_done', val, 'boolean')} 
+                      />
+                    </div>
+                  </th>
+                )}
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
               </tr>
             </thead>

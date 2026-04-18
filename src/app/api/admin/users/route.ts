@@ -44,19 +44,38 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Us
       .from('profiles')
       .select('*', { count: 'exact' });
 
-    // Filtro ricerca
+    // Filtro ricerca globale
     if (search) {
       query = query.or(
         `name.ilike.%${search}%,surname.ilike.%${search}%,email.ilike.%${search}%,scout_group.ilike.%${search}%`
       );
     }
 
-    // Filtro ruolo
+    // Filtri per colonna dinamici (es. filter_role=admin)
+    const filterableFields = [
+      'name', 'surname', 'email', 'scout_group', 'static_group', 
+      'role', 'is_medical_staff', 'fire_warden_level', 'codice_socio',
+      'profile_setup_complete'
+    ];
+
+    searchParams.forEach((value, key) => {
+      if (key.startsWith('filter_')) {
+        const field = key.replace('filter_', '');
+        if (filterableFields.includes(field)) {
+          if (value === 'true' || value === 'false') {
+            query = query.eq(field, value === 'true');
+          } else if (value && value !== 'all') {
+            query = query.ilike(field, `%${value}%`);
+          }
+        }
+      }
+    });
+
+    // Filtri legacy/espliciti (per retrocompatibilità se usati in altre parti)
     if (roleFilter && ['user', 'staff', 'admin'].includes(roleFilter)) {
       query = query.eq('role', roleFilter);
     }
 
-    // Filtro stato profilo
     if (onboardingFilter === 'completed') {
       query = query.eq('profile_setup_complete', true);
     } else if (onboardingFilter === 'pending') {

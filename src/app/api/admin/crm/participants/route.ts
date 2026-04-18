@@ -51,6 +51,25 @@ export async function GET(request: Request) {
       }
     }
 
+    // Filtri per colonna dinamici
+    const filterableFields = [
+      'codice', 'nome', 'cognome', 'email', 'gruppo_regione', 
+      'is_registered_in_app', 'checkin_done'
+    ];
+
+    searchParams.forEach((value, key) => {
+      if (key.startsWith('filter_')) {
+        const field = key.replace('filter_', '');
+        if (filterableFields.includes(field)) {
+          if (value === 'true' || value === 'false') {
+            query = query.eq(field, value === 'true');
+          } else if (value && value !== 'all') {
+            query = query.ilike(field, `%${value}%`);
+          }
+        }
+      }
+    });
+
     const { data, error, count } = await query
       .order('cognome', { ascending: true })
       .order('nome', { ascending: true })

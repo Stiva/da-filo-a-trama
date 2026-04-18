@@ -6,6 +6,8 @@ import type { Event, EventCategory } from '@/types/database';
 import DailyCalendarView from '@/components/DailyCalendarView';
 import MassEventImport from '@/components/admin/MassEventImport';
 import { stripHtml } from '@/lib/stripHtml';
+import { useTableFilters } from '@/hooks/useTableFilters';
+import ColumnFilter from '@/components/admin/ColumnFilter';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -15,6 +17,7 @@ export default function AdminEventsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
   // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
@@ -180,15 +183,22 @@ export default function AdminEventsPage() {
       if (filter === 'draft') return !event.is_published;
       return true;
     })
-    .filter(event => {
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const titleMatch = event.title.toLowerCase().includes(query);
-        const idMatch = event.custom_id?.toLowerCase().includes(query) || false;
-        const speakerMatch = event.speaker_name?.toLowerCase().includes(query) || false;
-        return titleMatch || idMatch || speakerMatch;
-      }
       return true;
+    })
+    .filter(event => {
+      // Apply column filters (client-side)
+      return Object.values(filters).every(filter => {
+        if (!filter.value) return true;
+        const val = filter.value.toString().toLowerCase();
+        
+        switch (filter.id) {
+          case 'title': return event.title.toLowerCase().includes(val) || event.custom_id?.toLowerCase().includes(val);
+          case 'category': return event.category.toLowerCase().includes(val);
+          case 'luogo': return event.poi?.nome?.toLowerCase().includes(val);
+          case 'is_published': return event.is_published.toString() === val;
+          default: return true;
+        }
+      });
     })
     .sort((a, b) => {
       if (!sortField) {
@@ -437,17 +447,37 @@ export default function AdminEventsPage() {
                         {visibleColumns.evento && (
                           <th 
                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('title')}
                           >
-                            Evento <SortIcon field="title" />
+                            <div className="flex items-center">
+                              <span className="flex items-center" onClick={() => handleSort('title')}>
+                                Evento <SortIcon field="title" />
+                              </span>
+                              <ColumnFilter 
+                                columnId="title" 
+                                label="Titolo/ID" 
+                                type="text" 
+                                value={filters.title?.value} 
+                                onChange={(v) => setFilter('title', v)} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.categoria && (
                           <th 
                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('category')}
                           >
-                            Categoria <SortIcon field="category" />
+                            <div className="flex items-center">
+                              <span className="flex items-center" onClick={() => handleSort('category')}>
+                                Categoria <SortIcon field="category" />
+                              </span>
+                              <ColumnFilter 
+                                columnId="category" 
+                                label="Categoria" 
+                                type="text" 
+                                value={filters.category?.value} 
+                                onChange={(v) => setFilter('category', v)} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.data && (
@@ -469,14 +499,33 @@ export default function AdminEventsPage() {
                         {visibleColumns.stato && (
                           <th 
                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('is_published')}
                           >
-                            Stato <SortIcon field="is_published" />
+                            <div className="flex items-center">
+                              <span className="flex items-center" onClick={() => handleSort('is_published')}>
+                                Stato <SortIcon field="is_published" />
+                              </span>
+                              <ColumnFilter 
+                                columnId="is_published" 
+                                label="Stato" 
+                                type="boolean" 
+                                value={filters.is_published?.value} 
+                                onChange={(v) => setFilter('is_published', v, 'boolean')} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.luogo && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
-                            Luogo
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <div className="flex items-center">
+                              Luogo
+                              <ColumnFilter 
+                                columnId="luogo" 
+                                label="Luogo" 
+                                type="text" 
+                                value={filters.luogo?.value} 
+                                onChange={(v) => setFilter('luogo', v)} 
+                              />
+                            </div>
                           </th>
                         )}
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -486,14 +535,20 @@ export default function AdminEventsPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredEvents.map((event) => (
-                        <tr key={event.id} className={`hover:bg-gray-50 ${selectedIds.includes(event.id) ? 'bg-indigo-50' : ''}`}>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(event.id)}
-                              onChange={() => handleSelectOne(event.id)}
-                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(event.id)}
+                                onChange={() => handleSelectOne(event.id)}
+                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              {hasFilters && (
+                                <button onClick={clearFilters} className="p-1 text-red-600 rounded hover:bg-red-50" title="Pulisci tutti i filtri">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                              )}
+                            </div>
                           </td>
                           {visibleColumns.evento && (
                             <td className="px-6 py-4">

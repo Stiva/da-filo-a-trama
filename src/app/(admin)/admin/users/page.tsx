@@ -7,6 +7,8 @@ import { FIRE_WARDEN_LABELS } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import ColumnSelector from '@/components/admin/ColumnSelector';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
+import { useTableFilters } from '@/hooks/useTableFilters';
+import ColumnFilter from '@/components/admin/ColumnFilter';
 
 const APP_USERS_COLUMNS: ColumnDef[] = [
   { id: 'utente', label: 'Utente (Foto, Nome, Email)', defaultVisible: true },
@@ -31,9 +33,9 @@ export default function AdminUsersPage() {
   const [pageSize] = useState(20);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('app_users', APP_USERS_COLUMNS);
+  const { filters, setFilter, clearFilters, hasFilters, getApiParams } = useTableFilters();
 
   // Filtri
   const [search, setSearch] = useState('');
@@ -51,6 +53,12 @@ export default function AdminUsersPage() {
       if (search) params.set('search', search);
       if (roleFilter) params.set('role', roleFilter);
       if (onboardingFilter) params.set('onboarding', onboardingFilter);
+
+      // Add column filters
+      const apiFilters = getApiParams();
+      Object.entries(apiFilters).forEach(([key, value]) => {
+        params.set(key, value);
+      });
 
       const response = await fetch(`/api/admin/users?${params}`);
       const result = await response.json();
@@ -71,7 +79,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+  }, [fetchUsers, filters]);
 
   // Debounce search
   useEffect(() => {
@@ -231,11 +239,16 @@ export default function AdminUsersPage() {
           Esporta CSV
         </button>
         <ColumnSelector 
-          availableColumns={APP_USERS_COLUMNS}
-          visibleColumns={visibleColumns}
-          onToggleColumn={toggleColumn}
           isLoading={isPrefsLoading}
         />
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="text-sm text-red-600 hover:text-red-700 font-medium underline"
+          >
+            Pulisci filtri
+          </button>
+        )}
       </div>
 
       {/* Filters - Touch friendly */}
@@ -356,32 +369,89 @@ export default function AdminUsersPage() {
                         </th>
                         {visibleColumns.includes('utente') && (
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Utente
+                            <div className="flex items-center">
+                              Utente
+                              <ColumnFilter 
+                                columnId="name" 
+                                label="Nome/Cognome" 
+                                type="text" 
+                                value={filters.name?.value} 
+                                onChange={(val) => setFilter('name', val)} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.includes('gruppo') && (
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Gruppo Scout
+                            <div className="flex items-center">
+                              Gruppo Scout
+                              <ColumnFilter 
+                                columnId="scout_group" 
+                                label="Gruppo Scout" 
+                                type="text" 
+                                value={filters.scout_group?.value} 
+                                onChange={(val) => setFilter('scout_group', val)} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.includes('ruolo') && (
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Ruolo
+                            <div className="flex items-center">
+                              Ruolo
+                              <ColumnFilter 
+                                columnId="role" 
+                                label="Ruolo" 
+                                type="select" 
+                                value={filters.role?.value} 
+                                options={[
+                                  { value: 'user', label: 'Utente' },
+                                  { value: 'staff', label: 'Staff' },
+                                  { value: 'admin', label: 'Admin' },
+                                ]}
+                                onChange={(val) => setFilter('role', val, 'select')} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.includes('sicurezza') && (
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Sicurezza
+                            <div className="flex items-center">
+                              Sicurezza
+                              <ColumnFilter 
+                                columnId="is_medical_staff" 
+                                label="Medico" 
+                                type="boolean" 
+                                value={filters.is_medical_staff?.value} 
+                                onChange={(val) => setFilter('is_medical_staff', val, 'boolean')} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.includes('stato') && (
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Stato
+                            <div className="flex items-center">
+                              Stato
+                              <ColumnFilter 
+                                columnId="profile_setup_complete" 
+                                label="Stato Profilo" 
+                                type="boolean" 
+                                value={filters.profile_setup_complete?.value} 
+                                onChange={(val) => setFilter('profile_setup_complete', val, 'boolean')} 
+                              />
+                            </div>
                           </th>
                         )}
                         {visibleColumns.includes('registrato') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center">
                             Registrato
+                            <ColumnFilter 
+                              columnId="created_at" 
+                              label="Data" 
+                              type="date" 
+                              value={filters.created_at?.value} 
+                              onChange={(val) => setFilter('created_at', val, 'date')} 
+                            />
                           </th>
                         )}
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
