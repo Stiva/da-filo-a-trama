@@ -5,6 +5,8 @@ import Link from 'next/link';
 import type { Poi, PoiCategory } from '@/types/database';
 import { POI_TYPE_LABELS } from '@/types/database';
 import { stripHtml } from '@/lib/stripHtml';
+import { useTableFilters } from '@/hooks/useTableFilters';
+import ColumnFilter from '@/components/admin/ColumnFilter';
 
 export default function AdminPoiPage() {
   const [pois, setPois] = useState<Poi[]>([]);
@@ -13,6 +15,7 @@ export default function AdminPoiPage() {
   const [filterTipo, setFilterTipo] = useState<PoiCategory | ''>('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+  const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
   useEffect(() => {
     fetchPois();
@@ -35,14 +38,6 @@ export default function AdminPoiPage() {
         throw new Error(result.error || 'Errore nel caricamento');
       }
 
-      let data: Poi[] = result.data || [];
-      data.sort((a, b) => {
-        const fantA = a.is_fantastic ? 1 : 0;
-        const fantB = b.is_fantastic ? 1 : 0;
-        if (fantA !== fantB) return fantB - fantA;
-        return a.nome.localeCompare(b.nome);
-      });
-
       setPois(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -50,6 +45,24 @@ export default function AdminPoiPage() {
       setIsLoading(false);
     }
   };
+
+  const filteredPois = pois.filter(poi => {
+    // Legacy filter
+    if (filterTipo && poi.tipo !== filterTipo) return false;
+    
+    // Column filters
+    return Object.values(filters).every(filter => {
+      if (!filter.value) return true;
+      const val = filter.value.toString().toLowerCase();
+      
+      switch (filter.id) {
+        case 'nome': return poi.nome.toLowerCase().includes(val);
+        case 'tipo': return poi.tipo.toLowerCase().includes(val);
+        case 'is_active': return poi.is_active.toString() === val;
+        default: return true;
+      }
+    });
+  });
 
   const handleToggleActive = async (poi: Poi) => {
     try {
@@ -235,6 +248,14 @@ export default function AdminPoiPage() {
         </div>
       )}
 
+      {hasFilters && (
+        <div className="mb-4 flex justify-end">
+          <button onClick={clearFilters} className="text-sm text-red-600 underline font-medium">
+            Pulisci tutti i filtri
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <div className="text-center py-12">
@@ -245,7 +266,7 @@ export default function AdminPoiPage() {
         <div className="bg-red-100 text-red-700 p-4 rounded-lg">
           {error}
         </div>
-      ) : pois.length === 0 ? (
+      ) : filteredPois.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
           <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -262,24 +283,54 @@ export default function AdminPoiPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left w-12">
-                      <input
-                        type="checkbox"
-                        checked={pois.length > 0 && selectedIds.length === pois.length}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      />
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="checkbox"
+                          checked={filteredPois.length > 0 && selectedIds.length === filteredPois.length}
+                          onChange={handleSelectAll}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome
+                      <div className="flex items-center">
+                        Nome
+                        <ColumnFilter 
+                          columnId="nome" 
+                          label="Nome" 
+                          type="text" 
+                          value={filters.nome?.value} 
+                          onChange={(v) => setFilter('nome', v)} 
+                        />
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
+                      <div className="flex items-center">
+                        Tipo
+                        <ColumnFilter 
+                          columnId="tipo" 
+                          label="Tipo" 
+                          type="select" 
+                          value={filters.tipo?.value} 
+                          options={Object.entries(POI_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+                          onChange={(v) => setFilter('tipo', v, 'select')} 
+                        />
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Coordinate
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stato
+                      <div className="flex items-center">
+                        Stato
+                        <ColumnFilter 
+                          columnId="is_active" 
+                          label="Stato" 
+                          type="boolean" 
+                          value={filters.is_active?.value} 
+                          onChange={(v) => setFilter('is_active', v, 'boolean')} 
+                        />
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Azioni
@@ -287,7 +338,7 @@ export default function AdminPoiPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {pois.map((poi) => (
+                  {filteredPois.map((poi) => (
                     <tr key={poi.id} className={!poi.is_active ? 'bg-gray-50' : selectedIds.includes(poi.id) ? 'bg-indigo-50' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
@@ -371,7 +422,7 @@ export default function AdminPoiPage() {
 
           {/* Mobile: Card View */}
           <div className="md:hidden space-y-4">
-            {pois.map((poi) => (
+            {filteredPois.map((poi) => (
               <div key={poi.id} className={`data-card ${!poi.is_active ? 'opacity-60' : ''} ${selectedIds.includes(poi.id) ? 'border-indigo-500 ring-1 ring-indigo-500' : ''}`}>
                 {/* POI Header */}
                 <div className="flex items-start gap-3">

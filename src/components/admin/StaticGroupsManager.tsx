@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, Users, ArrowRight, RefreshCw, Pencil, Check, X, Download } from 'lucide-react';
+import { useTableFilters } from '@/hooks/useTableFilters';
+import ColumnFilter from '@/components/admin/ColumnFilter';
 
 interface Participant {
     codice: string;
@@ -39,12 +41,31 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
     const [editingCodice, setEditingCodice] = useState<string | null>(null);
     const [editGroupValue, setEditGroupValue] = useState<string>('');
     const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
     // Derived states
     const activeParticipantsCount = useMemo(() => {
         if (selectedRoles.length === 0) return participants.length;
         return participants.filter(p => selectedRoles.includes(p.ruolo)).length;
     }, [participants, selectedRoles]);
+
+    const filteredParticipants = useMemo(() => {
+        return participants.filter(p => {
+            // Apply column filters
+            return Object.values(filters).every(filter => {
+                if (!filter.value) return true;
+                const val = filter.value.toString().toLowerCase();
+                
+                switch (filter.id) {
+                    case 'nome': return `${p.cognome} ${p.nome}`.toLowerCase().includes(val) || p.codice.toLowerCase().includes(val);
+                    case 'ruolo': return p.ruolo.toLowerCase().includes(val) || p.regione.toLowerCase().includes(val);
+                    case 'app': return (p.is_app_registered ? 'true' : 'false') === val;
+                    case 'static_group': return (p.static_group || 'nessuno').toLowerCase().includes(val);
+                    default: return true;
+                }
+            });
+        });
+    }, [participants, filters]);
 
     const groupSummary = useMemo(() => {
         const summary: Record<string, number> = {};
@@ -283,6 +304,14 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                             <Download className="w-4 h-4" />
                             Esporta in Excel
                         </button>
+                        {hasFilters && (
+                            <button
+                                onClick={clearFilters}
+                                className="text-sm text-red-600 hover:text-red-700 font-medium underline"
+                            >
+                                Pulisci filtri
+                            </button>
+                        )}
                     </div>
 
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -291,16 +320,52 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                                 <thead className="bg-gray-50 sticky top-0 z-10">
                                     <tr>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Iscritto
+                                            <div className="flex items-center">
+                                                Iscritto
+                                                <ColumnFilter 
+                                                    columnId="nome" 
+                                                    label="Nome/Codice" 
+                                                    type="text" 
+                                                    value={filters.nome?.value} 
+                                                    onChange={(v) => setFilter('nome', v)} 
+                                                />
+                                            </div>
                                         </th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ruolo / Regione
+                                            <div className="flex items-center">
+                                                Ruolo / Regione
+                                                <ColumnFilter 
+                                                    columnId="ruolo" 
+                                                    label="Ruolo/Regione" 
+                                                    type="text" 
+                                                    value={filters.ruolo?.value} 
+                                                    onChange={(v) => setFilter('ruolo', v)} 
+                                                />
+                                            </div>
                                         </th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            App
+                                            <div className="flex items-center">
+                                                App
+                                                <ColumnFilter 
+                                                    columnId="app" 
+                                                    label="App" 
+                                                    type="boolean" 
+                                                    value={filters.app?.value} 
+                                                    onChange={(v) => setFilter('app', v, 'boolean')} 
+                                                />
+                                            </div>
                                         </th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Gruppo Statico
+                                            <div className="flex items-center">
+                                                Gruppo Statico
+                                                <ColumnFilter 
+                                                    columnId="static_group" 
+                                                    label="Gruppo" 
+                                                    type="text" 
+                                                    value={filters.static_group?.value} 
+                                                    onChange={(v) => setFilter('static_group', v)} 
+                                                />
+                                            </div>
                                         </th>
                                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Azione
@@ -308,7 +373,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {participants.map((p) => (
+                                    {filteredParticipants.map((p) => (
                                         <tr key={p.codice} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-bold text-gray-900">{p.cognome} {p.nome}</div>
@@ -366,7 +431,7 @@ export default function StaticGroupsManager({ initialParticipants, availableRole
                                             </td>
                                         </tr>
                                     ))}
-                                    {participants.length === 0 && (
+                                    {filteredParticipants.length === 0 && (
                                         <tr>
                                             <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
                                                 Nessun partecipante in anagrafica CRM.
