@@ -1,3 +1,11 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import React from 'react';
+import Link from 'next/link';
+import type { Poi, PoiCategory } from '@/types/database';
+import { POI_TYPE_LABELS } from '@/types/database';
+import { stripHtml } from '@/lib/stripHtml';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import ColumnFilter from '@/components/admin/ColumnFilter';
@@ -49,7 +57,7 @@ export default function AdminPoiPage() {
         throw new Error(result.error || 'Errore nel caricamento');
       }
 
-      setPois(data);
+      setPois(result.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
     } finally {
@@ -74,6 +82,22 @@ export default function AdminPoiPage() {
       }
     });
   });
+
+  const handleDelete = async (id: string, nome: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare il POI "${nome}"? Questa azione non può essere annullata.`)) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/admin/poi/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Errore durante l\'eliminazione');
+      }
+      fetchPois();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    }
+  };
 
   const handleToggleActive = async (poi: Poi) => {
     try {

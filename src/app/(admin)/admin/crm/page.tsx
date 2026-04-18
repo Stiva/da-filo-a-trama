@@ -44,6 +44,7 @@ export default function CRMPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [activeOnly, setActiveOnly] = useState(false);
   const { filters, setFilter, clearFilters, hasFilters, getApiParams } = useTableFilters();
 
   const fetchParticipants = useCallback(async () => {
@@ -225,6 +226,9 @@ export default function CRMPage() {
         <div className="flex justify-end p-2 sm:hidden text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
           <span className="flex items-center gap-1">
             <ArrowLeftRight className="w-4 h-4" />
+            Scorri la tabella per vedere tutto
+          </span>
+        </div>
         <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <table className="min-w-full divide-y border-t border-gray-200 divide-gray-200">
             <thead className="bg-gray-50">

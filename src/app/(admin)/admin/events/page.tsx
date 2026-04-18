@@ -1,3 +1,12 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import React from 'react';
+import Link from 'next/link';
+import type { Event, EventCategory } from '@/types/database';
+import DailyCalendarView from '@/components/DailyCalendarView';
+import MassEventImport from '@/components/admin/MassEventImport';
+import { stripHtml } from '@/lib/stripHtml';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import ColumnFilter from '@/components/admin/ColumnFilter';
@@ -30,14 +39,12 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [publishFilter, setPublishFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
-
   const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('events', EVENTS_COLUMNS);
-  const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'title' | 'start_time' | 'category' | 'max_posti' | 'is_published' | null>(null);
@@ -175,8 +182,8 @@ export default function AdminEventsPage() {
 
   const filteredEvents = events
     .filter(event => {
-      if (filter === 'published') return event.is_published;
-      if (filter === 'draft') return !event.is_published;
+      if (publishFilter === 'published') return event.is_published;
+      if (publishFilter === 'draft') return !event.is_published;
       return true;
     })
     .filter(event => {
@@ -306,8 +313,8 @@ export default function AdminEventsPage() {
           ].map((option) => (
             <button
               key={option.value}
-              onClick={() => setFilter(option.value)}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-none ${filter === option.value
+              onClick={() => setPublishFilter(option.value)}
+              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] flex-1 sm:flex-none ${publishFilter === option.value
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
                 }`}
@@ -316,37 +323,6 @@ export default function AdminEventsPage() {
             </button>
           ))}
           <div className="flex items-center ml-auto gap-3 border-l pl-4 border-gray-200">
-            {/* Column Toggler */}
-            {viewMode === 'list' && (
-              <div className="relative">
-                <button
-                  onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                  title="Scegli Colonne"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                  </svg>
-                  Colonne
-                </button>
-                {isColumnDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
-                    {Object.keys(visibleColumns).map((col) => (
-                      <label key={col} className="flex flex-row items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={visibleColumns[col]}
-                          onChange={(e) => setVisibleColumns({ ...visibleColumns, [col]: e.target.checked })}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="text-sm text-gray-700 capitalize">{col}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            
             <div className="flex bg-gray-100 p-1 rounded-lg">
               <button
                 onClick={() => setViewMode('list')}
