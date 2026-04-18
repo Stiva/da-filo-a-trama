@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import ColumnFilter from '@/components/admin/ColumnFilter';
@@ -6,6 +9,10 @@ import { exportToCSV } from '@/lib/exportUtils';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { MapPin, Info, Settings, Download, Activity, Star, Eye, EyeOff } from 'lucide-react';
+import type { Poi, PoiCategory } from '@/types/database';
+import { POI_TYPE_LABELS } from '@/types/database';
+import { stripHtml } from '@/lib/stripHtml';
+import Link from 'next/link';
 
 const POI_COLUMNS: ColumnDef[] = [
   { id: 'nome', label: 'Nome', defaultVisible: true },
@@ -49,7 +56,7 @@ export default function AdminPoiPage() {
         throw new Error(result.error || 'Errore nel caricamento');
       }
 
-      setPois(data);
+      setPois(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
     } finally {
@@ -139,6 +146,17 @@ export default function AdminPoiPage() {
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
+  };
+
+  const handleDelete = async (id: string, nome: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare il POI "${nome}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/poi/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Errore durante l\'eliminazione');
+      fetchPois();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione');
+    }
   };
 
   const handleBulkDelete = async () => {
