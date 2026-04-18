@@ -18,7 +18,7 @@ import { Download, Users, Mail, Shield, CheckCircle, XCircle } from 'lucide-reac
 const APP_USERS_COLUMNS: ColumnDef[] = [
   { id: 'utente', label: 'Utente', defaultVisible: true },
   { id: 'surname', label: 'Cognome', defaultVisible: true },
-  { id: 'first_name', label: 'Nome', defaultVisible: true },
+  { id: 'name', label: 'Nome', defaultVisible: true },
   { id: 'email', label: 'Email', defaultVisible: true },
   { id: 'codice_socio', label: 'Codice Socio', defaultVisible: true },
   { id: 'scout_group', label: 'Gruppo Scout', defaultVisible: true },
@@ -440,7 +440,7 @@ export default function AdminUsersPage() {
                                           <div className="flex items-center">
                                             <AvatarPreview config={profile.avatar_config} size="sm" />
                                             <div className="ml-4">
-                                              <div className="text-sm font-bold text-gray-900">{profile.surname} {profile.first_name}</div>
+                                              <div className="text-sm font-bold text-gray-900">{profile.surname} {profile.name}</div>
                                               {!visibleColumns.includes('email') && (
                                                 <div className="text-xs text-gray-500">{profile.email}</div>
                                               )}
@@ -502,7 +502,7 @@ export default function AdminUsersPage() {
                                     </svg>
                                 </Link>
                                 <button
-                                    onClick={() => handleDelete(profile.id, `${profile.surname || ''} ${profile.first_name || ''}`.trim() || profile.email)}
+                                    onClick={() => handleDelete(profile.id, `${profile.surname || ''} ${profile.name || ''}`.trim() || profile.email)}
                                     className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                                     title="Elimina"
                                 >
@@ -537,7 +537,7 @@ export default function AdminUsersPage() {
                     <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
                       <AvatarPreview config={profile.avatar_config} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 truncate">{profile.surname} {profile.first_name}</p>
+                        <p className="font-bold text-gray-900 truncate">{profile.surname} {profile.name}</p>
                         <p className="text-xs text-gray-500 truncate">{profile.email}</p>
                       </div>
                     </div>
