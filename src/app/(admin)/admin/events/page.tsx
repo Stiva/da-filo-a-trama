@@ -1,13 +1,30 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import type { Event, EventCategory } from '@/types/database';
-import DailyCalendarView from '@/components/DailyCalendarView';
-import MassEventImport from '@/components/admin/MassEventImport';
-import { stripHtml } from '@/lib/stripHtml';
+import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import ColumnFilter from '@/components/admin/ColumnFilter';
+import ColumnSelector from '@/components/admin/ColumnSelector';
+import { exportToCSV } from '@/lib/exportUtils';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { Calendar, Users, MapPin, Tag, Shield, Download, Star, CheckCircle, XCircle } from 'lucide-react';
+
+const EVENTS_COLUMNS: ColumnDef[] = [
+  { id: 'evento', label: 'Evento', defaultVisible: true },
+  { id: 'categoria', label: 'Categoria', defaultVisible: true },
+  { id: 'data', label: 'Data/Ora', defaultVisible: true },
+  { id: 'posti', label: 'Posti', defaultVisible: true },
+  { id: 'stato', label: 'Stato', defaultVisible: true },
+  { id: 'luogo', label: 'Luogo', defaultVisible: true },
+  { id: 'speaker', label: 'Speaker', defaultVisible: false },
+  { id: 'custom_id', label: 'ID Personalizzato', defaultVisible: false },
+  { id: 'visibility', label: 'Visibilità App', defaultVisible: false },
+  { id: 'featured', label: 'In Evidenza', defaultVisible: false },
+  { id: 'checkin', label: 'Check-in Abil.', defaultVisible: false },
+  { id: 'auto_enroll', label: 'Iscr. Autom.', defaultVisible: false },
+  { id: 'assets_upload', label: 'Upload Asset', defaultVisible: false },
+  { id: 'groups', label: 'Num. Gruppi', defaultVisible: false },
+  { id: 'max_group_size', label: 'Max Dim. Gruppo', defaultVisible: false },
+  { id: 'created_at', label: 'Creato il', defaultVisible: false },
+];
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -19,16 +36,8 @@ export default function AdminEventsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
-  // Column visibility
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
-    evento: true,
-    categoria: true,
-    data: true,
-    posti: true,
-    stato: true,
-    luogo: true,
-  });
-  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+  const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('events', EVENTS_COLUMNS);
+  const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'title' | 'start_time' | 'category' | 'max_posti' | 'is_published' | null>(null);
@@ -136,31 +145,18 @@ export default function AdminEventsPage() {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ['Titolo', 'Data/Ora', 'Descrizione', 'Relatore', 'Biografia Relatore', 'Tipologia (Categoria)', 'Luogo'];
-    let csvContent = headers.join(',') + '\r\n';
-
-    filteredEvents.forEach(event => {
-       const row = [
-          `"${(event.title || '').replace(/"/g, '""')}"`,
-          `"${new Date(event.start_time).toLocaleString('it-IT')}"`,
-          `"${stripHtml(event.description || '').replace(/"/g, '""')}"`,
-          `"${(event.speaker_name || '').replace(/"/g, '""')}"`,
-          `"${stripHtml(event.speaker_bio || '').replace(/"/g, '""')}"`,
-          `"${(event.category || '').replace(/"/g, '""')}"`,
-          `"${(event.poi?.nome || '').replace(/"/g, '""')}"`
-       ];
-       csvContent += row.join(',') + '\r\n';
-    });
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Eventi_AGESCI_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExport = () => {
+    const columnsToExport = EVENTS_COLUMNS.filter(c => visibleColumns.includes(c.id));
+    const exportData = filteredEvents.map(event => ({
+      ...event,
+      description: stripHtml(event.description || ''),
+      speaker_bio: stripHtml(event.speaker_bio || ''),
+      start_time: format(new Date(event.start_time), 'dd/MM/yyyy HH:mm', { locale: it }),
+      end_time: format(new Date(event.end_time), 'dd/MM/yyyy HH:mm', { locale: it }),
+      luogo: event.poi?.nome || '-',
+      stato: event.is_published ? 'Pubblicato' : 'Bozza',
+    }));
+    exportToCSV(exportData, columnsToExport, 'Eventi');
   };
 
   const handleSort = (field: 'title' | 'start_time' | 'category' | 'max_posti' | 'is_published') => {
@@ -260,14 +256,19 @@ export default function AdminEventsPage() {
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <MassEventImport onImportSuccess={fetchEvents} />
           
+          <ColumnSelector 
+            availableColumns={EVENTS_COLUMNS}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            isLoading={isPrefsLoading}
+          />
+          
           <button
-            onClick={exportToCSV}
+            onClick={handleExport}
             className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] w-full sm:w-auto mt-2 sm:mt-0"
             title="Esporta in CSV"
           >
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <Download className="w-5 h-5 text-green-600" />
             Esporta CSV
           </button>
 
@@ -436,7 +437,7 @@ export default function AdminEventsPage() {
                   <table className="w-full min-w-[700px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-6 py-3 text-left w-12">
+                        <th className="px-6 py-3 text-left w-12 text-center">
                           <input
                             type="checkbox"
                             checked={filteredEvents.length > 0 && selectedIds.length === filteredEvents.length}
@@ -444,165 +445,114 @@ export default function AdminEventsPage() {
                             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           />
                         </th>
-                        {visibleColumns.evento && (
-                          <th 
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          >
-                            <div className="flex items-center">
-                              <span className="flex items-center" onClick={() => handleSort('title')}>
-                                Evento <SortIcon field="title" />
-                              </span>
-                              <ColumnFilter 
-                                columnId="title" 
-                                label="Titolo/ID" 
-                                type="text" 
-                                value={filters.title?.value} 
-                                onChange={(v) => setFilter('title', v)} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.categoria && (
-                          <th 
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          >
-                            <div className="flex items-center">
-                              <span className="flex items-center" onClick={() => handleSort('category')}>
-                                Categoria <SortIcon field="category" />
-                              </span>
-                              <ColumnFilter 
-                                columnId="category" 
-                                label="Categoria" 
-                                type="text" 
-                                value={filters.category?.value} 
-                                onChange={(v) => setFilter('category', v)} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.data && (
-                          <th 
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('start_time')}
-                          >
-                            Data <SortIcon field="start_time" />
-                          </th>
-                        )}
-                        {visibleColumns.posti && (
-                          <th 
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort('max_posti')}
-                          >
-                            Posti <SortIcon field="max_posti" />
-                          </th>
-                        )}
-                        {visibleColumns.stato && (
-                          <th 
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                          >
-                            <div className="flex items-center">
-                              <span className="flex items-center" onClick={() => handleSort('is_published')}>
-                                Stato <SortIcon field="is_published" />
-                              </span>
-                              <ColumnFilter 
-                                columnId="is_published" 
-                                label="Stato" 
-                                type="boolean" 
-                                value={filters.is_published?.value} 
-                                onChange={(v) => setFilter('is_published', v, 'boolean')} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.luogo && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center">
-                              Luogo
-                              <ColumnFilter 
-                                columnId="luogo" 
-                                label="Luogo" 
-                                type="text" 
-                                value={filters.luogo?.value} 
-                                onChange={(v) => setFilter('luogo', v)} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Azioni
-                        </th>
+                        {visibleColumns.map(colId => {
+                            const col = EVENTS_COLUMNS.find(c => c.id === colId);
+                            const canSort = ['title', 'start_time', 'category', 'max_posti', 'is_published'].includes(colId === 'evento' ? 'title' : colId === 'data' ? 'start_time' : colId === 'categoria' ? 'category' : colId === 'posti' ? 'max_posti' : colId === 'stato' ? 'is_published' : '');
+                            const sortKey = colId === 'evento' ? 'title' : colId === 'data' ? 'start_time' : colId === 'categoria' ? 'category' : colId === 'posti' ? 'max_posti' : colId === 'stato' ? 'is_published' : null;
+
+                            return (
+                                <th key={colId} className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${sortKey ? 'cursor-pointer hover:bg-gray-100' : ''}`}>
+                                    <div className="flex items-center">
+                                        <div className="flex items-center" onClick={() => sortKey && handleSort(sortKey as any)}>
+                                            {col?.label}
+                                            {sortKey && <SortIcon field={sortKey} />}
+                                        </div>
+                                        {colId === 'evento' && (
+                                            <ColumnFilter columnId="title" label="Cerca" type="text" value={filters.title?.value} onChange={(v) => setFilter('title', v)} />
+                                        )}
+                                        {colId === 'categoria' && (
+                                            <ColumnFilter columnId="category" label="Filtra" type="text" value={filters.category?.value} onChange={(v) => setFilter('category', v)} />
+                                        )}
+                                        {colId === 'stato' && (
+                                            <ColumnFilter columnId="is_published" label="Filtra" type="boolean" value={filters.is_published?.value} onChange={(v) => setFilter('is_published', v, 'boolean')} />
+                                        )}
+                                        {colId === 'luogo' && (
+                                            <ColumnFilter columnId="luogo" label="Filtra" type="text" value={filters.luogo?.value} onChange={(v) => setFilter('luogo', v)} />
+                                        )}
+                                    </div>
+                                </th>
+                            );
+                        })}
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredEvents.map((event) => (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(event.id)}
-                                onChange={() => handleSelectOne(event.id)}
-                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                              />
-                              {hasFilters && (
-                                <button onClick={clearFilters} className="p-1 text-red-600 rounded hover:bg-red-50" title="Pulisci tutti i filtri">
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                              )}
-                            </div>
+                        <tr key={event.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(event.id) ? 'bg-indigo-50' : ''}`}>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(event.id)}
+                              onChange={() => handleSelectOne(event.id)}
+                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
                           </td>
-                          {visibleColumns.evento && (
-                            <td className="px-6 py-4">
-                              <div>
-                                <p className="font-medium text-gray-900 flex items-center gap-2">
-                                  {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
-                                </p>
-                                {event.speaker_name && (
-                                  <p className="text-sm text-gray-500">con {event.speaker_name}</p>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.categoria && (
-                            <td className="px-6 py-4">
-                              <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
-                                {event.category}
-                              </span>
-                            </td>
-                          )}
-                          {visibleColumns.data && (
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {formatDate(event.start_time)}
-                            </td>
-                          )}
-                          {visibleColumns.posti && (
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {event.max_posti}
-                            </td>
-                          )}
-                          {visibleColumns.stato && (
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => handleTogglePublish(event.id, event.is_published)}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${event.is_published
-                                  ? 'bg-green-100 text-green-800 hover:bg-green-200 active:bg-green-300'
-                                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 active:bg-yellow-300'
-                                  }`}
-                              >
-                                {event.is_published ? 'Pubblicato' : 'Bozza'}
-                              </button>
-                            </td>
-                          )}
-                          {visibleColumns.luogo && (
-                            <td className="px-6 py-4 text-sm font-medium text-gray-700">
-                              <span className="flex items-center gap-1">
-                                <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                {event.poi?.nome || <span className="text-gray-300 italic">Non Assegnato</span>}
-                              </span>
-                            </td>
-                          )}
+                          {visibleColumns.map(colId => {
+                                let val = (event as any)[colId];
+                                
+                                if (colId === 'evento') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4">
+                                          <div>
+                                            <p className="font-medium text-gray-900">{event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}</p>
+                                            {event.speaker_name && !visibleColumns.includes('speaker') && (
+                                              <p className="text-sm text-gray-500">con {event.speaker_name}</p>
+                                            )}
+                                          </div>
+                                        </td>
+                                    );
+                                }
+                                
+                                if (colId === 'categoria') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4">
+                                          <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
+                                            {event.category}
+                                          </span>
+                                        </td>
+                                    );
+                                }
+                                
+                                if (colId === 'data') {
+                                    return <td key={colId} className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{formatDate(event.start_time)}</td>;
+                                }
+                                
+                                if (colId === 'stato') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4">
+                                          <button
+                                            onClick={() => handleTogglePublish(event.id, event.is_published)}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-full min-h-[32px] ${event.is_published ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                                          >
+                                            {event.is_published ? 'Pubblicato' : 'Bozza'}
+                                          </button>
+                                        </td>
+                                    );
+                                }
+
+                                if (colId === 'luogo') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4 text-sm font-medium text-gray-700">
+                                          <span className="flex items-center gap-1">
+                                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                                            {event.poi?.nome || <span className="text-gray-300 italic">N/A</span>}
+                                          </span>
+                                        </td>
+                                    );
+                                }
+
+                                if (colId === 'created_at' && val) {
+                                    val = format(new Date(val), 'dd/MM/yy', { locale: it });
+                                } else if (typeof val === 'boolean') {
+                                    val = val ? 'Sì' : 'No';
+                                }
+
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {val?.toString() || '-'}
+                                    </td>
+                                );
+                          })}
                           <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-1">
                               <Link
@@ -689,22 +639,35 @@ export default function AdminEventsPage() {
                       </div>
                     </div>
 
-                    {/* Details */}
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-gray-500 block">Categoria</span>
-                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded mt-1 ${getCategoryColor(event.category)}`}>
-                          {event.category}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block">Data</span>
-                        <span className="text-gray-900">{formatDate(event.start_time)}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block">Posti</span>
-                        <span className="text-gray-900">{event.max_posti}</span>
-                      </div>
+                    {/* Details (Dynamic) */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs pt-3 border-t border-gray-50">
+                        {visibleColumns.map(colId => {
+                            if (['evento'].includes(colId)) return null;
+                            const col = EVENTS_COLUMNS.find(c => c.id === colId);
+                            let val = (event as any)[colId];
+                            
+                            if (colId === 'data') val = formatDate(event.start_time);
+                            else if (colId === 'luogo') val = event.poi?.nome || 'N/A';
+                            else if (colId === 'categoria') {
+                                return (
+                                    <React.Fragment key={colId}>
+                                        <span className="text-gray-500 font-medium">{col?.label}:</span>
+                                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] w-fit font-bold ${getCategoryColor(event.category)}`}>
+                                            {event.category.toUpperCase()}
+                                        </span>
+                                    </React.Fragment>
+                                );
+                            }
+                            else if (colId === 'stato') return null; // Already in header
+                            else if (typeof val === 'boolean') val = val ? 'Sì' : 'No';
+                            
+                            return (
+                                <React.Fragment key={colId}>
+                                    <span className="text-gray-500 font-medium">{col?.label}:</span>
+                                    <span className="text-gray-900 text-right truncate font-medium">{val?.toString() || '-'}</span>
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
 
                     {/* Actions */}

@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { auth } from '@clerk/nextjs/server';
 import { 
   CheckCircle, XCircle, ArrowLeft, User, Mail, MapPin, Tag, 
-  HeartPulse, AlertTriangle, Leaf, Target, Lightbulb, Utensils, Users 
+  HeartPulse, AlertTriangle, Leaf, Target, Lightbulb, Utensils, Users, ShieldAlert, Stethoscope
 } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
 
@@ -257,25 +257,38 @@ export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
                </dd>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
-              <div>
-                 <dt className="text-sm font-medium text-gray-500 mb-1">Esigenze Mediche</dt>
-                 <dd className="text-gray-900 text-sm">
-                   {participant.esigenze_mediche && participant.esigenze_mediche.toLowerCase() !== 'nessuna' && participant.esigenze_mediche.toLowerCase() !== 'no'
-                     ? participant.esigenze_mediche
-                     : <span className="text-gray-400 italic">Nessuna</span>
-                   }
-                 </dd>
-              </div>
-              <div>
-                 <dt className="text-sm font-medium text-gray-500 mb-1">Segnalazioni Extra</dt>
-                 <dd className="text-gray-900 text-sm">
-                   {participant.segnalazioni && participant.segnalazioni.trim() !== '' && participant.segnalazioni.toLowerCase() !== 'no' && participant.segnalazioni.toLowerCase() !== 'niente da segnalare'
-                     ? participant.segnalazioni
-                     : <span className="text-gray-400 italic">Nessuna</span>
-                   }
-                 </dd>
-              </div>
+            </div>
+            
+            {/* Campi Sicurezza (v053) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+               <div>
+                  <dt className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                    <Stethoscope className="w-4 h-4 text-red-600" /> Personale Medico
+                  </dt>
+                  <dd>
+                     {participant.is_medical_staff ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                           MEDICO / INFERMIERE
+                        </span>
+                     ) : (
+                        <span className="text-gray-400 text-sm italic">Nessuna qualifica medica</span>
+                     )}
+                  </dd>
+               </div>
+               <div>
+                  <dt className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-orange-600" /> Addetto Antincendio
+                  </dt>
+                  <dd>
+                     {participant.fire_warden_level ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200 uppercase">
+                           LIVELLO {participant.fire_warden_level}
+                        </span>
+                     ) : (
+                        <span className="text-gray-400 text-sm italic">Nessun incarico</span>
+                     )}
+                  </dd>
+               </div>
             </div>
 
           </div>

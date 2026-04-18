@@ -1,12 +1,22 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import type { Poi, PoiCategory } from '@/types/database';
-import { POI_TYPE_LABELS } from '@/types/database';
-import { stripHtml } from '@/lib/stripHtml';
+import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import ColumnFilter from '@/components/admin/ColumnFilter';
+import ColumnSelector from '@/components/admin/ColumnSelector';
+import { exportToCSV } from '@/lib/exportUtils';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { MapPin, Info, Settings, Download, Activity, Star, Eye, EyeOff } from 'lucide-react';
+
+const POI_COLUMNS: ColumnDef[] = [
+  { id: 'nome', label: 'Nome', defaultVisible: true },
+  { id: 'tipo', label: 'Tipologia', defaultVisible: true },
+  { id: 'descrizione', label: 'Descrizione', defaultVisible: true },
+  { id: 'coordinate', label: 'Coordinate', defaultVisible: true },
+  { id: 'is_active', label: 'Stato', defaultVisible: true },
+  { id: 'is_fantastic', label: 'Fantastico', defaultVisible: false },
+  { id: 'color', label: 'Colore', defaultVisible: false },
+  { id: 'created_at', label: 'Creato il', defaultVisible: false },
+];
 
 export default function AdminPoiPage() {
   const [pois, setPois] = useState<Poi[]>([]);
@@ -15,6 +25,7 @@ export default function AdminPoiPage() {
   const [filterTipo, setFilterTipo] = useState<PoiCategory | ''>('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+  const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('poi', POI_COLUMNS);
   const { filters, setFilter, clearFilters, hasFilters } = useTableFilters();
 
   useEffect(() => {
@@ -102,6 +113,20 @@ export default function AdminPoiPage() {
     }
   };
 
+  const handleExport = () => {
+    const columnsToExport = POI_COLUMNS.filter(c => visibleColumns.includes(c.id));
+    const exportData = filteredPois.map(poi => ({
+      ...poi,
+      descrizione: stripHtml(poi.descrizione || ''),
+      tipo: POI_TYPE_LABELS[poi.tipo] || poi.tipo,
+      coordinate: `${poi.latitude}, ${poi.longitude}`,
+      stato: poi.is_active ? 'Attivo' : 'Disattivato',
+      is_fantastic: poi.is_fantastic ? 'Sì' : 'No',
+      created_at: format(new Date(poi.created_at), 'dd/MM/yyyy HH:mm', { locale: it }),
+    }));
+    exportToCSV(exportData, columnsToExport, 'POI');
+  };
+
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedIds(pois.map(p => p.id));
@@ -172,12 +197,30 @@ export default function AdminPoiPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">POI - Punti di Interesse</h1>
           <p className="text-gray-500 mt-1">Gestisci i punti di interesse sulla mappa</p>
         </div>
-        <Link
-          href="/admin/poi/new"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light active:scale-95 transition-all min-h-[44px] w-full sm:w-auto"
-        >
-          + Nuovo POI
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <ColumnSelector 
+            availableColumns={POI_COLUMNS}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            isLoading={isPrefsLoading}
+          />
+
+          <button
+            onClick={handleExport}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 active:scale-95 transition-all min-h-[44px] w-full sm:w-auto"
+            title="Esporta in CSV"
+          >
+            <Download className="w-5 h-5 text-green-600" />
+            Esporta CSV
+          </button>
+
+          <Link
+            href="/admin/poi/new"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light active:scale-95 transition-all min-h-[44px] w-full sm:w-auto"
+          >
+            + Nuovo POI
+          </Link>
+        </div>
       </div>
 
       {/* Filtri - Touch friendly */}
@@ -279,68 +322,49 @@ export default function AdminPoiPage() {
           {/* Desktop: Table View */}
           <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
             <div className="table-responsive">
-              <table className="w-full min-w-[700px]">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left w-12">
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="checkbox"
-                          checked={filteredPois.length > 0 && selectedIds.length === filteredPois.length}
-                          onChange={handleSelectAll}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                      </div>
+                    <th className="px-6 py-3 text-left w-12 text-center">
+                      <input
+                        type="checkbox"
+                        checked={filteredPois.length > 0 && selectedIds.length === filteredPois.length}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <div className="flex items-center">
-                        Nome
-                        <ColumnFilter 
-                          columnId="nome" 
-                          label="Nome" 
-                          type="text" 
-                          value={filters.nome?.value} 
-                          onChange={(v) => setFilter('nome', v)} 
-                        />
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <div className="flex items-center">
-                        Tipo
-                        <ColumnFilter 
-                          columnId="tipo" 
-                          label="Tipo" 
-                          type="select" 
-                          value={filters.tipo?.value} 
-                          options={Object.entries(POI_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
-                          onChange={(v) => setFilter('tipo', v, 'select')} 
-                        />
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Coordinate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <div className="flex items-center">
-                        Stato
-                        <ColumnFilter 
-                          columnId="is_active" 
-                          label="Stato" 
-                          type="boolean" 
-                          value={filters.is_active?.value} 
-                          onChange={(v) => setFilter('is_active', v, 'boolean')} 
-                        />
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Azioni
-                    </th>
+                    {visibleColumns.map(colId => {
+                        const col = POI_COLUMNS.find(c => c.id === colId);
+                        return (
+                            <th key={colId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <div className="flex items-center">
+                                    {col?.label}
+                                    {colId === 'nome' && (
+                                        <ColumnFilter columnId="nome" label="Cerca" type="text" value={filters.nome?.value} onChange={(v) => setFilter('nome', v)} />
+                                    )}
+                                    {colId === 'tipo' && (
+                                        <ColumnFilter 
+                                            columnId="tipo" 
+                                            label="Filtra" 
+                                            type="select" 
+                                            value={filters.tipo?.value} 
+                                            options={Object.entries(POI_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+                                            onChange={(v) => setFilter('tipo', v, 'select')} 
+                                        />
+                                    )}
+                                    {colId === 'is_active' && (
+                                        <ColumnFilter columnId="is_active" label="Filtra" type="boolean" value={filters.is_active?.value} onChange={(v) => setFilter('is_active', v, 'boolean')} />
+                                    )}
+                                </div>
+                            </th>
+                        );
+                    })}
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredPois.map((poi) => (
-                    <tr key={poi.id} className={!poi.is_active ? 'bg-gray-50' : selectedIds.includes(poi.id) ? 'bg-indigo-50' : ''}>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <tr key={poi.id} className={`hover:bg-gray-50 transition-colors ${!poi.is_active ? 'bg-gray-50 opacity-80' : selectedIds.includes(poi.id) ? 'bg-indigo-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(poi.id)}
@@ -348,69 +372,91 @@ export default function AdminPoiPage() {
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900 flex items-center gap-1.5">
-                           {poi.is_fantastic && <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>}
-                           {poi.nome}
-                        </div>
-                        {poi.descrizione && (
-                          <div className="text-sm text-gray-500 truncate max-w-xs mt-1">
-                            {stripHtml(poi.descrizione)}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(poi.tipo)}`}>
-                          {POI_TYPE_LABELS[poi.tipo]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatCoordinates(poi)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${poi.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {poi.is_active ? 'Attivo' : 'Disattivo'}
-                        </span>
-                      </td>
+                      {visibleColumns.map(colId => {
+                            let val = (poi as any)[colId];
+                            
+                            if (colId === 'nome') {
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap">
+                                        <div className="font-bold text-gray-900 flex items-center gap-1.5 text-sm">
+                                           {poi.is_fantastic && <Star className="w-4 h-4 text-purple-600 fill-current" />}
+                                           {poi.nome}
+                                        </div>
+                                    </td>
+                                );
+                            }
+                            
+                            if (colId === 'tipo') {
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${getTypeColor(poi.tipo)}`}>
+                                          {POI_TYPE_LABELS[poi.tipo]}
+                                        </span>
+                                    </td>
+                                );
+                            }
+                            
+                            if (colId === 'coordinate') {
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500">
+                                        {formatCoordinates(poi)}
+                                    </td>
+                                );
+                            }
+                            
+                            if (colId === 'is_active') {
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap">
+                                        <button 
+                                            onClick={() => handleToggleActive(poi)}
+                                            className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full transition-colors ${poi.is_active ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                          {poi.is_active ? 'Attivo' : 'Disattivo'}
+                                        </button>
+                                    </td>
+                                );
+                            }
+
+                            if (colId === 'is_fantastic') {
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap text-center">
+                                        <button onClick={() => handleToggleFantastic(poi)}>
+                                            <Star className={`w-5 h-5 transition-colors ${poi.is_fantastic ? 'text-purple-600 fill-current' : 'text-gray-300 hover:text-purple-400'}`} />
+                                        </button>
+                                    </td>
+                                );
+                            }
+
+                            if (colId === 'created_at' && val) {
+                                val = format(new Date(val), 'dd/MM/yy', { locale: it });
+                            } else if (typeof val === 'boolean') {
+                                val = val ? 'Sì' : 'No';
+                            }
+
+                            return (
+                                <td key={colId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {val?.toString() || '-'}
+                                </td>
+                            );
+                      })}
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleToggleFantastic(poi)}
-                            className="p-2 transition-colors focus:outline-none"
-                            title={poi.is_fantastic ? 'Rimuovi dai Luoghi Fantastici' : 'Segna come Luogo Fantastico'}
-                          >
-                            <svg className={`w-5 h-5 ${poi.is_fantastic ? 'text-purple-600' : 'text-gray-400 hover:text-purple-500'}`} fill={poi.is_fantastic ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={poi.is_fantastic ? 1 : 2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleToggleActive(poi)}
-                            className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
-                            title={poi.is_active ? 'Disattiva' : 'Attiva'}
-                          >
-                            {poi.is_active ? (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            )}
-                          </button>
-                          <Link
-                            href={`/admin/poi/${poi.id}`}
-                            className="p-2 text-agesci-blue hover:text-agesci-blue-light transition-colors"
-                            title="Modifica"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </Link>
+                           <Link
+                             href={`/admin/poi/${poi.id}`}
+                             className="p-2 text-gray-400 hover:text-agesci-blue transition-colors"
+                             title="Modifica"
+                           >
+                             <Settings className="w-5 h-5" />
+                           </Link>
+                           <button
+                             onClick={() => handleDelete(poi.id, poi.nome)}
+                             className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                             title="Elimina"
+                           >
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                             </svg>
+                           </button>
                         </div>
                       </td>
                     </tr>
@@ -452,23 +498,25 @@ export default function AdminPoiPage() {
                   </div>
                 </div>
 
-                {/* POI Details */}
-                <div className="space-y-2 text-sm pt-3 border-t border-gray-100">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Coordinate</span>
-                    <span className="text-gray-900 font-mono text-xs">
-                      {formatCoordinates(poi)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Stato</span>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${poi.is_active
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                      }`}>
-                      {poi.is_active ? 'Attivo' : 'Disattivo'}
-                    </span>
-                  </div>
+                {/* POI Details (Dynamic) */}
+                <div className="space-y-2 text-xs pt-3 border-t border-gray-100">
+                    {visibleColumns.map(colId => {
+                        if (['nome'].includes(colId)) return null;
+                        const col = POI_COLUMNS.find(c => c.id === colId);
+                        let val = (poi as any)[colId];
+                        
+                        if (colId === 'coordinate') val = formatCoordinates(poi);
+                        else if (colId === 'is_active') val = poi.is_active ? 'Attivo' : 'Disattivo';
+                        else if (colId === 'tipo') val = POI_TYPE_LABELS[poi.tipo];
+                        else if (typeof val === 'boolean') val = val ? 'Sì' : 'No';
+                        
+                        return (
+                            <div key={colId} className="flex justify-between items-center">
+                                <span className="text-gray-500 font-medium">{col?.label}</span>
+                                <span className="text-gray-900 font-bold">{val?.toString() || '-'}</span>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Actions */}

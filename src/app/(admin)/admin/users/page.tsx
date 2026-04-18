@@ -9,14 +9,25 @@ import ColumnSelector from '@/components/admin/ColumnSelector';
 import { useAdminTablePreferences, ColumnDef } from '@/hooks/useAdminTablePreferences';
 import { useTableFilters } from '@/hooks/useTableFilters';
 import ColumnFilter from '@/components/admin/ColumnFilter';
+import { exportToCSV } from '@/lib/exportUtils';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { Download, Users, Mail, Shield, CheckCircle, XCircle } from 'lucide-react';
 
 const APP_USERS_COLUMNS: ColumnDef[] = [
-  { id: 'utente', label: 'Utente (Foto, Nome, Email)', defaultVisible: true },
-  { id: 'gruppo', label: 'Gruppo Scout', defaultVisible: true },
-  { id: 'ruolo', label: 'Ruolo', defaultVisible: true },
-  { id: 'sicurezza', label: 'Sicurezza', defaultVisible: false },
-  { id: 'stato', label: 'Stato Profilo', defaultVisible: true },
-  { id: 'registrato', label: 'Data Registrazione', defaultVisible: true },
+  { id: 'utente', label: 'Utente', defaultVisible: true },
+  { id: 'surname', label: 'Cognome', defaultVisible: true },
+  { id: 'first_name', label: 'Nome', defaultVisible: true },
+  { id: 'email', label: 'Email', defaultVisible: true },
+  { id: 'codice_socio', label: 'Codice Socio', defaultVisible: true },
+  { id: 'scout_group', label: 'Gruppo Scout', defaultVisible: true },
+  { id: 'service_role', label: 'Ruolo Servizio', defaultVisible: true },
+  { id: 'role', label: 'Ruolo Sistema', defaultVisible: false },
+  { id: 'is_medical_staff', label: 'Staff Medico', defaultVisible: false },
+  { id: 'fire_warden_level', label: 'Addetto Antincendio', defaultVisible: false },
+  { id: 'onboarding_completed', label: 'Onboarding', defaultVisible: true },
+  { id: 'static_group', label: 'Gruppo Statico', defaultVisible: false },
+  { id: 'created_at', label: 'Registrato il', defaultVisible: true },
 ];
 
 interface UsersResponse {
@@ -194,29 +205,13 @@ export default function AdminUsersPage() {
     }
   };
 
-  const exportCSV = () => {
-    const headers = ['Nome', 'Cognome', 'Email', 'Gruppo Scout', 'Gruppo Statico', 'Ruolo', 'Medico/Inf.', 'Antincendio', 'Stato Profilo', 'Data Iscrizione'];
-    const rows = users.map((u) => [
-      u.name || '',
-      u.surname || '',
-      u.email,
-      u.scout_group || '',
-      u.static_group || 'Nessuno',
-      u.role,
-      u.is_medical_staff ? 'Sì' : 'No',
-      u.fire_warden_level ? (FIRE_WARDEN_LABELS[u.fire_warden_level] || u.fire_warden_level) : 'No',
-      u.profile_setup_complete ? 'Completato' : 'In attesa',
-      new Date(u.created_at).toLocaleDateString('it-IT'),
-    ]);
-
-    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `utenti_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = () => {
+    const columnsToExport = APP_USERS_COLUMNS.filter(c => visibleColumns.includes(c.id));
+    const exportData = users.map(u => ({
+      ...u,
+      created_at: format(new Date(u.created_at), 'dd/MM/yyyy HH:mm', { locale: it })
+    }));
+    exportToCSV(exportData, columnsToExport, 'Utenti_App');
   };
 
   return (
@@ -229,18 +224,29 @@ export default function AdminUsersPage() {
             {total} utenti registrati
           </p>
         </div>
-        <button
-          onClick={exportCSV}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-lc-green text-white rounded-lg hover:bg-lc-green-dark active:scale-95 transition-all min-h-[44px] w-full sm:w-auto"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Esporta CSV
-        </button>
-        <ColumnSelector 
-          isLoading={isPrefsLoading}
-        />
+        <div className="flex flex-wrap gap-2">
+          <ColumnSelector 
+            availableColumns={APP_USERS_COLUMNS}
+            visibleColumns={visibleColumns}
+            onToggleColumn={toggleColumn}
+            isLoading={isPrefsLoading}
+          />
+          <button
+            onClick={handleExport}
+            className="flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+          >
+            <Download className="w-5 h-5 mr-1" />
+            Esporta
+          </button>
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-sm text-red-600 hover:text-red-700 font-medium underline px-2"
+            >
+              Pulisci filtri
+            </button>
+          )}
+        </div>
         {hasFilters && (
           <button
             onClick={clearFilters}
@@ -357,7 +363,7 @@ export default function AdminUsersPage() {
               <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="table-responsive">
                   <table className="w-full min-w-[800px]">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-3 text-center">
                           <input
@@ -367,214 +373,149 @@ export default function AdminUsersPage() {
                             className="w-4 h-4 rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue"
                           />
                         </th>
-                        {visibleColumns.includes('utente') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center">
-                              Utente
-                              <ColumnFilter 
-                                columnId="name" 
-                                label="Nome/Cognome" 
-                                type="text" 
-                                value={filters.name?.value} 
-                                onChange={(val) => setFilter('name', val)} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.includes('gruppo') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center">
-                              Gruppo Scout
-                              <ColumnFilter 
-                                columnId="scout_group" 
-                                label="Gruppo Scout" 
-                                type="text" 
-                                value={filters.scout_group?.value} 
-                                onChange={(val) => setFilter('scout_group', val)} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.includes('ruolo') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center">
-                              Ruolo
-                              <ColumnFilter 
-                                columnId="role" 
-                                label="Ruolo" 
-                                type="select" 
-                                value={filters.role?.value} 
-                                options={[
-                                  { value: 'user', label: 'Utente' },
-                                  { value: 'staff', label: 'Staff' },
-                                  { value: 'admin', label: 'Admin' },
-                                ]}
-                                onChange={(val) => setFilter('role', val, 'select')} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.includes('sicurezza') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center">
-                              Sicurezza
-                              <ColumnFilter 
-                                columnId="is_medical_staff" 
-                                label="Medico" 
-                                type="boolean" 
-                                value={filters.is_medical_staff?.value} 
-                                onChange={(val) => setFilter('is_medical_staff', val, 'boolean')} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.includes('stato') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center">
-                              Stato
-                              <ColumnFilter 
-                                columnId="profile_setup_complete" 
-                                label="Stato Profilo" 
-                                type="boolean" 
-                                value={filters.profile_setup_complete?.value} 
-                                onChange={(val) => setFilter('profile_setup_complete', val, 'boolean')} 
-                              />
-                            </div>
-                          </th>
-                        )}
-                        {visibleColumns.includes('registrato') && (
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center">
-                            Registrato
-                            <ColumnFilter 
-                              columnId="created_at" 
-                              label="Data" 
-                              type="date" 
-                              value={filters.created_at?.value} 
-                              onChange={(val) => setFilter('created_at', val, 'date')} 
-                            />
-                          </th>
-                        )}
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Azioni
-                        </th>
+                        {/* Header Dinamico */}
+                        {visibleColumns.map(colId => {
+                            const col = APP_USERS_COLUMNS.find(c => c.id === colId);
+                            return (
+                                <th key={colId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <div className="flex items-center">
+                                        {col?.label}
+                                        {colId === 'utente' && (
+                                            <ColumnFilter columnId="name" label="Cerca" type="text" value={filters.name?.value} onChange={(v) => setFilter('name', v)} />
+                                        )}
+                                        {colId === 'email' && (
+                                            <ColumnFilter columnId="email" label="Email" type="text" value={filters.email?.value} onChange={(v) => setFilter('email', v)} />
+                                        )}
+                                        {colId === 'role' && (
+                                            <ColumnFilter 
+                                                columnId="role" 
+                                                label="Ruolo" 
+                                                type="select" 
+                                                value={filters.role?.value} 
+                                                options={[
+                                                  { value: 'user', label: 'Utente' },
+                                                  { value: 'staff', label: 'Staff' },
+                                                  { value: 'admin', label: 'Admin' },
+                                                ]}
+                                                onChange={(val) => setFilter('role', val, 'select')} 
+                                            />
+                                        )}
+                                        {colId === 'is_medical_staff' && (
+                                            <ColumnFilter 
+                                                columnId="is_medical_staff" 
+                                                label="Medico" 
+                                                type="boolean" 
+                                                value={filters.is_medical_staff?.value} 
+                                                onChange={(val) => setFilter('is_medical_staff', val, 'boolean')} 
+                                            />
+                                        )}
+                                        {colId === 'created_at' && (
+                                            <ColumnFilter 
+                                                columnId="created_at" 
+                                                label="Data" 
+                                                type="date" 
+                                                value={filters.created_at?.value} 
+                                                onChange={(val) => setFilter('created_at', val, 'date')} 
+                                            />
+                                        )}
+                                    </div>
+                                </th>
+                            );
+                        })}
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {users.map((user) => (
-                        <tr key={user.id} className={`hover:bg-gray-50 ${selectedIds.has(user.id) ? 'bg-blue-50' : ''}`}>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {users.map((profile) => (
+                        <tr key={profile.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(profile.id) ? 'bg-blue-50' : ''}`}>
                           <td className="px-3 py-4 text-center">
                             <input
                               type="checkbox"
-                              checked={selectedIds.has(user.id)}
-                              onChange={() => toggleSelect(user.id)}
+                              checked={selectedIds.has(profile.id)}
+                              onChange={() => toggleSelect(profile.id)}
                               className="w-4 h-4 rounded border-gray-300 text-agesci-blue focus:ring-agesci-blue"
                             />
                           </td>
-                          {visibleColumns.includes('utente') && (
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                {user.profile_image_url ? (
-                                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                                    <img
-                                      src={user.profile_image_url}
-                                      alt={`${user.name || 'Utente'}`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                ) : (
-                                  <AvatarPreview config={user.avatar_config} size="xs" />
-                                )}
-                                <div>
-                                  <p className="font-medium text-gray-900">
-                                    {user.name || user.first_name || 'N/D'} {user.surname || ''}
-                                  </p>
-                                  <p className="text-sm text-gray-500">{user.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.includes('gruppo') && (
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {user.scout_group || '-'}
-                            </td>
-                          )}
-                          {visibleColumns.includes('ruolo') && (
-                            <td className="px-6 py-4">
-                              <select
-                                value={user.role}
-                                onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                                className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(user.role)}`}
-                              >
-                                <option value="user">Utente</option>
-                                <option value="staff">Staff</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            </td>
-                          )}
-                          {visibleColumns.includes('sicurezza') && (
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col gap-1">
-                                {user.is_medical_staff && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 w-fit">
-                                    🩺 Medico
-                                  </span>
-                                )}
-                                {user.fire_warden_level && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 w-fit">
-                                    🔥 {FIRE_WARDEN_LABELS[user.fire_warden_level] || user.fire_warden_level}
-                                  </span>
-                                )}
-                                {!user.is_medical_staff && !user.fire_warden_level && (
-                                  <span className="text-gray-400 text-xs">-</span>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.includes('stato') && (
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
-                                className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
-                                  user.profile_setup_complete
-                                    ? 'bg-green-100 text-green-800 hover:ring-green-400'
-                                    : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
-                                }`}
-                                title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
-                              >
-                                {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
-                              </button>
-                            </td>
-                          )}
-                          {visibleColumns.includes('registrato') && (
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {new Date(user.created_at).toLocaleDateString('it-IT', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
-                            </td>
-                          )}
-                          <td className="px-6 py-4 text-right">
+                          {/* Campi dinamici */}
+                          {visibleColumns.map(colId => {
+                                let val = (profile as any)[colId];
+                                
+                                if (colId === 'utente') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4 whitespace-nowrap">
+                                          <div className="flex items-center">
+                                            <AvatarPreview config={profile.avatar_config} size="sm" />
+                                            <div className="ml-4">
+                                              <div className="text-sm font-bold text-gray-900">{profile.surname} {profile.first_name}</div>
+                                              {!visibleColumns.includes('email') && (
+                                                <div className="text-xs text-gray-500">{profile.email}</div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </td>
+                                    );
+                                }
+                                
+                                if (colId === 'role') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4 whitespace-nowrap">
+                                            <select
+                                              value={profile.role}
+                                              onChange={(e) => handleRoleChange(profile.id, e.target.value)}
+                                              className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(profile.role)}`}
+                                            >
+                                              <option value="user">Utente</option>
+                                              <option value="staff">Staff</option>
+                                              <option value="admin">Admin</option>
+                                            </select>
+                                        </td>
+                                    );
+                                }
+                                
+                                if (colId === 'onboarding_completed') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4 whitespace-nowrap text-center">
+                                            <button
+                                                onClick={() => updateProfileStatus([profile.id], !profile.onboarding_completed)}
+                                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-colors ${profile.onboarding_completed ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}`}
+                                            >
+                                                {profile.onboarding_completed ? 'Completo' : 'Incompleto'}
+                                            </button>
+                                        </td>
+                                    );
+                                }
+
+                                if (colId === 'created_at' && val) {
+                                    val = format(new Date(val), 'dd/MM/yy', { locale: it });
+                                } else if (typeof val === 'boolean') {
+                                    val = val ? 'Sì' : 'No';
+                                } else if (colId === 'fire_warden_level' && val) {
+                                    val = FIRE_WARDEN_LABELS[val as keyof typeof FIRE_WARDEN_LABELS] || val;
+                                }
+
+                                return (
+                                    <td key={colId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {val?.toString() || '-'}
+                                    </td>
+                                );
+                          })}
+                          <td className="px-6 py-4 text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
-                              <Link
-                                href={`/admin/users/${user.id}`}
-                                className="p-2 text-gray-400 hover:text-agesci-blue transition-colors"
-                                title="Dettagli"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </Link>
-                              <button
-                                onClick={() => handleDelete(user.id, `${user.name || ''} ${user.surname || ''}`.trim() || user.email)}
-                                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                                title="Elimina"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                                <Link href={`/admin/users/${profile.id}`} className="p-2 text-gray-400 hover:text-black transition-colors" title="Dettagli">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(profile.id, `${profile.surname || ''} ${profile.first_name || ''}`.trim() || profile.email)}
+                                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                    title="Elimina"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
                             </div>
                           </td>
                         </tr>
@@ -583,158 +524,52 @@ export default function AdminUsersPage() {
                   </table>
                 </div>
 
-                {/* Pagination - Desktop */}
+                {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
-                      Pagina {page} di {totalPages} ({total} risultati)
-                    </p>
+                  <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                    <p className="text-sm text-gray-500">Pagina {page} di {totalPages} ({total} risultati)</p>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Precedente
-                      </button>
-                      <button
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Successiva
-                      </button>
+                        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">Precedente</button>
+                        <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">Successiva</button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Mobile: Card View */}
+              {/* Mobile Card View (Dynamic) */}
               <div className="md:hidden space-y-4">
-                {users.map((user) => (
-                  <div key={user.id} className="data-card">
-                    {/* User Header */}
-                    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                      {user.profile_image_url ? (
-                        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                          <img
-                            src={user.profile_image_url}
-                            alt={`${user.name || 'Utente'}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <AvatarPreview config={user.avatar_config} size="sm" />
-                      )}
+                {users.map((profile) => (
+                  <div key={profile.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                      <AvatarPreview config={profile.avatar_config} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {user.name || user.first_name || 'N/D'} {user.surname || ''}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                        <p className="font-bold text-gray-900 truncate">{profile.surname} {profile.first_name}</p>
+                        <p className="text-xs text-gray-500 truncate">{profile.email}</p>
                       </div>
                     </div>
-
-                    {/* User Details */}
-                    <div className="space-y-2 text-sm">
-                      {visibleColumns.includes('gruppo') && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Gruppo Scout</span>
-                          <span className="text-gray-900">{user.scout_group || '-'}</span>
-                        </div>
-                      )}
-                      {visibleColumns.includes('ruolo') && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Ruolo</span>
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                            className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer min-h-[32px] ${getRoleBadgeColor(user.role)}`}
-                          >
-                            <option value="user">Utente</option>
-                            <option value="staff">Staff</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-                      )}
-                      {visibleColumns.includes('stato') && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Stato Profilo</span>
-                          <button
-                            onClick={() => updateProfileStatus([user.id], !user.profile_setup_complete)}
-                            className={`px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all ${
-                              user.profile_setup_complete
-                                ? 'bg-green-100 text-green-800 hover:ring-green-400'
-                                : 'bg-yellow-100 text-yellow-800 hover:ring-yellow-400'
-                            }`}
-                            title={`Clicca per ${user.profile_setup_complete ? 'reimpostare a In attesa' : 'segnare come Completato'}`}
-                          >
-                            {user.profile_setup_complete ? '✅ Completato' : '⏳ In attesa'}
-                          </button>
-                        </div>
-                      )}
-                      {visibleColumns.includes('registrato') && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Registrato</span>
-                          <span className="text-gray-900">
-                            {new Date(user.created_at).toLocaleDateString('it-IT', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                      )}
+                    <div className="grid grid-cols-2 gap-y-2 text-xs">
+                        {visibleColumns.map(colId => {
+                            if (['utente', 'email'].includes(colId)) return null;
+                            const col = APP_USERS_COLUMNS.find(c => c.id === colId);
+                            let val = (profile as any)[colId];
+                            if (colId === 'created_at' && val) val = format(new Date(val), 'dd/MM/yy');
+                            else if (typeof val === 'boolean') val = val ? 'Sì' : 'No';
+                            else if (colId === 'fire_warden_level' && val) val = FIRE_WARDEN_LABELS[val as keyof typeof FIRE_WARDEN_LABELS] || val;
+                            
+                            return (
+                                <React.Fragment key={colId}>
+                                    <span className="text-gray-500 font-medium">{col?.label}:</span>
+                                    <span className="text-gray-900 text-right truncate">{val?.toString() || '-'}</span>
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
-
-                    {/* Actions */}
-                    <div className="data-card-actions">
-                      <Link
-                        href={`/admin/users/${user.id}`}
-                        className="action-btn text-agesci-blue"
-                        title="Dettagli"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(user.id, `${user.name || ''} ${user.surname || ''}`.trim() || user.email)}
-                        className="action-btn text-red-600"
-                        title="Elimina"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                    <div className="flex gap-2 pt-2 border-t border-gray-50">
+                        <Link href={`/admin/users/${profile.id}`} className="flex-1 text-center py-2 bg-gray-50 rounded-lg text-xs font-medium text-gray-700">Dettagli</Link>
+                        <button onClick={() => handleDelete(profile.id, profile.email)} className="flex-1 text-center py-2 bg-red-50 rounded-lg text-xs font-medium text-red-600">Elimina</button>
                     </div>
                   </div>
                 ))}
-
-                {/* Pagination - Mobile */}
-                {totalPages > 1 && (
-                  <div className="bg-white rounded-lg shadow-md p-4">
-                    <p className="text-sm text-gray-500 text-center mb-3">
-                      Pagina {page} di {totalPages} ({total} risultati)
-                    </p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100 min-h-[44px]"
-                      >
-                        Precedente
-                      </button>
-                      <button
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 active:bg-gray-100 min-h-[44px]"
-                      >
-                        Successiva
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </>
           )}

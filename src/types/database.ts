@@ -615,6 +615,8 @@ export interface ParticipantCrmView extends Participant {
   profile_avatar_url: string | null;
   is_app_registered: boolean;
   static_group?: string | null;
+  is_medical_staff?: boolean;
+  fire_warden_level?: FireWardenLevel | null;
 }
 
 // ============================================
