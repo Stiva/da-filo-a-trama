@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import type { Profile } from '@/types/database';
 import { FIRE_WARDEN_LABELS } from '@/types/database';
@@ -45,6 +46,7 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('app_users', APP_USERS_COLUMNS);
   const { filters, setFilter, clearFilters, hasFilters, getApiParams } = useTableFilters();
 
@@ -247,14 +249,6 @@ export default function AdminUsersPage() {
             </button>
           )}
         </div>
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-sm text-red-600 hover:text-red-700 font-medium underline"
-          >
-            Pulisci filtri
-          </button>
-        )}
       </div>
 
       {/* Filters - Touch friendly */}
