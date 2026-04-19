@@ -1,6 +1,6 @@
 {
-  "name": "Da Filo a Trama",
-  "short_name": "DaFiloATrama",
+  "name": "GomitoloApp",
+  "short_name": "GomitoloApp",
   "description": "Piattaforma digitale per l'evento scout nazionale 2026",
   "start_url": "/",
   "display": "standalone",

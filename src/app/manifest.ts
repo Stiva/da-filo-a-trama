@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Da Filo a Trama',
-    short_name: 'DfaT',
+    name: 'GomitoloApp',
+    short_name: 'GomitoloApp',
     description: 'Piattaforma Eventi Scout - Da Filo a Trama',
     start_url: '/',
     display: 'standalone',

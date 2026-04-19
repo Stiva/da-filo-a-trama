@@ -48,6 +48,11 @@ export const metadata: Metadata = {
     shortcut: '/favicon.png',
     apple: '/apple-touch-icon.png',
   },
+  appleWebApp: {
+    title: 'GomitoloApp',
+    statusBarStyle: 'default',
+    capable: true,
+  },
   openGraph: {
     title: 'Da Filo a Trama - Convegno Nazionale sull\'Ambiente Fantastico - AGESCI Branca L/C 2026',
     description: 'Piattaforma digitale per il convegno nazionale Branca L/C AGESCI 2026',
