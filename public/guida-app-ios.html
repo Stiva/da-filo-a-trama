@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GomitoloApp — Guida Installazione iOS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --violet: #4B2D82;
+    --violet-light: #6B4DAA;
+    --gold: #F5A623;
+    --gold-light: #FFD166;
+    --cream: #FAF7F2;
+    --text: #1a1a2e;
+    --muted: #6b6b8a;
+    --success: #2ECC71;
+    --card-bg: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--violet);
+    padding: 36px 24px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -40px;
+    width: 220px; height: 220px;
+    background: rgba(245,166,35,0.1);
+    border-radius: 50%;
+  }
+
+  .logo-emoji {
+    font-size: 52px;
+    display: block;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+  }
+
+  .header h1 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: white;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .header h1 span {
+    color: var(--gold-light);
+  }
+
+  .header .subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .ios-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    color: white;
+    font-weight: 700;
+    margin-top: 16px;
+  }
+
+  /* INTRO */
+  .intro {
+    padding: 20px 20px 0;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .intro-box {
+    background: linear-gradient(135deg, #FFF8E7, #FFF3D0);
+    border: 2px solid var(--gold-light);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .intro-box .icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .intro-box p { font-size: 13.5px; line-height: 1.5; color: #5a4000; font-weight: 600; }
+
+  /* PROGRESS BAR */
+  .progress-wrap {
+    max-width: 480px;
+    margin: 20px auto 0;
+    padding: 0 20px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .progress-track {
+    background: #e8e0f0;
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--violet), var(--gold));
+    transition: width 0.5s ease;
+  }
+
+  /* STEPS */
+  .steps {
+    padding: 20px 20px 40px;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .step-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(75,45,130,0.08);
+    border: 1.5px solid rgba(75,45,130,0.07);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .step-card:active {
+    transform: scale(0.98);
+  }
+
+  .step-card.expanded .step-img {
+    display: block;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+
+  .step-num-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .step-num {
+    width: 42px; height: 42px;
+    background: var(--violet);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: white;
+  }
+
+  .step-num.done {
+    background: var(--success);
+  }
+
+  .step-check {
+    position: absolute;
+    top: -5px; right: -5px;
+    width: 18px; height: 18px;
+    background: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: white;
+    border: 2px solid white;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .step-card.done .step-check { opacity: 1; }
+  .step-card.done .step-num { background: #c8f0d8; color: #1a7a45; }
+
+  .step-content { flex: 1; min-width: 0; }
+
+  .step-tag {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--violet-light);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 2px;
+  }
+
+  .step-title {
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .step-emoji {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .step-desc {
+    padding: 0 18px 16px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #444;
+    display: none;
+  }
+
+  .step-card.expanded .step-desc {
+    display: block;
+  }
+
+  .step-img {
+    display: none;
+    margin: 0 18px 16px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid rgba(75,45,130,0.1);
+    text-align: center;
+    background: #f5f0fa;
+  }
+
+  .step-img img {
+    max-width: 100%;
+    height: auto;
+    max-height: 380px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .expand-hint {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .step-card.expanded .expand-hint {
+    transform: rotate(180deg);
+  }
+
+  /* DONE STATE */
+  .step-done-btn {
+    margin: 0 18px 16px;
+    padding: 10px;
+    background: #f0faf5;
+    border: 2px solid #c8f0d8;
+    border-radius: 12px;
+    width: calc(100% - 36px);
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: #1a7a45;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: none;
+  }
+
+  .step-card.expanded .step-done-btn {
+    display: block;
+  }
+
+  .step-done-btn:hover {
+    background: #d4f5e5;
+  }
+
+  .step-card.done .step-done-btn {
+    background: #e8f5ee;
+    color: #999;
+    border-color: #d0eedd;
+  }
+
+  /* DIVIDER */
+  .step-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 12px;
+    color: var(--violet-light);
+    font-size: 16px;
+    opacity: 0.4;
+  }
+
+  /* FINAL */
+  .final-card {
+    background: linear-gradient(135deg, var(--violet), #7B5EA7);
+    border-radius: 20px;
+    padding: 24px 20px;
+    text-align: center;
+    color: white;
+    margin: 8px 20px 32px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 8px 32px rgba(75,45,130,0.25);
+  }
+
+  .final-card .big-emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+  .final-card h2 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .final-card p {
+    font-size: 13.5px;
+    line-height: 1.6;
+    opacity: 0.9;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  .final-link {
+    display: inline-block;
+    margin-top: 16px;
+    background: var(--gold);
+    color: #3a2000;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    padding: 11px 24px;
+    border-radius: 50px;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(245,166,35,0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="logo-emoji">🧶</span>
+  <h1>GomitoloApp<br><span>Da Filo a Trama</span></h1>
+  <div class="subtitle">Convegno Nazionale AGESCI L/C</div>
+  <div class="ios-badge">📱 Guida installazione iOS</div>
+</div>
+
+<div class="intro">
+  <div class="intro-box">
+    <span class="icon">👇</span>
+    <p>Due passi veloci: installa l'app sulla Home del tuo iPhone, poi attiva le notifiche. Ci vogliono meno di 2 minuti. Promesso.</p>
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span>Progresso</span>
+    <span id="prog-text">0 / 7 passi</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="steps" id="steps-container">
+  <!-- injected by JS -->
+</div>
+
+<div class="final-card" id="final-card" style="display:none">
+  <span class="big-emoji">🎉</span>
+  <h2>Tutto pronto!</h2>
+  <p>Sei connesso all'evento. Ora non ti perdi nessun laboratorio, nessuna sessione, nessun aggiornamento last-minute.</p>
+  <a class="final-link" href="https://dafiloatrama.app">Apri GomitoloApp →</a>
+</div>
+
+<script>
+const STEPS = [
+  {
+    num: "01",
+    emoji: "🧶",
+    title: "Apri Safari e vai su dafiloatrama.app",
+    desc: "Accedi all'app dal browser Safari. Non dal Chrome, non da Firefox — Safari. È l'unico che fa le cose per bene su iOS.",
+    tag: "Prerequisito"
+  },
+  {
+    num: "02",
+    emoji: "🤙",
+    title: "Tocca il tasto Condividi",
+    desc: "In basso al centro della barra di Safari c'è il quadratino con la freccia su ↑. Toccalo. Si apre il foglio di condivisione di iOS.",
+    tag: "Tocca"
+  },
+  {
+    num: "03",
+    emoji: "📱",
+    title: "Scorri e scegli \"Aggiungi alla schermata Home\"",
+    desc: "Scorri le opzioni verso il basso fino a trovare <strong>\"Aggiungi alla schermata Home\"</strong>. Toccala. Conferma con <strong>\"Aggiungi\"</strong> in alto a destra.",
+    tag: "Scorri e tocca"
+  },
+  {
+    num: "04",
+    emoji: "✅",
+    title: "GomitoloApp è sulla tua Home!",
+    desc: "L'icona del gomitolo è comparsa sulla schermata Home del tuo iPhone. D'ora in poi apri sempre l'app da lì — non dal browser.",
+    tag: "Fatto!"
+  },
+  {
+    num: "05",
+    emoji: "🚀",
+    title: "Apri l'app dalla schermata Home",
+    desc: "Tocca l'icona GomitoloApp. L'app si apre in modalità full-screen, senza barre del browser. Sei nella dashboard personale dell'evento.",
+    tag: "Lancia"
+  },
+  {
+    num: "06",
+    emoji: "🔔",
+    title: "Vai al Profilo → Preferenze",
+    desc: "Tocca il menu <strong>☰</strong> in alto a destra → <strong>Profilo</strong> → tab <strong>Preferenze</strong>. Qui trovi il toggle delle <strong>Notifiche Push</strong>. Attivalo.",
+    tag: "Impostazioni"
+  },
+  {
+    num: "07",
+    emoji: "✅",
+    title: "Consenti le notifiche",
+    desc: "iOS ti chiede il permesso con un popup di sistema: <strong>\"GomitoloApp\" vorrebbe inviarti delle notifiche</strong>. Tocca <strong>Consenti</strong>. Se scegli \"Non consentire\" non riceverai nulla — e poi non lamentarti 😅",
+    tag: "Permesso iOS"
+  }
+];
+
+let doneSet = new Set(JSON.parse(localStorage.getItem('dftSteps') || '[]'));
+
+function saveDone() {
+  localStorage.setItem('dftSteps', JSON.stringify([...doneSet]));
+}
+
+function updateProgress() {
+  const n = doneSet.size;
+  const total = STEPS.length;
+  document.getElementById('prog-text').textContent = n + ' / ' + total + ' passi';
+  document.getElementById('prog-fill').style.width = (n / total * 100) + '%';
+  if (n === total) {
+    document.getElementById('final-card').style.display = 'block';
+    document.getElementById('final-card').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+}
+
+function renderSteps() {
+  const container = document.getElementById('steps-container');
+  container.innerHTML = '';
+
+  STEPS.forEach((step, i) => {
+    if (i > 0) {
+      const div = document.createElement('div');
+      div.className = 'step-divider';
+      div.innerHTML = '▾';
+      container.appendChild(div);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'step-card' + (doneSet.has(i) ? ' done' : '');
+    card.id = 'card-' + i;
+
+    const isDone = doneSet.has(i);
+
+    card.innerHTML = `
+      <div class="step-header" onclick="toggleStep(${i})">
+        <div class="step-num-wrap">
+          <div class="step-num ${isDone ? 'done' : ''}">${step.num}</div>
+          <div class="step-check">✓</div>
+        </div>
+        <div class="step-content">
+          <div class="step-tag">${step.tag}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+        <span class="step-emoji">${step.emoji}</span>
+        <span class="expand-hint">▾</span>
+      </div>
+      <div class="step-desc">${step.desc}</div>
+      <button class="step-done-btn" onclick="markDone(event, ${i})">${isDone ? '✅ Fatto!' : '✅ Fatto, avanti!'}</button>
+    `;
+
+    container.appendChild(card);
+  });
+
+  updateProgress();
+}
+
+function toggleStep(i) {
+  const card = document.getElementById('card-' + i);
+  card.classList.toggle('expanded');
+}
+
+function markDone(e, i) {
+  e.stopPropagation();
+  doneSet.add(i);
+  saveDone();
+
+  const card = document.getElementById('card-' + i);
+  card.classList.add('done');
+  card.classList.remove('expanded');
+
+  const next = document.getElementById('card-' + (i + 1));
+  if (next) {
+    next.classList.add('expanded');
+    setTimeout(() => next.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+  }
+
+  updateProgress();
+
+  card.querySelector('.step-done-btn').textContent = '✅ Fatto!';
+  card.querySelector('.step-num').classList.add('done');
+}
+
+renderSteps();
+const firstUndone = STEPS.findIndex((_, i) => !doneSet.has(i));
+if (firstUndone >= 0) {
+  document.getElementById('card-' + firstUndone)?.classList.add('expanded');
+}
+</script>
+</body>
+</html>
