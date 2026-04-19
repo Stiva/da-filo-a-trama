@@ -24,10 +24,15 @@ export default function ColumnFilter({
   placeholder = 'Filtra...'
 }: ColumnFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [localText, setLocalText] = useState<string>(value || '');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isActive = value !== undefined && value !== null && value !== '';
+
+  useEffect(() => {
+    if (isOpen) setLocalText(value || '');
+  }, [isOpen, value]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -46,8 +51,14 @@ export default function ColumnFilter({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, type]);
 
+  const handleApply = () => {
+    onChange(localText);
+    setIsOpen(false);
+  };
+
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setLocalText('');
     onChange('');
     setIsOpen(false);
   };
@@ -92,11 +103,11 @@ export default function ColumnFilter({
               <input
                 ref={inputRef}
                 type="text"
-                value={value || ''}
-                onChange={(e) => onChange(e.target.value)}
+                value={localText}
+                onChange={(e) => setLocalText(e.target.value)}
                 placeholder={placeholder}
                 className="input w-full pl-9 h-9 text-sm"
-                onKeyDown={(e) => e.key === 'Enter' && setIsOpen(false)}
+                onKeyDown={(e) => e.key === 'Enter' && handleApply()}
               />
             </div>
           )}
@@ -157,7 +168,7 @@ export default function ColumnFilter({
 
           <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={handleApply}
               className="px-3 py-1 text-xs font-medium text-white bg-agesci-blue rounded hover:bg-agesci-blue-light transition-colors"
             >
               Applica

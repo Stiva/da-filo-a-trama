@@ -46,9 +46,15 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Us
 
     // Filtro ricerca globale
     if (search) {
-      query = query.or(
-        `name.ilike.%${search}%,surname.ilike.%${search}%,email.ilike.%${search}%,scout_group.ilike.%${search}%`
-      );
+      let orFilter = `name.ilike.%${search}%,surname.ilike.%${search}%,email.ilike.%${search}%,scout_group.ilike.%${search}%`;
+      const parts = search.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        const p1 = parts[0];
+        const p2 = parts.slice(1).join(' ');
+        orFilter += `,and(name.ilike.%${p1}%,surname.ilike.%${p2}%)`;
+        orFilter += `,and(surname.ilike.%${p1}%,name.ilike.%${p2}%)`;
+      }
+      query = query.or(orFilter);
     }
 
     // Filtri per colonna dinamici (es. filter_role=admin)
