@@ -16,6 +16,113 @@ const EventLocationMap = dynamic(() => import('@/components/EventLocationMap'), 
   ),
 });
 
+// ── GroupPanel ────────────────────────────────────────────────────────────────
+// Shown when the current user is a member or moderator of a group for this event.
+// Moderators also get an expandable participant list.
+
+type GroupMember = {
+  user_id: string;
+  profile: { id: string; name: string | null; surname: string | null; scout_group: string | null; service_role: string | null } | null;
+};
+
+function GroupPanel({ event, eventId }: { event: EventWithEnrollment; eventId: string }) {
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  const handleToggleMembers = async () => {
+    if (!membersOpen && members.length === 0) {
+      setLoadingMembers(true);
+      try {
+        const res = await fetch(`/api/events/${eventId}/groups/${event.user_group_id}`);
+        const result = await res.json();
+        if (res.ok) setMembers(result.data?.members || []);
+      } finally {
+        setLoadingMembers(false);
+      }
+    }
+    setMembersOpen(prev => !prev);
+  };
+
+  return (
+    <div className="mt-4 bg-indigo-50 border border-indigo-200 rounded-xl overflow-hidden">
+      {/* Header row */}
+      <div className="p-4 flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-indigo-500 uppercase tracking-wide">
+              {event.is_group_moderator ? 'Sei moderatore del gruppo' : 'Il tuo gruppo'}
+            </p>
+            <p className="text-indigo-900 font-bold text-lg leading-tight">
+              {event.user_group_name ?? 'Gruppo di Lavoro'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {event.is_group_moderator && (
+            <button
+              type="button"
+              onClick={handleToggleMembers}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Partecipanti
+              <svg className={`w-3.5 h-3.5 transition-transform ${membersOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          )}
+          <Link
+            href={`/events/${eventId}/groups/${event.user_group_id}`}
+            className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Area Gruppo →
+          </Link>
+        </div>
+      </div>
+
+      {/* Participant list — moderator only */}
+      {membersOpen && (
+        <div className="border-t border-indigo-200 bg-white">
+          {loadingMembers ? (
+            <div className="p-4 text-center text-sm text-gray-500">Caricamento partecipanti…</div>
+          ) : members.length === 0 ? (
+            <div className="p-4 text-center text-sm text-gray-500">Nessun partecipante assegnato.</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {members.map((m) => {
+                const p = m.profile;
+                const fullName = [p?.name, p?.surname].filter(Boolean).join(' ') || '—';
+                return (
+                  <div key={m.user_id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-xs font-bold text-indigo-600">
+                      {(p?.name?.[0] ?? p?.surname?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{fullName}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {p?.service_role ?? 'Ruolo non indicato'}
+                        {p?.scout_group ? ` · ${p.scout_group}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EventDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -288,27 +395,12 @@ export default function EventDetailPage() {
               </p>
             )}
 
-            {/* Workspace Link for Group Members/Moderators */}
+            {/* Gruppo di Lavoro */}
             {event.user_group_id && (
-              <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-between flex-wrap gap-4">
-                <div>
-                  <h3 className="text-indigo-900 font-semibold text-lg flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Area Gruppo di Lavoro
-                  </h3>
-                  <p className="text-indigo-700 text-sm mt-1">
-                    {event.is_group_moderator ? 'Sei moderatore di questo gruppo.' : 'Sei stato assegnato a un gruppo di lavoro.'} Accedi per collaborare.
-                  </p>
-                </div>
-                <Link
-                  href={`/events/${eventId}/groups/${event.user_group_id}`}
-                  className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-                >
-                  Vai all'Area Gruppo
-                </Link>
-              </div>
+              <GroupPanel
+                event={event}
+                eventId={eventId}
+              />
             )}
           </div>
 

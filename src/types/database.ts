@@ -211,6 +211,7 @@ export interface EventWithEnrollment extends Event {
   waitlist_position?: number | null;
   checked_in_at?: string | null;
   user_group_id?: string;
+  user_group_name?: string;
   is_group_moderator?: boolean;
   is_favourited?: boolean;
 }

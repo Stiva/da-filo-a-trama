@@ -54,6 +54,7 @@ export async function GET(
     let checkedInAt = null;
     let userGroupId = undefined;
     let isGroupModerator = false;
+    let userGroupName: string | null = null;
     let isFavourited = false;
 
     if (userId) {
@@ -81,12 +82,11 @@ export async function GET(
           checkedInAt = enrollment.checked_in_at;
         }
 
-        // Se l'evento è diviso in gruppi, cerca se l'utente vi appartiene
-        if (event.workshop_groups_count > 0) {
-          // Controlla se è moderatore
+        // Cerca se l'utente appartiene a un gruppo di lavoro (moderatore o membro)
+        {
           const { data: modGroup } = await supabase
             .from('event_group_moderators')
-            .select('group_id, event_groups!inner(event_id)')
+            .select('group_id, event_groups!inner(event_id, name)')
             .eq('user_id', profile.id)
             .eq('event_groups.event_id', id)
             .maybeSingle();
@@ -94,17 +94,18 @@ export async function GET(
           if (modGroup) {
             userGroupId = modGroup.group_id;
             isGroupModerator = true;
+            userGroupName = (modGroup.event_groups as any)?.name ?? null;
           } else {
-            // Controlla se è membro
             const { data: memberGroup } = await supabase
               .from('event_group_members')
-              .select('group_id, event_groups!inner(event_id)')
+              .select('group_id, event_groups!inner(event_id, name)')
               .eq('user_id', profile.id)
               .eq('event_groups.event_id', id)
               .maybeSingle();
 
             if (memberGroup) {
               userGroupId = memberGroup.group_id;
+              userGroupName = (memberGroup.event_groups as any)?.name ?? null;
             }
           }
         }
@@ -129,6 +130,7 @@ export async function GET(
       waitlist_position: waitlistPosition,
       checked_in_at: checkedInAt,
       user_group_id: userGroupId,
+      user_group_name: userGroupName ?? undefined,
       is_group_moderator: isGroupModerator,
       is_favourited: isFavourited,
     };

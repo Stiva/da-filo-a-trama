@@ -70,6 +70,10 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
   const [groupSizeMode, setGroupSizeMode] = useState<'count' | 'avg'>(
     event?.avg_people_per_group ? 'avg' : 'count'
   );
+  const [groupWizardStep, setGroupWizardStep] = useState<number>(() => {
+    if (!event?.group_creation_mode) return 1;
+    return ['static_crm', 'copy'].includes(event.group_creation_mode) ? 2 : 4;
+  });
 
   const [workshopEvents, setWorkshopEvents] = useState<{ id: string; title: string; start_time: string }[]>([]);
   const [serviceRoles, setServiceRoles] = useState<ServiceRoleRecord[]>([]);
@@ -268,258 +272,266 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             </div>
           </div>
 
-          {/* Sezione gruppi, abilitata dinamicamente per categorie con has_groups=true */}
+          {/* Sezione gruppi — wizard sequenziale */}
           {categories.find(c => c.slug === formData.category)?.has_groups && (() => {
+            const mode = formData.group_creation_mode;
+            const maxStep = ['static_crm', 'copy'].includes(mode) ? 2 : 4;
             const groupsEnabled = formData.workshop_groups_count > 0
               || !!formData.avg_people_per_group
-              || ['copy', 'homogeneous', 'static_crm'].includes(formData.group_creation_mode);
-            const mode = formData.group_creation_mode;
-            const showRoleFilter = !['static_crm', 'copy'].includes(mode);
-            const showGroupSize = !['static_crm', 'copy'].includes(mode);
+              || ['copy', 'homogeneous', 'static_crm'].includes(mode);
+
+            // Summary labels for completed steps
+            const step1Value = formData.auto_enroll_all
+              ? 'Iscritti BC (automatico)'
+              : formData.group_user_source === 'bc_list'
+              ? 'Lista iscritti BC'
+              : `Iscritti all'evento${formData.auto_create_groups_at_start ? ' · auto-creazione attiva' : ''}`;
+
+            const modeLabels: Record<string, string> = {
+              random: 'Casuale', mix_roles: 'Ruoli equamente distribuiti',
+              homogeneous: 'Raggruppa ruoli omogenei', static_crm: 'Gruppi Statici CRM', copy: 'Copia evento precedente',
+            };
+            const step2Value = modeLabels[mode] || mode;
+
+            const step3Value = mode === 'homogeneous'
+              ? `Max ${formData.max_group_size} per ruolo`
+              : groupSizeMode === 'count'
+              ? `${formData.workshop_groups_count} gruppi`
+              : `~${formData.avg_people_per_group} persone/gruppo`;
+
+            const step4Value = formData.group_eligible_roles.length === 0
+              ? 'Tutti i ruoli inclusi'
+              : `${formData.group_eligible_roles.length} ruol${formData.group_eligible_roles.length === 1 ? 'o' : 'i'} selezionati`;
+
+            const stepBadge = (n: number) => (
+              <span className="flex-shrink-0 w-5 h-5 bg-agesci-blue text-white rounded-full flex items-center justify-center text-[10px] font-bold">{n}</span>
+            );
+
+            const stepTitle = (n: number, label: string) => (
+              <div className="flex items-center gap-2 mb-3">
+                {stepBadge(n)}
+                <span className="text-sm font-semibold text-gray-800">{label}</span>
+              </div>
+            );
+
+            const stepSummary = (n: number, label: string, value: string, onEdit: () => void) => (
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-green-50 rounded-lg border border-green-100">
+                <span className="flex-shrink-0 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold">✓</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-medium text-green-600 uppercase tracking-wide">{label}</p>
+                  <p className="text-sm text-gray-800 font-medium truncate">{value}</p>
+                </div>
+                <button type="button" onClick={onEdit} className="text-xs text-agesci-blue hover:underline font-medium flex-shrink-0">Modifica</button>
+              </div>
+            );
+
+            const continueBtn = (onClick: () => void, label = 'Continua →') => (
+              <div className="flex justify-end pt-2">
+                <button type="button" onClick={onClick}
+                  className="px-4 py-1.5 text-sm font-medium text-white bg-agesci-blue rounded-lg hover:bg-agesci-blue-light transition-colors">
+                  {label}
+                </button>
+              </div>
+            );
 
             return (
               <div className="space-y-4 pt-4 border-t border-gray-100">
-                {/* Toggle Crea Gruppi */}
+                {/* Toggle */}
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800">Gruppi di Lavoro</h3>
                     <p className="text-sm text-gray-500">Abilita la creazione di gruppi di lavoro per questo evento</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
-                    <input
-                      type="checkbox"
-                      checked={groupsEnabled}
+                    <input type="checkbox" checked={groupsEnabled}
                       onChange={(e) => {
                         if (!e.target.checked) {
                           setFormData(prev => ({ ...prev, workshop_groups_count: 0, avg_people_per_group: null, source_event_id: '', group_eligible_roles: [], group_creation_mode: 'random', auto_create_groups_at_start: false }));
+                          setGroupWizardStep(1);
                         } else {
                           setFormData(prev => ({ ...prev, workshop_groups_count: 4 }));
                           setGroupSizeMode('count');
+                          setGroupWizardStep(1);
                         }
                       }}
-                      className="sr-only peer"
-                    />
+                      className="sr-only peer" />
                     <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
 
                 {groupsEnabled && (
-                  <div className="space-y-4 pl-0 sm:pl-4 border-l-0 sm:border-l-2 sm:border-blue-200">
+                  <div className="space-y-2 pl-0 sm:pl-4 border-l-0 sm:border-l-2 sm:border-blue-200">
 
-                    {/* STEP 1 — Sorgente utenti */}
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <p className="text-sm font-semibold text-gray-700">1. Sorgente utenti</p>
-                      {formData.auto_enroll_all ? (
-                        <div className="flex items-start gap-2 text-sm text-blue-700 bg-blue-50 rounded-md p-3">
-                          <span className="mt-0.5">ℹ️</span>
-                          <span>Iscrizione automatica attiva — la lista utenti sarà sempre quella degli iscritti BC.</span>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors">
-                            <input
-                              type="radio"
-                              name="group_user_source"
-                              value="bc_list"
-                              checked={formData.group_user_source === 'bc_list'}
-                              onChange={() => setFormData(prev => ({ ...prev, group_user_source: 'bc_list', auto_create_groups_at_start: false }))}
-                              className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                            />
-                            <div>
-                              <span className="text-sm font-medium text-gray-800">Lista iscritti BC</span>
-                              <p className="text-xs text-gray-500 mt-0.5">Gruppi pre-determinati al salvataggio dell&apos;evento</p>
-                            </div>
-                          </label>
-                          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors">
-                            <input
-                              type="radio"
-                              name="group_user_source"
-                              value="event_registrants"
-                              checked={formData.group_user_source === 'event_registrants'}
-                              onChange={() => setFormData(prev => ({ ...prev, group_user_source: 'event_registrants' }))}
-                              className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                            />
-                            <div>
-                              <span className="text-sm font-medium text-gray-800">Iscritti all&apos;evento</span>
-                              <p className="text-xs text-gray-500 mt-0.5">Solo gli utenti che si iscrivono in autonomia — gruppi creati manualmente o automaticamente</p>
-                            </div>
-                          </label>
-
-                          {formData.group_user_source === 'event_registrants' && (
-                            <div className="ml-6 flex items-center justify-between gap-4 p-3 bg-white rounded-lg border border-gray-200">
+                    {/* ── STEP 1 ── */}
+                    {groupWizardStep > 1 && stepSummary(1, 'Sorgente utenti', step1Value, () => setGroupWizardStep(1))}
+                    {groupWizardStep === 1 && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        {stepTitle(1, 'Sorgente utenti')}
+                        {formData.auto_enroll_all ? (
+                          <div className="text-sm text-blue-700 bg-blue-50 rounded-md p-3 flex gap-2">
+                            <span>ℹ️</span>
+                            <span>Iscrizione automatica attiva — la lista utenti sarà sempre quella degli iscritti BC.</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border bg-white hover:border-agesci-blue transition-colors" style={{ borderColor: formData.group_user_source === 'bc_list' ? undefined : undefined }}>
+                              <input type="radio" name="group_user_source" value="bc_list"
+                                checked={formData.group_user_source === 'bc_list'}
+                                onChange={() => setFormData(prev => ({ ...prev, group_user_source: 'bc_list', auto_create_groups_at_start: false }))}
+                                className="mt-0.5 text-blue-600" />
                               <div>
-                                <span className="text-sm font-medium text-gray-800">Crea gruppi automaticamente all&apos;inizio dell&apos;evento</span>
-                                <p className="text-xs text-gray-500 mt-0.5">Se i gruppi non vengono creati manualmente, il sistema li genera all&apos;ora di inizio</p>
+                                <span className="text-sm font-medium text-gray-800">Lista iscritti BC</span>
+                                <p className="text-xs text-gray-500 mt-0.5">Gruppi pre-determinati al salvataggio dell&apos;evento</p>
                               </div>
-                              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input
-                                  type="checkbox"
-                                  checked={formData.auto_create_groups_at_start}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, auto_create_groups_at_start: e.target.checked }))}
-                                  className="sr-only peer"
-                                />
-                                <div className="relative w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* STEP 2 — Modalità di generazione */}
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <p className="text-sm font-semibold text-gray-700">2. Modalità di generazione</p>
-                      <div className="space-y-1">
-                        {[
-                          { value: 'random', label: 'Casuale', desc: 'Distribuzione casuale dei partecipanti' },
-                          { value: 'mix_roles', label: 'Ruoli equamente distribuiti', desc: 'Ogni gruppo riceve una proporzione bilanciata di ruoli' },
-                          { value: 'homogeneous', label: 'Raggruppa ruoli omogenei', desc: 'Ogni gruppo è composto da persone con lo stesso ruolo di servizio' },
-                          { value: 'static_crm', label: 'Usa i gruppi Statici del CRM', desc: 'I partecipanti vengono assegnati in base al loro gruppo statico' },
-                          { value: 'copy', label: 'Copia da evento precedente', desc: 'Replica la struttura gruppi di un evento già svolto' },
-                        ].map(opt => (
-                          <label key={opt.value} className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors">
-                            <input
-                              type="radio"
-                              name="group_creation_mode"
-                              value={opt.value}
-                              checked={mode === opt.value}
-                              onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: opt.value as EventGroupCreationMode, source_event_id: opt.value !== 'copy' ? '' : prev.source_event_id }))}
-                              className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                            />
-                            <div>
-                              <span className="text-sm font-medium text-gray-800">{opt.label}</span>
-                              <p className="text-xs text-gray-500">{opt.desc}</p>
-                            </div>
-                          </label>
-                        ))}
+                            </label>
+                            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border bg-white hover:border-agesci-blue transition-colors">
+                              <input type="radio" name="group_user_source" value="event_registrants"
+                                checked={formData.group_user_source === 'event_registrants'}
+                                onChange={() => setFormData(prev => ({ ...prev, group_user_source: 'event_registrants' }))}
+                                className="mt-0.5 text-blue-600" />
+                              <div>
+                                <span className="text-sm font-medium text-gray-800">Iscritti all&apos;evento</span>
+                                <p className="text-xs text-gray-500 mt-0.5">Solo chi si iscrive autonomamente — gruppi creati manualmente o in automatico</p>
+                              </div>
+                            </label>
+                            {formData.group_user_source === 'event_registrants' && (
+                              <div className="ml-4 flex items-center justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-800">Crea gruppi automaticamente all&apos;inizio</p>
+                                  <p className="text-xs text-gray-500">Se non creati manualmente, il sistema li genera all&apos;ora di inizio</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                  <input type="checkbox" checked={formData.auto_create_groups_at_start}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, auto_create_groups_at_start: e.target.checked }))}
+                                    className="sr-only peer" />
+                                  <div className="relative w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {continueBtn(() => setGroupWizardStep(2))}
                       </div>
+                    )}
 
-                      {mode === 'copy' && (
-                        <div className="mt-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Evento di origine *</label>
-                          <select
-                            value={formData.source_event_id}
-                            onChange={(e) => setFormData(prev => ({ ...prev, source_event_id: e.target.value }))}
-                            required={mode === 'copy'}
-                            className="input w-full"
-                          >
-                            <option value="" disabled>Seleziona un evento passato</option>
-                            {workshopEvents.map(we => (
-                              <option key={we.id} value={we.id}>
-                                {we.title} ({new Date(we.start_time).toLocaleDateString('it-IT')})
-                              </option>
-                            ))}
-                          </select>
+                    {/* ── STEP 2 ── */}
+                    {groupWizardStep > 2 && stepSummary(2, 'Modalità di generazione', step2Value, () => setGroupWizardStep(2))}
+                    {groupWizardStep === 2 && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        {stepTitle(2, 'Modalità di generazione')}
+                        <div className="space-y-1">
+                          {[
+                            { value: 'random', label: 'Casuale', desc: 'Distribuzione casuale dei partecipanti' },
+                            { value: 'mix_roles', label: 'Ruoli equamente distribuiti', desc: 'Ogni gruppo riceve una proporzione bilanciata di ruoli' },
+                            { value: 'homogeneous', label: 'Raggruppa ruoli omogenei', desc: 'Ogni gruppo è composto da persone con lo stesso ruolo' },
+                            { value: 'static_crm', label: 'Usa i gruppi Statici del CRM', desc: 'I partecipanti vengono assegnati in base al loro gruppo statico' },
+                            { value: 'copy', label: 'Copia da evento precedente', desc: 'Replica la struttura gruppi di un evento già svolto' },
+                          ].map(opt => (
+                            <label key={opt.value} className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-transparent hover:bg-white hover:border-gray-200 transition-colors">
+                              <input type="radio" name="group_creation_mode" value={opt.value}
+                                checked={mode === opt.value}
+                                onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: opt.value as EventGroupCreationMode, source_event_id: opt.value !== 'copy' ? '' : prev.source_event_id }))}
+                                className="mt-0.5 text-blue-600 focus:ring-blue-500" />
+                              <div>
+                                <span className="text-sm font-medium text-gray-800">{opt.label}</span>
+                                <p className="text-xs text-gray-500">{opt.desc}</p>
+                              </div>
+                            </label>
+                          ))}
                         </div>
-                      )}
-                    </div>
+                        {mode === 'copy' && (
+                          <div className="mt-3">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Evento di origine *</label>
+                            <select value={formData.source_event_id}
+                              onChange={(e) => setFormData(prev => ({ ...prev, source_event_id: e.target.value }))}
+                              required={mode === 'copy'} className="input w-full">
+                              <option value="" disabled>Seleziona un evento passato</option>
+                              {workshopEvents.map(we => (
+                                <option key={we.id} value={we.id}>
+                                  {we.title} ({new Date(we.start_time).toLocaleDateString('it-IT')})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {maxStep > 2 && continueBtn(() => setGroupWizardStep(3))}
+                      </div>
+                    )}
 
-                    {/* STEP 3 — Dimensione gruppi */}
-                    {showGroupSize && (
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <p className="text-sm font-semibold text-gray-700">3. Dimensione gruppi</p>
+                    {/* ── STEP 3 — only for random / mix_roles / homogeneous ── */}
+                    {maxStep >= 3 && groupWizardStep > 3 && stepSummary(3, 'Dimensione gruppi', step3Value, () => setGroupWizardStep(3))}
+                    {maxStep >= 3 && groupWizardStep === 3 && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        {stepTitle(3, 'Dimensione gruppi')}
                         {mode === 'homogeneous' ? (
                           <div>
                             <label className="block text-sm text-gray-700 mb-1">Dimensione massima per gruppo (per ruolo)</label>
-                            <input
-                              type="number"
-                              value={formData.max_group_size}
+                            <input type="number" value={formData.max_group_size}
                               onChange={(e) => setFormData(prev => ({ ...prev, max_group_size: parseInt(e.target.value) || 1 }))}
-                              min={1}
-                              required
-                              className="input w-full"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Se un ruolo ha più persone di questo limite, vengono creati più gruppi per quel ruolo.</p>
+                              min={1} required className="input w-full" />
+                            <p className="text-xs text-gray-500 mt-1">Se un ruolo supera questo limite vengono creati più gruppi per quel ruolo.</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
                             <div className="flex gap-4">
                               <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="group_size_mode"
-                                  checked={groupSizeMode === 'count'}
-                                  onChange={() => {
-                                    setGroupSizeMode('count');
-                                    setFormData(prev => ({ ...prev, avg_people_per_group: null, workshop_groups_count: prev.workshop_groups_count || 4 }));
-                                  }}
-                                  className="text-blue-600"
-                                />
+                                <input type="radio" name="group_size_mode" checked={groupSizeMode === 'count'}
+                                  onChange={() => { setGroupSizeMode('count'); setFormData(prev => ({ ...prev, avg_people_per_group: null, workshop_groups_count: prev.workshop_groups_count || 4 })); }}
+                                  className="text-blue-600" />
                                 <span className="text-sm text-gray-800">Numero di gruppi</span>
                               </label>
                               <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="group_size_mode"
-                                  checked={groupSizeMode === 'avg'}
-                                  onChange={() => {
-                                    setGroupSizeMode('avg');
-                                    setFormData(prev => ({ ...prev, workshop_groups_count: 0, avg_people_per_group: prev.avg_people_per_group || 10 }));
-                                  }}
-                                  className="text-blue-600"
-                                />
-                                <span className="text-sm text-gray-800">Media persone per gruppo</span>
+                                <input type="radio" name="group_size_mode" checked={groupSizeMode === 'avg'}
+                                  onChange={() => { setGroupSizeMode('avg'); setFormData(prev => ({ ...prev, workshop_groups_count: 0, avg_people_per_group: prev.avg_people_per_group || 10 })); }}
+                                  className="text-blue-600" />
+                                <span className="text-sm text-gray-800">Media persone / gruppo</span>
                               </label>
                             </div>
                             {groupSizeMode === 'count' ? (
-                              <div>
-                                <input
-                                  type="number"
-                                  value={formData.workshop_groups_count || ''}
+                              <>
+                                <input type="number" value={formData.workshop_groups_count || ''}
                                   onChange={(e) => setFormData(prev => ({ ...prev, workshop_groups_count: parseInt(e.target.value) || 0 }))}
-                                  min={1}
-                                  placeholder="es. 8"
-                                  className="input w-full"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">I partecipanti saranno distribuiti in questo numero di gruppi.</p>
-                              </div>
+                                  min={1} placeholder="es. 8" className="input w-full" />
+                                <p className="text-xs text-gray-500">I partecipanti saranno distribuiti in questo numero di gruppi.</p>
+                              </>
                             ) : (
-                              <div>
-                                <input
-                                  type="number"
-                                  value={formData.avg_people_per_group || ''}
+                              <>
+                                <input type="number" value={formData.avg_people_per_group || ''}
                                   onChange={(e) => setFormData(prev => ({ ...prev, avg_people_per_group: parseInt(e.target.value) || null }))}
-                                  min={1}
-                                  placeholder="es. 10"
-                                  className="input w-full"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Il numero di gruppi verrà calcolato automaticamente al momento della generazione.</p>
-                              </div>
+                                  min={1} placeholder="es. 10" className="input w-full" />
+                                <p className="text-xs text-gray-500">Il numero di gruppi verrà calcolato al momento della generazione.</p>
+                              </>
                             )}
                           </div>
                         )}
+                        {continueBtn(() => setGroupWizardStep(4))}
                       </div>
                     )}
 
-                    {/* STEP 4 — Ruoli da includere */}
-                    {showRoleFilter && (
-                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-700">4. Ruoli di servizio da includere</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Se nessuno è selezionato, tutti i ruoli saranno inclusi.</p>
-                        </div>
+                    {/* ── STEP 4 — only for random / mix_roles / homogeneous ── */}
+                    {maxStep >= 4 && groupWizardStep === 4 && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        {stepTitle(4, 'Ruoli di servizio da includere')}
+                        <p className="text-xs text-gray-500 mb-3">Se nessuno è selezionato, tutti i ruoli saranno inclusi.</p>
                         <div className="grid grid-cols-2 gap-1">
-                          {serviceRoles.map((role) => (
+                          {serviceRoles.map(role => (
                             <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors">
-                              <input
-                                type="checkbox"
+                              <input type="checkbox"
                                 checked={formData.group_eligible_roles.includes(role.name)}
-                                onChange={(e) => {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    group_eligible_roles: e.target.checked
-                                      ? [...prev.group_eligible_roles, role.name]
-                                      : prev.group_eligible_roles.filter(r => r !== role.name),
-                                  }));
-                                }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
-                              />
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  group_eligible_roles: e.target.checked
+                                    ? [...prev.group_eligible_roles, role.name]
+                                    : prev.group_eligible_roles.filter(r => r !== role.name),
+                                }))}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4" />
                               <span className="text-sm text-gray-800">{role.name}</span>
                             </label>
                           ))}
                         </div>
                       </div>
                     )}
+
                   </div>
                 )}
               </div>

@@ -38,15 +38,13 @@ export async function GET(
             // Admin e staff possono accedere, ma verifichiamo se e' moderatore
             hasAccess = true;
         } else {
-            // L'utente e' un partecipante normale, verifichiamo che appartenga a questo gruppo
-            const { data: memberCheck } = await supabase
-                .from('event_group_members')
-                .select('group_id')
-                .eq('user_id', profile.id)
-                .eq('group_id', groupId)
-                .maybeSingle();
+            // L'utente e' un partecipante normale: controlla membro o moderatore
+            const [{ data: memberCheck }, { data: modCheck }] = await Promise.all([
+                supabase.from('event_group_members').select('group_id').eq('user_id', profile.id).eq('group_id', groupId).maybeSingle(),
+                supabase.from('event_group_moderators').select('group_id').eq('user_id', profile.id).eq('group_id', groupId).maybeSingle(),
+            ]);
 
-            if (memberCheck) {
+            if (memberCheck || modCheck) {
                 hasAccess = true;
             }
         }
@@ -83,7 +81,7 @@ export async function GET(
         // 3. Membri
         const { data: members } = await supabase
             .from('event_group_members')
-            .select('user_id, profile:profiles(id, name, surname, scout_group)')
+            .select('user_id, profile:profiles(id, name, surname, scout_group, service_role)')
             .eq('group_id', groupId);
 
         // TODO: Note e allegati (possiamo restituirli qui o da altri endpoint)
