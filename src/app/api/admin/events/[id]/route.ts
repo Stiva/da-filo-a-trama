@@ -247,8 +247,11 @@ export async function PUT(
       visibility: body.visibility || 'public',
       workshop_groups_count: body.workshop_groups_count || 0,
       group_creation_mode: body.group_creation_mode || 'random',
+      group_user_source: body.group_user_source || 'event_registrants',
       group_eligible_roles: body.group_eligible_roles || [],
       max_group_size: body.max_group_size || 10,
+      avg_people_per_group: body.avg_people_per_group || null,
+      auto_create_groups_at_start: body.auto_create_groups_at_start ?? false,
       registrations_open_at: body.registrations_open_at || null,
       registrations_close_at: body.registrations_close_at || null,
       updated_at: new Date().toISOString(),
@@ -268,16 +271,21 @@ export async function PUT(
       throw error;
     }
 
-    // Gestione creazione gruppi se il numero e' aumentato
-    if (eventData.workshop_groups_count > 0 && eventData.group_creation_mode !== 'copy') {
+    // Crea gruppi al salvataggio solo per bc_list (pre-determinati)
+    const shouldCreateOnSave = (eventData.workshop_groups_count as number) > 0
+      && eventData.group_creation_mode !== 'copy'
+      && (eventData.group_user_source === 'bc_list' || eventData.auto_enroll_all);
+
+    if (shouldCreateOnSave) {
       const { data: existingGroups } = await supabase
         .from('event_groups')
         .select('id')
         .eq('event_id', data.id);
 
       const currentCount = existingGroups?.length || 0;
-      if (currentCount < eventData.workshop_groups_count) {
-        const groupsToCreate = Array.from({ length: eventData.workshop_groups_count - currentCount }).map((_, i) => ({
+      const targetCount = eventData.workshop_groups_count as number;
+      if (currentCount < targetCount) {
+        const groupsToCreate = Array.from({ length: targetCount - currentCount }).map((_, i) => ({
           event_id: data.id,
           name: `Gruppo ${currentCount + i + 1}`,
         }));
@@ -381,8 +389,11 @@ export async function PATCH(
     if (body.user_can_upload_assets !== undefined) updateData.user_can_upload_assets = body.user_can_upload_assets;
     if (body.workshop_groups_count !== undefined) updateData.workshop_groups_count = body.workshop_groups_count;
     if (body.group_creation_mode !== undefined) updateData.group_creation_mode = body.group_creation_mode;
+    if (body.group_user_source !== undefined) updateData.group_user_source = body.group_user_source;
     if (body.source_event_id !== undefined) updateData.source_event_id = body.source_event_id;
     if (body.group_eligible_roles !== undefined) updateData.group_eligible_roles = body.group_eligible_roles;
+    if (body.avg_people_per_group !== undefined) updateData.avg_people_per_group = body.avg_people_per_group || null;
+    if (body.auto_create_groups_at_start !== undefined) updateData.auto_create_groups_at_start = body.auto_create_groups_at_start;
     if (body.registrations_open_at !== undefined) updateData.registrations_open_at = body.registrations_open_at || null;
     if (body.registrations_close_at !== undefined) updateData.registrations_close_at = body.registrations_close_at || null;
 
@@ -400,13 +411,15 @@ export async function PATCH(
       throw error;
     }
 
-    // Gestione creazione gruppi se il numero e' aumentato e mod non e' copy
-    if (updateData.workshop_groups_count && (updateData.workshop_groups_count as number) > 0 && updateData.group_creation_mode !== 'copy') {
-      const { data: existingGroups } = await supabase
-        .from('event_groups')
-        .select('id')
-        .eq('event_id', data.id);
+    // Crea gruppi solo per bc_list se il numero è aumentato
+    const patchShouldCreate = updateData.workshop_groups_count
+      && (updateData.workshop_groups_count as number) > 0
+      && updateData.group_creation_mode !== 'copy'
+      && (updateData.group_user_source === 'bc_list' || data.auto_enroll_all);
 
+    if (patchShouldCreate) {
+      const { data: existingGroups } = await supabase
+        .from('event_groups').select('id').eq('event_id', data.id);
       const currentCount = existingGroups?.length || 0;
       const targetCount = updateData.workshop_groups_count as number;
       if (currentCount < targetCount) {

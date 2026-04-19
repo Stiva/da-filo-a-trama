@@ -39,7 +39,7 @@ export async function GET(
         // 1. Fetch Event
         const { data: event, error: eventError } = await supabase
             .from('events')
-            .select('id, title, category, group_creation_mode')
+            .select('id, title, category, group_creation_mode, group_user_source, auto_enroll_all')
             .eq('id', eventId)
             .single();
 
@@ -232,8 +232,8 @@ export async function GET(
         // 5. Compute unassigned users based on mode
         let unassignedUsers: any[] = [];
         
-        if (event.group_creation_mode === 'random_crm') {
-            // For CRM mode, fetch unassigned participants from the entire active CRM list
+        if (event.auto_enroll_all || event.group_user_source === 'bc_list') {
+            // For CRM source, fetch unassigned participants from the entire active CRM list
             const { data: crmParticipants, error: crmError } = await supabase
                 .from('participants')
                 .select('codice, nome, cognome, gruppo, ruolo, static_group')

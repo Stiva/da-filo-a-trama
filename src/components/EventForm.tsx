@@ -2,7 +2,7 @@
 
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord, EventGroupCreationMode, ServiceRoleRecord } from '@/types/database';
+import type { Event, EventCategory, EventVisibility, EventCategoryRecord, PreferenceTagRecord, EventGroupCreationMode, EventGroupUserSource, ServiceRoleRecord } from '@/types/database';
 
 const RichTextEditor = lazy(() => import('@/components/RichTextEditor'));
 
@@ -53,9 +53,12 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     user_can_upload_assets: event?.user_can_upload_assets || false,
     workshop_groups_count: event?.workshop_groups_count || 0,
     group_creation_mode: event?.group_creation_mode || 'random' as EventGroupCreationMode,
+    group_user_source: event?.group_user_source || 'event_registrants' as EventGroupUserSource,
     source_event_id: event?.source_event_id || '',
     group_eligible_roles: event?.group_eligible_roles || [],
     max_group_size: event?.max_group_size || 10,
+    avg_people_per_group: event?.avg_people_per_group ?? null,
+    auto_create_groups_at_start: event?.auto_create_groups_at_start ?? false,
     visibility: event?.visibility || 'public' as EventVisibility,
     is_placeholder: event?.is_placeholder || false,
     registrations_open_at: event?.registrations_open_at ? toLocalDatetimeString(event.registrations_open_at) : '',
@@ -64,6 +67,9 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
 
   const [isRecurring, setIsRecurring] = useState(false);
   const [occurrences, setOccurrences] = useState(1);
+  const [groupSizeMode, setGroupSizeMode] = useState<'count' | 'avg'>(
+    event?.avg_people_per_group ? 'avg' : 'count'
+  );
 
   const [workshopEvents, setWorkshopEvents] = useState<{ id: string; title: string; start_time: string }[]>([]);
   const [serviceRoles, setServiceRoles] = useState<ServiceRoleRecord[]>([]);
@@ -263,201 +269,262 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           </div>
 
           {/* Sezione gruppi, abilitata dinamicamente per categorie con has_groups=true */}
-          {categories.find(c => c.slug === formData.category)?.has_groups && (
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              {/* Toggle Crea Gruppi */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800">Gruppi di Lavoro</h3>
-                  <p className="text-sm text-gray-500">Abilita la creazione di gruppi di lavoro per questo evento</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.workshop_groups_count > 0 || ['copy', 'homogeneous', 'random_crm', 'static_crm'].includes(formData.group_creation_mode)}
-                    onChange={(e) => {
-                      if (!e.target.checked) {
-                        setFormData(prev => ({ ...prev, workshop_groups_count: 0, source_event_id: '', group_eligible_roles: [] }));
-                      } else {
-                        setFormData(prev => ({ ...prev, workshop_groups_count: prev.workshop_groups_count || 4 }));
-                      }
-                    }}
-                    className="sr-only peer"
-                  />
-                  <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+          {categories.find(c => c.slug === formData.category)?.has_groups && (() => {
+            const groupsEnabled = formData.workshop_groups_count > 0
+              || !!formData.avg_people_per_group
+              || ['copy', 'homogeneous', 'static_crm'].includes(formData.group_creation_mode);
+            const mode = formData.group_creation_mode;
+            const showRoleFilter = !['static_crm', 'copy'].includes(mode);
+            const showGroupSize = !['static_crm', 'copy'].includes(mode);
 
-              {/* Dettagli Gruppi - Mostrati solo se il toggle e attivo */}
-              {((formData.workshop_groups_count ?? 0) > 0 || ['copy', 'homogeneous', 'random_crm', 'static_crm'].includes(formData.group_creation_mode)) && (
-                <div className="space-y-4 pl-0 sm:pl-4 border-l-0 sm:border-l-2 sm:border-blue-200">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Modalità Generazione Gruppi *
-                    </label>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="group_creation_mode"
-                          value="random"
-                          checked={formData.group_creation_mode === 'random'}
-                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'random', source_event_id: '' }))}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-800">Random al check-in</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="group_creation_mode"
-                          value="mix_roles"
-                          checked={formData.group_creation_mode === 'mix_roles'}
-                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'mix_roles', source_event_id: '' }))}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-800">Sulla base degli iscritti all&apos;evento (distribuzione per ruoli)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="group_creation_mode"
-                          value="copy"
-                          checked={formData.group_creation_mode === 'copy'}
-                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'copy' }))}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-800">Copiando i gruppi creati da un evento precedente</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer mt-2 pt-2 border-t border-gray-100">
-                        <input
-                          type="radio"
-                          name="group_creation_mode"
-                          value="homogeneous"
-                          checked={formData.group_creation_mode === 'homogeneous'}
-                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'homogeneous', source_event_id: '' }))}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-800 font-medium">Raggruppa ruoli omogenei nello stesso gruppo</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="group_creation_mode"
-                          value="random_crm"
-                          checked={formData.group_creation_mode === 'random_crm'}
-                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'random_crm', source_event_id: '' }))}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-800 font-medium">Random sulla Lista Iscritti BC</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer mt-2 pt-2 border-t border-gray-100">
-                        <input
-                          type="radio"
-                          name="group_creation_mode"
-                          value="static_crm"
-                          checked={formData.group_creation_mode === 'static_crm'}
-                          onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: 'static_crm', source_event_id: '' }))}
-                          className="text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-800 font-medium">Usa i Gruppi Statici del CRM</span>
-                      </label>
-                    </div>
+            return (
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                {/* Toggle Crea Gruppi */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">Gruppi di Lavoro</h3>
+                    <p className="text-sm text-gray-500">Abilita la creazione di gruppi di lavoro per questo evento</p>
                   </div>
+                  <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
+                    <input
+                      type="checkbox"
+                      checked={groupsEnabled}
+                      onChange={(e) => {
+                        if (!e.target.checked) {
+                          setFormData(prev => ({ ...prev, workshop_groups_count: 0, avg_people_per_group: null, source_event_id: '', group_eligible_roles: [], group_creation_mode: 'random', auto_create_groups_at_start: false }));
+                        } else {
+                          setFormData(prev => ({ ...prev, workshop_groups_count: 4 }));
+                          setGroupSizeMode('count');
+                        }
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
 
-                  {formData.group_creation_mode === 'homogeneous' && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                      <label className="block text-sm font-medium text-blue-900 mb-1">
-                        Dimensione massima dei gruppi omogenei *
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.max_group_size}
-                        onChange={(e) => setFormData(prev => ({ ...prev, max_group_size: parseInt(e.target.value) || 1 }))}
-                        min={1}
-                        required={formData.group_creation_mode === 'homogeneous'}
-                        className="input w-full border-blue-200 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                      <p className="text-xs text-blue-700 mt-1">
-                        Verranno formati gruppi con persone aventi lo stesso ruolo. Se il numero di persone con un certo ruolo supera questo limite, verranno creati più gruppi per quel ruolo.
-                      </p>
-                    </div>
-                  )}
+                {groupsEnabled && (
+                  <div className="space-y-4 pl-0 sm:pl-4 border-l-0 sm:border-l-2 sm:border-blue-200">
 
-                  {formData.group_creation_mode === 'copy' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Evento di origine *
-                      </label>
-                      <select
-                        value={formData.source_event_id}
-                        onChange={(e) => setFormData(prev => ({ ...prev, source_event_id: e.target.value }))}
-                        required={formData.group_creation_mode === 'copy'}
-                        className="input w-full"
-                      >
-                        <option value="" disabled>Seleziona un evento passato</option>
-                        {workshopEvents.map(we => (
-                          <option key={we.id} value={we.id}>
-                            {we.title} ({new Date(we.start_time).toLocaleDateString('it-IT')})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.group_creation_mode !== 'copy' && formData.group_creation_mode !== 'static_crm' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Numero di gruppi di lavoro da creare
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.workshop_groups_count}
-                        onChange={(e) => setFormData(prev => ({ ...prev, workshop_groups_count: parseInt(e.target.value) || 0 }))}
-                        min={1}
-                        className="input w-full"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        I partecipanti verranno assegnati in modo bilanciato ai gruppi in base alla modalità scelta.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Ruoli di servizio idonei */}
-                  {formData.group_creation_mode !== 'static_crm' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Ruoli di servizio da includere nei gruppi
-                      </label>
-                      <p className="text-xs text-gray-500 mb-2">
-                        Se nessuno è selezionato, tutti i ruoli saranno inclusi.
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {serviceRoles.map((role) => (
-                          <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                    {/* STEP 1 — Sorgente utenti */}
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <p className="text-sm font-semibold text-gray-700">1. Sorgente utenti</p>
+                      {formData.auto_enroll_all ? (
+                        <div className="flex items-start gap-2 text-sm text-blue-700 bg-blue-50 rounded-md p-3">
+                          <span className="mt-0.5">ℹ️</span>
+                          <span>Iscrizione automatica attiva — la lista utenti sarà sempre quella degli iscritti BC.</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors">
                             <input
-                              type="checkbox"
-                              checked={formData.group_eligible_roles.includes(role.name)}
-                              onChange={(e) => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  group_eligible_roles: e.target.checked
-                                    ? [...prev.group_eligible_roles, role.name]
-                                    : prev.group_eligible_roles.filter(r => r !== role.name),
-                                }));
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                              type="radio"
+                              name="group_user_source"
+                              value="bc_list"
+                              checked={formData.group_user_source === 'bc_list'}
+                              onChange={() => setFormData(prev => ({ ...prev, group_user_source: 'bc_list', auto_create_groups_at_start: false }))}
+                              className="mt-0.5 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className="text-sm text-gray-800">{role.name}</span>
+                            <div>
+                              <span className="text-sm font-medium text-gray-800">Lista iscritti BC</span>
+                              <p className="text-xs text-gray-500 mt-0.5">Gruppi pre-determinati al salvataggio dell&apos;evento</p>
+                            </div>
+                          </label>
+                          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-colors">
+                            <input
+                              type="radio"
+                              name="group_user_source"
+                              value="event_registrants"
+                              checked={formData.group_user_source === 'event_registrants'}
+                              onChange={() => setFormData(prev => ({ ...prev, group_user_source: 'event_registrants' }))}
+                              className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                            />
+                            <div>
+                              <span className="text-sm font-medium text-gray-800">Iscritti all&apos;evento</span>
+                              <p className="text-xs text-gray-500 mt-0.5">Solo gli utenti che si iscrivono in autonomia — gruppi creati manualmente o automaticamente</p>
+                            </div>
+                          </label>
+
+                          {formData.group_user_source === 'event_registrants' && (
+                            <div className="ml-6 flex items-center justify-between gap-4 p-3 bg-white rounded-lg border border-gray-200">
+                              <div>
+                                <span className="text-sm font-medium text-gray-800">Crea gruppi automaticamente all&apos;inizio dell&apos;evento</span>
+                                <p className="text-xs text-gray-500 mt-0.5">Se i gruppi non vengono creati manualmente, il sistema li genera all&apos;ora di inizio</p>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.auto_create_groups_at_start}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, auto_create_groups_at_start: e.target.checked }))}
+                                  className="sr-only peer"
+                                />
+                                <div className="relative w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* STEP 2 — Modalità di generazione */}
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <p className="text-sm font-semibold text-gray-700">2. Modalità di generazione</p>
+                      <div className="space-y-1">
+                        {[
+                          { value: 'random', label: 'Casuale', desc: 'Distribuzione casuale dei partecipanti' },
+                          { value: 'mix_roles', label: 'Ruoli equamente distribuiti', desc: 'Ogni gruppo riceve una proporzione bilanciata di ruoli' },
+                          { value: 'homogeneous', label: 'Raggruppa ruoli omogenei', desc: 'Ogni gruppo è composto da persone con lo stesso ruolo di servizio' },
+                          { value: 'static_crm', label: 'Usa i gruppi Statici del CRM', desc: 'I partecipanti vengono assegnati in base al loro gruppo statico' },
+                          { value: 'copy', label: 'Copia da evento precedente', desc: 'Replica la struttura gruppi di un evento già svolto' },
+                        ].map(opt => (
+                          <label key={opt.value} className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors">
+                            <input
+                              type="radio"
+                              name="group_creation_mode"
+                              value={opt.value}
+                              checked={mode === opt.value}
+                              onChange={() => setFormData(prev => ({ ...prev, group_creation_mode: opt.value as EventGroupCreationMode, source_event_id: opt.value !== 'copy' ? '' : prev.source_event_id }))}
+                              className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                            />
+                            <div>
+                              <span className="text-sm font-medium text-gray-800">{opt.label}</span>
+                              <p className="text-xs text-gray-500">{opt.desc}</p>
+                            </div>
                           </label>
                         ))}
                       </div>
+
+                      {mode === 'copy' && (
+                        <div className="mt-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Evento di origine *</label>
+                          <select
+                            value={formData.source_event_id}
+                            onChange={(e) => setFormData(prev => ({ ...prev, source_event_id: e.target.value }))}
+                            required={mode === 'copy'}
+                            className="input w-full"
+                          >
+                            <option value="" disabled>Seleziona un evento passato</option>
+                            {workshopEvents.map(we => (
+                              <option key={we.id} value={we.id}>
+                                {we.title} ({new Date(we.start_time).toLocaleDateString('it-IT')})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+
+                    {/* STEP 3 — Dimensione gruppi */}
+                    {showGroupSize && (
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <p className="text-sm font-semibold text-gray-700">3. Dimensione gruppi</p>
+                        {mode === 'homogeneous' ? (
+                          <div>
+                            <label className="block text-sm text-gray-700 mb-1">Dimensione massima per gruppo (per ruolo)</label>
+                            <input
+                              type="number"
+                              value={formData.max_group_size}
+                              onChange={(e) => setFormData(prev => ({ ...prev, max_group_size: parseInt(e.target.value) || 1 }))}
+                              min={1}
+                              required
+                              className="input w-full"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Se un ruolo ha più persone di questo limite, vengono creati più gruppi per quel ruolo.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="group_size_mode"
+                                  checked={groupSizeMode === 'count'}
+                                  onChange={() => {
+                                    setGroupSizeMode('count');
+                                    setFormData(prev => ({ ...prev, avg_people_per_group: null, workshop_groups_count: prev.workshop_groups_count || 4 }));
+                                  }}
+                                  className="text-blue-600"
+                                />
+                                <span className="text-sm text-gray-800">Numero di gruppi</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="group_size_mode"
+                                  checked={groupSizeMode === 'avg'}
+                                  onChange={() => {
+                                    setGroupSizeMode('avg');
+                                    setFormData(prev => ({ ...prev, workshop_groups_count: 0, avg_people_per_group: prev.avg_people_per_group || 10 }));
+                                  }}
+                                  className="text-blue-600"
+                                />
+                                <span className="text-sm text-gray-800">Media persone per gruppo</span>
+                              </label>
+                            </div>
+                            {groupSizeMode === 'count' ? (
+                              <div>
+                                <input
+                                  type="number"
+                                  value={formData.workshop_groups_count || ''}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, workshop_groups_count: parseInt(e.target.value) || 0 }))}
+                                  min={1}
+                                  placeholder="es. 8"
+                                  className="input w-full"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">I partecipanti saranno distribuiti in questo numero di gruppi.</p>
+                              </div>
+                            ) : (
+                              <div>
+                                <input
+                                  type="number"
+                                  value={formData.avg_people_per_group || ''}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, avg_people_per_group: parseInt(e.target.value) || null }))}
+                                  min={1}
+                                  placeholder="es. 10"
+                                  className="input w-full"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Il numero di gruppi verrà calcolato automaticamente al momento della generazione.</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* STEP 4 — Ruoli da includere */}
+                    {showRoleFilter && (
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700">4. Ruoli di servizio da includere</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Se nessuno è selezionato, tutti i ruoli saranno inclusi.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {serviceRoles.map((role) => (
+                            <label key={role.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={formData.group_eligible_roles.includes(role.name)}
+                                onChange={(e) => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    group_eligible_roles: e.target.checked
+                                      ? [...prev.group_eligible_roles, role.name]
+                                      : prev.group_eligible_roles.filter(r => r !== role.name),
+                                  }));
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                              />
+                              <span className="text-sm text-gray-800">{role.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

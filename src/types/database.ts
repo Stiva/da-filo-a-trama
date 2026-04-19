@@ -151,7 +151,8 @@ export type EventCategory =
 // Event visibility - public = everyone, registered = only authenticated users
 export type EventVisibility = 'public' | 'registered';
 
-export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous' | 'static_crm' | 'random_crm';
+export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous' | 'static_crm';
+export type EventGroupUserSource = 'bc_list' | 'event_registrants';
 
 export interface Event {
   id: string;
@@ -177,9 +178,15 @@ export interface Event {
   user_can_upload_assets: boolean;
   workshop_groups_count: number;
   group_creation_mode: EventGroupCreationMode;
+  /** Sorgente utenti per la generazione gruppi: bc_list = lista CRM, event_registrants = iscritti all'evento */
+  group_user_source: EventGroupUserSource;
   source_event_id: string | null;
   group_eligible_roles: string[];
   max_group_size: number;
+  /** Alternativa a workshop_groups_count: numero medio di persone per gruppo (calcolato al momento della generazione) */
+  avg_people_per_group: number | null;
+  /** Se true, il sistema crea i gruppi automaticamente all'orario di inizio evento (solo per event_registrants) */
+  auto_create_groups_at_start: boolean;
   visibility: EventVisibility;
   is_placeholder: boolean;
   /** Data/ora di apertura delle iscrizioni. Se null, le iscrizioni sono aperte appena l'evento è pubblicato. */

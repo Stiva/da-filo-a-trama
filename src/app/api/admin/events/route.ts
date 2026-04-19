@@ -116,9 +116,12 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
             visibility: body.visibility || 'public',
             workshop_groups_count: isPlaceholder ? 0 : (body.workshop_groups_count || 0),
             group_creation_mode: body.group_creation_mode || 'random',
+            group_user_source: isPlaceholder ? 'event_registrants' : (body.group_user_source || 'event_registrants'),
             source_event_id: body.group_creation_mode === 'copy' ? (body.source_event_id || null) : null,
             group_eligible_roles: body.group_eligible_roles || [],
             max_group_size: body.max_group_size || 10,
+            avg_people_per_group: body.avg_people_per_group || null,
+            auto_create_groups_at_start: isPlaceholder ? false : (body.auto_create_groups_at_start ?? false),
             is_placeholder: isPlaceholder,
             registrations_open_at: body.registrations_open_at || null,
             registrations_close_at: body.registrations_close_at || null,
@@ -139,8 +142,12 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
     const eventIdsToAutoEnroll: string[] = [];
 
     for (const createdEvent of data) {
-      // Prepara i gruppi di lavoro se previsti
-      if (createdEvent.workshop_groups_count > 0 && createdEvent.group_creation_mode !== 'copy' && !isPlaceholder) {
+      // Prepara i gruppi di lavoro se previsti (solo per bc_list: gruppi pre-determinati al salvataggio)
+      const shouldCreateGroupsOnSave = createdEvent.workshop_groups_count > 0
+        && createdEvent.group_creation_mode !== 'copy'
+        && !isPlaceholder
+        && (createdEvent.group_user_source === 'bc_list' || createdEvent.auto_enroll_all);
+      if (shouldCreateGroupsOnSave) {
         const eventGroups = Array.from({ length: createdEvent.workshop_groups_count }).map((_, i) => ({
           event_id: createdEvent.id,
           name: `Gruppo ${i + 1}`,
