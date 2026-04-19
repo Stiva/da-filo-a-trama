@@ -421,6 +421,16 @@ export default function ProfilePage() {
                     L&apos;email e gestita da Clerk e non puo essere modificata qui
                   </p>
                 </div>
+
+                {profile?.static_group && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Gruppo Statico</h3>
+                    <p className="text-gray-800 font-medium">{profile.static_group}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Il gruppo statico è assegnato dagli amministratori e non può essere modificato
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -319,13 +319,7 @@ Ruoli effettivamente presenti nel CRM: ${debugRoles.join(', ')}`
             let sr = p.profile?.service_role;
             if (sr) {
                 if (event.group_creation_mode === 'homogeneous') {
-                    if (sr.toLowerCase() === 'capo branco' || sr.toLowerCase() === 'capo cerchio') {
-                        sr = 'Capi Branco/Cerchio';
-                    } else if (sr.toLowerCase() === 'capo reparto') {
-                        sr = 'Capi Reparto';
-                    } else {
-                        sr = sr.charAt(0).toUpperCase() + sr.slice(1).toLowerCase();
-                    }
+                    sr = sr.charAt(0).toUpperCase() + sr.slice(1).toLowerCase();
                 }
                 if (!roleMap[sr]) roleMap[sr] = [];
                 roleMap[sr].push(uId);
@@ -348,7 +342,7 @@ Ruoli effettivamente presenti nel CRM: ${debugRoles.join(', ')}`
                 let groupCounter = 1;
                 for (let i = 0; i < users.length; i += maxGroupSize) {
                     const chunk = users.slice(i, i + maxGroupSize);
-                    const groupName = `${role} ${groupCounter}`;
+                    const groupName = `${role} - ${groupCounter}`;
                     newGroupsToCreate.push({ event_id: eventId, name: groupName });
                     roleChunks.push({ role, chunkUsers: chunk, groupName });
                     groupCounter++;
@@ -359,7 +353,7 @@ Ruoli effettivamente presenti nel CRM: ${debugRoles.join(', ')}`
                 let groupCounter = 1;
                 for (let i = 0; i < unassignedRoleUsers.length; i += maxGroupSize) {
                     const chunk = unassignedRoleUsers.slice(i, i + maxGroupSize);
-                    const groupName = `Misti ${groupCounter}`;
+                    const groupName = `Misti - ${groupCounter}`;
                     newGroupsToCreate.push({ event_id: eventId, name: groupName });
                     roleChunks.push({ role: 'Misti', chunkUsers: chunk, groupName });
                     groupCounter++;
