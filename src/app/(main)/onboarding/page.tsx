@@ -101,8 +101,8 @@ export default function OnboardingPage() {
         setError('La parola chiave Segreta non è valida.');
         return;
       }
-      if (!formData.is_staff && !formData.is_nazionale && !/^[0-9]{6,8}$/.test(formData.codice_socio)) {
-        setError('Il Codice Socio deve essere un numero composto da 6 a 8 cifre.');
+      if (!formData.is_staff && !formData.is_nazionale && !/^[0-9]{4,8}$/.test(formData.codice_socio)) {
+        setError('Il Codice Socio deve essere un numero composto da 4 a 8 cifre.');
         return;
       }
     }
