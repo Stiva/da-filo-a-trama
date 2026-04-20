@@ -77,6 +77,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<S
 
         const newRoleData = {
             name: body.name,
+            cluster: body.cluster || null,
             display_order: body.display_order || 0,
             is_active: body.is_active !== false,
         };

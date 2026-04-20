@@ -36,6 +36,7 @@ export async function PUT(
 
         const updateData: Record<string, unknown> = {};
         if (body.name !== undefined) updateData.name = body.name;
+        if (body.cluster !== undefined) updateData.cluster = body.cluster || null;
         if (body.display_order !== undefined) updateData.display_order = body.display_order;
         if (body.is_active !== undefined) updateData.is_active = body.is_active;
 

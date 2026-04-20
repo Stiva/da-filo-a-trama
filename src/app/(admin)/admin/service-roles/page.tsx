@@ -13,6 +13,7 @@ export default function ServiceRolesPage() {
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
+        cluster: '',
         display_order: 0,
     });
     const [editingRole, setEditingRole] = useState<ServiceRoleRecord | null>(null);
@@ -63,6 +64,7 @@ export default function ServiceRolesPage() {
         setEditingRole(role);
         setFormData({
             name: role.name,
+            cluster: role.cluster || '',
             display_order: role.display_order,
         });
         setShowForm(true);
@@ -93,7 +95,7 @@ export default function ServiceRolesPage() {
 
             setShowForm(false);
             setEditingRole(null);
-            setFormData({ name: '', display_order: 0 });
+            setFormData({ name: '', cluster: '', display_order: 0 });
             fetchRoles();
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -124,7 +126,7 @@ export default function ServiceRolesPage() {
                     onClick={() => {
                         if (showForm && editingRole) {
                             setEditingRole(null);
-                            setFormData({ name: '', display_order: 0 });
+                            setFormData({ name: '', cluster: '', display_order: 0 });
                         } else {
                             setShowForm(!showForm);
                         }
@@ -161,6 +163,16 @@ export default function ServiceRolesPage() {
                             />
                         </div>
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Cluster</label>
+                            <input
+                                type="text"
+                                value={formData.cluster}
+                                onChange={(e) => setFormData({ ...formData, cluster: e.target.value })}
+                                className="input w-full"
+                                placeholder="es. Capi"
+                            />
+                        </div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Ordine</label>
                             <input
                                 type="number"
@@ -176,7 +188,7 @@ export default function ServiceRolesPage() {
                             onClick={() => {
                                 setShowForm(false);
                                 setEditingRole(null);
-                                setFormData({ name: '', display_order: 0 });
+                                setFormData({ name: '', cluster: '', display_order: 0 });
                             }}
                             className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 min-h-[44px]"
                         >
@@ -217,6 +229,7 @@ export default function ServiceRolesPage() {
                                     )}
                                 </div>
                                 <p className="text-sm text-gray-500">
+                                    {role.cluster && <span className="mr-3">Cluster: {role.cluster}</span>}
                                     Ordine: {role.display_order}
                                 </p>
                             </div>

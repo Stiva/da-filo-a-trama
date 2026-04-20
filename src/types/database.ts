@@ -526,6 +526,7 @@ export interface EventCategoryRecord {
 export interface ServiceRoleRecord {
   id: string;
   name: string;
+  cluster: string | null;
   display_order: number;
   is_active: boolean;
   created_at: string;
