@@ -214,11 +214,10 @@ export async function GET(
             throw groupsError;
         }
 
-        // Ordina i gruppi numericamente
         const sortedGroups = (groups || []).sort((a, b) => {
-            const numA = parseInt(a.name.replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(b.name.replace(/\D/g, ''), 10) || 0;
-            return numA - numB;
+            const nameCompare = a.name.localeCompare(b.name, 'it', { numeric: true, sensitivity: 'base' });
+            if (nameCompare !== 0) return nameCompare;
+            return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
         });
 
         // Collect all assigned user IDs and Codices across all groups
