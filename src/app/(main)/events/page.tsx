@@ -588,7 +588,7 @@ function EventsPageContent() {
                       <div className="px-4 py-3 bg-gray-50">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-sm text-gray-600">
-                            {event.is_placeholder ? (
+                            {event.is_placeholder || event.auto_enroll_all ? (
                               <span className="text-gray-500 italic">Evento riservato/Plenaria</span>
                             ) : isFull ? (
                               <span className="text-red-600 font-medium">Completo</span>
@@ -601,12 +601,14 @@ function EventsPageContent() {
                           </span>
                         </div>
                         {/* Progress bar */}
-                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${getOccupancyColor(event.enrollment_count, event.max_posti)}`}
-                            style={{ width: `${occupancyPercent}%` }}
-                          />
-                        </div>
+                        {!event.auto_enroll_all && (
+                          <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${getOccupancyColor(event.enrollment_count, event.max_posti)}`}
+                              style={{ width: `${occupancyPercent}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </Link>
                   );

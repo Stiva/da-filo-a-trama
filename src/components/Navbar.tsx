@@ -11,7 +11,7 @@ import type { AvatarConfig } from '@/types/database';
 
 // Profilo removed — accessible via avatar dropdown
 const navLinks = [
-  { href: '/events', label: 'Eventi', icon: CalendarIcon },
+  { href: '/events', label: 'Programma', icon: CalendarIcon },
   { href: '/documents', label: 'Documenti', icon: DocumentIcon },
   { href: '/map', label: 'Mappa', icon: MapIcon },
   { href: '/my-events', label: 'I Miei Eventi', icon: StarIcon },

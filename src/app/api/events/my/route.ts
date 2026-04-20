@@ -65,13 +65,42 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
       throw error;
     }
 
-    // Trasforma i dati nel formato atteso
     const myEvents: MyEvent[] = (data || []).map((enrollment) => ({
       ...(enrollment.events as unknown as Event),
       enrollment_status: enrollment.status as EnrollmentStatus,
       enrollment_date: enrollment.registration_time,
       waitlist_position: enrollment.waitlist_position,
     }));
+
+    // Include auto_enroll_all events not yet in enrollments (e.g. created before user registered)
+    if (statusFilter === 'all' || statusFilter === 'confirmed') {
+      const enrolledEventIds = new Set(myEvents.map((e) => e.id));
+
+      // Check for explicit cancellation from auto-enroll events
+      const { data: cancelled } = await supabase
+        .from('enrollments')
+        .select('event_id')
+        .eq('user_id', profile.id)
+        .eq('status', 'cancelled');
+      const cancelledIds = new Set((cancelled || []).map((c) => c.event_id));
+
+      const { data: autoEvents } = await supabase
+        .from('events')
+        .select('*')
+        .eq('auto_enroll_all', true)
+        .eq('is_published', true);
+
+      for (const ev of autoEvents || []) {
+        if (!enrolledEventIds.has(ev.id) && !cancelledIds.has(ev.id)) {
+          myEvents.push({
+            ...(ev as unknown as Event),
+            enrollment_status: 'confirmed' as EnrollmentStatus,
+            enrollment_date: ev.created_at,
+            waitlist_position: null,
+          });
+        }
+      }
+    }
 
     return NextResponse.json({ data: myEvents });
   } catch (error) {

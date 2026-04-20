@@ -121,7 +121,7 @@ export default function DailyCalendarView({
                         {displayTitle}
                     </Link>
                     
-                    {!isAdmin && !isPlaceholder && (onToggleFavourite || onToggleSubscribe) && height > 40 && colWidth > 30 && (
+                    {!isAdmin && !isPlaceholder && !event.auto_enroll_all && (onToggleFavourite || onToggleSubscribe) && height > 40 && colWidth > 30 && (
                         <div className="flex items-center gap-1 flex-shrink-0 bg-white/50 rounded-md px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                             {onToggleFavourite && (
                                 <button
@@ -281,7 +281,7 @@ export default function DailyCalendarView({
                                                             )}
                                                             {event.speaker_name && <div className="text-sm text-gray-600 mt-1">{event.speaker_name}</div>}
                                                         </div>
-                                                        {!isAdmin && !isPlaceholder && (onToggleFavourite || onToggleSubscribe) && (
+                                                        {!isAdmin && !isPlaceholder && !event.auto_enroll_all && (onToggleFavourite || onToggleSubscribe) && (
                                                             <div className="flex items-center gap-1.5 shrink-0">
                                                                 {onToggleFavourite && (
                                                                     <button
