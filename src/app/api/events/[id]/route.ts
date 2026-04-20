@@ -113,18 +113,27 @@ export async function GET(
               userGroupName = (memberGroup.event_groups as any)?.name ?? null;
               userGroupLocation = (memberGroup.event_groups as any)?.poi?.nome ?? null;
             } else if (profile.codice_socio) {
-              // Fallback: CRM-based group membership (static_crm mode)
-              const { data: crmGroup } = await supabase
-                .from('event_crm_group_members')
-                .select(groupSelect)
-                .eq('crm_codice', profile.codice_socio)
-                .eq('event_groups.event_id', id)
+              // Fallback: static_crm mode — membership derived from participants.static_group
+              const { data: participant } = await supabase
+                .from('participants')
+                .select('static_group')
+                .eq('codice', profile.codice_socio)
+                .eq('is_active_in_list', true)
                 .maybeSingle();
 
-              if (crmGroup) {
-                userGroupId = crmGroup.group_id;
-                userGroupName = (crmGroup.event_groups as any)?.name ?? null;
-                userGroupLocation = (crmGroup.event_groups as any)?.poi?.nome ?? null;
+              if (participant?.static_group) {
+                const { data: staticGroup } = await supabase
+                  .from('event_groups')
+                  .select('id, name, location_poi_id, poi:location_poi_id(nome)')
+                  .eq('event_id', id)
+                  .eq('name', participant.static_group)
+                  .maybeSingle();
+
+                if (staticGroup) {
+                  userGroupId = staticGroup.id;
+                  userGroupName = staticGroup.name;
+                  userGroupLocation = (staticGroup.poi as any)?.nome ?? null;
+                }
               }
             }
           }
