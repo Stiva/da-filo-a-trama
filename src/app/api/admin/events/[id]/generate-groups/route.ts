@@ -15,6 +15,20 @@ async function checkAdminRole(userId: string | null): Promise<boolean> {
     return role === 'admin' || role === 'staff';
 }
 
+function evenChunks<T>(arr: T[], maxSize: number): T[][] {
+    const numGroups = Math.ceil(arr.length / maxSize);
+    const base = Math.floor(arr.length / numGroups);
+    const remainder = arr.length % numGroups;
+    const result: T[][] = [];
+    let offset = 0;
+    for (let i = 0; i < numGroups; i++) {
+        const size = i < remainder ? base + 1 : base;
+        result.push(arr.slice(offset, offset + size));
+        offset += size;
+    }
+    return result;
+}
+
 function fisherYates<T>(arr: T[]): T[] {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -216,21 +230,19 @@ export async function POST(
             const chunks: { name: string; users: string[] }[] = [];
 
             Object.entries(clusterMap).forEach(([cluster, users]) => {
-                let counter = 1;
-                for (let i = 0; i < users.length; i += maxSize) {
-                    const name = `${cluster} - ${counter++}`;
+                evenChunks(users, maxSize).forEach((slice, i) => {
+                    const name = `${cluster} - ${i + 1}`;
                     groupsToCreate.push({ event_id: eventId, name });
-                    chunks.push({ name, users: users.slice(i, i + maxSize) });
-                }
+                    chunks.push({ name, users: slice });
+                });
             });
 
             if (unassigned.length > 0) {
-                let counter = 1;
-                for (let i = 0; i < unassigned.length; i += maxSize) {
-                    const name = `Senza cluster - ${counter++}`;
+                evenChunks(unassigned, maxSize).forEach((slice, i) => {
+                    const name = `Senza cluster - ${i + 1}`;
                     groupsToCreate.push({ event_id: eventId, name });
-                    chunks.push({ name, users: unassigned.slice(i, i + maxSize) });
-                }
+                    chunks.push({ name, users: slice });
+                });
             }
 
             const { data: newGroups, error: grpErr } = await supabase
