@@ -70,24 +70,27 @@ export async function GET(
             return NextResponse.json({ error: 'Accesso negato al gruppo' }, { status: 403 });
         }
 
-        // 1. Dati Gruppo e Evento
-        // Usiamo i nomi delle colonne per le relazioni per essere piu' espliciti (PostgREST)
+        // 1. Dati Gruppo
         const { data: groupData, error: groupError } = await supabase
             .from('event_groups')
-            .select('*, event:event_id(title, checkin_enabled, poi:location_poi_id(nome, latitude, longitude)), poi:location_poi_id(nome, latitude, longitude)')
+            .select('*, poi:location_poi_id(nome, latitude, longitude)')
             .eq('id', groupId)
             .eq('event_id', eventId)
-            .single();
+            .maybeSingle();
 
         if (groupError || !groupData) {
-            console.error('Errore recupero gruppo workspace:', {
-                error: groupError,
-                eventId,
-                groupId,
-                userId
-            });
+            console.error('Errore recupero gruppo workspace:', { error: groupError, eventId, groupId, userId });
             return NextResponse.json({ error: 'Gruppo non trovato' }, { status: 404 });
         }
+
+        // 1b. Dati Evento separati
+        const { data: eventData } = await supabase
+            .from('events')
+            .select('title, checkin_enabled, poi:location_poi_id(nome, latitude, longitude)')
+            .eq('id', eventId)
+            .maybeSingle();
+
+        (groupData as any).event = eventData ?? null;
 
         // 2. Moderatori
         const { data: moderators } = await supabase
