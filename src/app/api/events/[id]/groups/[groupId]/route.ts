@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { extractCoordinates } from '@/lib/geo';
 import type { ApiResponse } from '@/types/database';
 
 interface RouteParams {
@@ -73,7 +74,7 @@ export async function GET(
         // 1. Dati Gruppo
         const { data: groupData, error: groupError } = await supabase
             .from('event_groups')
-            .select('*, poi:location_poi_id(nome, latitude, longitude)')
+            .select('*, poi:location_poi_id(nome, coordinate)')
             .eq('id', groupId)
             .eq('event_id', eventId)
             .maybeSingle();
@@ -83,14 +84,27 @@ export async function GET(
             return NextResponse.json({ error: 'Gruppo non trovato' }, { status: 404 });
         }
 
+        // Trasforma coordinate POI gruppo
+        if (groupData.poi) {
+            const coords = extractCoordinates((groupData.poi as any).coordinate);
+            (groupData.poi as any).latitude = coords.latitude;
+            (groupData.poi as any).longitude = coords.longitude;
+        }
+
         // 1b. Dati Evento separati
         const { data: eventData } = await supabase
             .from('events')
-            .select('title, checkin_enabled, poi:location_poi_id(nome, latitude, longitude)')
+            .select('title, checkin_enabled, poi:location_poi_id(nome, coordinate)')
             .eq('id', eventId)
             .maybeSingle();
 
-        (groupData as any).event = eventData ?? null;
+        let eventResult: any = eventData ?? null;
+        if (eventResult?.poi) {
+            const coords = extractCoordinates((eventResult.poi as any).coordinate);
+            eventResult.poi.latitude = coords.latitude;
+            eventResult.poi.longitude = coords.longitude;
+        }
+        (groupData as any).event = eventResult;
 
         // 2. Moderatori
         const { data: moderators } = await supabase
