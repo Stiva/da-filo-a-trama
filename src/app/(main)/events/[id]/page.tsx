@@ -490,8 +490,8 @@ export default function EventDetailPage() {
                   </div>
                 )}
 
-                {/* Capacity - Hide for placeholders */}
-                {!event.is_placeholder && (
+                {/* Capacity - Hide for placeholders and auto-enroll events */}
+                {!event.is_placeholder && !event.auto_enroll_all && (
                   <div>
                     <div className="flex items-center text-gray-500 mb-1">
                       <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,7 +519,7 @@ export default function EventDetailPage() {
               )}
 
               {/* Action Buttons & Check-in - Responsive grid or stack */}
-              {!event.is_placeholder && (
+              {!event.is_placeholder && !event.auto_enroll_all && (
                 <div className="space-y-4">
 
                   {/* Conflitto temporale: banner di conferma inline */}
@@ -559,7 +559,7 @@ export default function EventDetailPage() {
                 )}
 
                 {/* 1. Unenrolled State */}
-                {!event.is_enrolled && !conflictingEvent && (
+                {!event.is_enrolled && !conflictingEvent && !event.auto_enroll_all && (
                   <div className="space-y-3">
                     <button
                       onClick={() => handleEnroll()}
