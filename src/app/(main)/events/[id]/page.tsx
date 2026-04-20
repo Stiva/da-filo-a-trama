@@ -508,6 +508,34 @@ export default function EventDetailPage() {
                 )}
               </div>
 
+              {/* Group Info Card */}
+              {event.user_group_id && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-indigo-700 uppercase tracking-wide">Il tuo gruppo</h3>
+                  <p className="text-indigo-900 font-bold text-lg leading-tight">{event.user_group_name ?? '—'}</p>
+
+                  {event.user_group_moderators && event.user_group_moderators.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-indigo-500 mb-1">
+                        {event.user_group_moderators.length === 1 ? 'Moderatore' : 'Moderatori'}
+                      </p>
+                      {event.user_group_moderators.map((m, i) => (
+                        <p key={i} className="text-sm text-indigo-800">
+                          {[m.name, m.surname].filter(Boolean).join(' ')}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {event.user_group_location && (
+                    <div>
+                      <p className="text-xs font-medium text-indigo-500 mb-1">Luogo di ritrovo</p>
+                      <p className="text-sm text-indigo-800">{event.user_group_location}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Enrollment Message */}
               {enrollMessage && (
                 <div className={`p-3 rounded-lg text-sm ${enrollMessage.includes('Errore') || enrollMessage.includes('cancellata')

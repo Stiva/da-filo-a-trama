@@ -55,6 +55,8 @@ export async function GET(
     let userGroupId = undefined;
     let isGroupModerator = false;
     let userGroupName: string | null = null;
+    let userGroupLocation: string | null = null;
+    let userGroupModerators: { name: string; surname: string | null }[] = [];
     let isFavourited = false;
 
     if (userId) {
@@ -84,9 +86,11 @@ export async function GET(
 
         // Cerca se l'utente appartiene a un gruppo di lavoro (moderatore o membro)
         {
+          const groupSelect = 'group_id, event_groups!inner(event_id, name, location_poi_id, poi:location_poi_id(nome))';
+
           const { data: modGroup } = await supabase
             .from('event_group_moderators')
-            .select('group_id, event_groups!inner(event_id, name)')
+            .select(groupSelect)
             .eq('user_id', profile.id)
             .eq('event_groups.event_id', id)
             .maybeSingle();
@@ -95,10 +99,11 @@ export async function GET(
             userGroupId = modGroup.group_id;
             isGroupModerator = true;
             userGroupName = (modGroup.event_groups as any)?.name ?? null;
+            userGroupLocation = (modGroup.event_groups as any)?.poi?.nome ?? null;
           } else {
             const { data: memberGroup } = await supabase
               .from('event_group_members')
-              .select('group_id, event_groups!inner(event_id, name)')
+              .select(groupSelect)
               .eq('user_id', profile.id)
               .eq('event_groups.event_id', id)
               .maybeSingle();
@@ -106,11 +111,12 @@ export async function GET(
             if (memberGroup) {
               userGroupId = memberGroup.group_id;
               userGroupName = (memberGroup.event_groups as any)?.name ?? null;
+              userGroupLocation = (memberGroup.event_groups as any)?.poi?.nome ?? null;
             } else if (profile.codice_socio) {
               // Fallback: CRM-based group membership (static_crm mode)
               const { data: crmGroup } = await supabase
                 .from('event_crm_group_members')
-                .select('group_id, event_groups!inner(event_id, name)')
+                .select(groupSelect)
                 .eq('crm_codice', profile.codice_socio)
                 .eq('event_groups.event_id', id)
                 .maybeSingle();
@@ -118,8 +124,22 @@ export async function GET(
               if (crmGroup) {
                 userGroupId = crmGroup.group_id;
                 userGroupName = (crmGroup.event_groups as any)?.name ?? null;
+                userGroupLocation = (crmGroup.event_groups as any)?.poi?.nome ?? null;
               }
             }
+          }
+
+          // Fetch moderators for found group
+          if (userGroupId) {
+            const { data: mods } = await supabase
+              .from('event_group_moderators')
+              .select('profiles!inner(name, surname)')
+              .eq('group_id', userGroupId);
+
+            userGroupModerators = (mods || []).map((m: any) => ({
+              name: m.profiles?.name ?? '',
+              surname: m.profiles?.surname ?? null,
+            }));
           }
         }
 
@@ -144,6 +164,8 @@ export async function GET(
       checked_in_at: checkedInAt,
       user_group_id: userGroupId,
       user_group_name: userGroupName ?? undefined,
+      user_group_location: userGroupLocation,
+      user_group_moderators: userGroupModerators,
       is_group_moderator: isGroupModerator,
       is_favourited: isFavourited,
     };

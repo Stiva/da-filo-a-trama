@@ -212,6 +212,8 @@ export interface EventWithEnrollment extends Event {
   checked_in_at?: string | null;
   user_group_id?: string;
   user_group_name?: string;
+  user_group_location?: string | null;
+  user_group_moderators?: { name: string; surname: string | null }[];
   is_group_moderator?: boolean;
   is_favourited?: boolean;
 }
