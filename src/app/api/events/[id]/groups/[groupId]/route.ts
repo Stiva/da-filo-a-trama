@@ -74,7 +74,7 @@ export async function GET(
         // Usiamo i nomi delle colonne per le relazioni per essere piu' espliciti (PostgREST)
         const { data: groupData, error: groupError } = await supabase
             .from('event_groups')
-            .select('*, event:event_id(title, checkin_enabled, poi:location_poi_id(nome, latitude, longitude)), poi:location_poi_id(nome, latitude, longitude, maps_url)')
+            .select('*, event:event_id(title, checkin_enabled, poi:location_poi_id(nome, latitude, longitude)), poi:location_poi_id(nome, latitude, longitude)')
             .eq('id', groupId)
             .eq('event_id', eventId)
             .single();
