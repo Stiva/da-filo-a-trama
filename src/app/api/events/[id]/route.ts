@@ -58,10 +58,10 @@ export async function GET(
     let isFavourited = false;
 
     if (userId) {
-      // Recupera profile_id dell'utente
+      // Recupera profile_id e codice_socio dell'utente
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, codice_socio')
         .eq('clerk_id', userId)
         .single();
 
@@ -106,6 +106,19 @@ export async function GET(
             if (memberGroup) {
               userGroupId = memberGroup.group_id;
               userGroupName = (memberGroup.event_groups as any)?.name ?? null;
+            } else if (profile.codice_socio) {
+              // Fallback: CRM-based group membership (static_crm mode)
+              const { data: crmGroup } = await supabase
+                .from('event_crm_group_members')
+                .select('group_id, event_groups!inner(event_id, name)')
+                .eq('crm_codice', profile.codice_socio)
+                .eq('event_groups.event_id', id)
+                .maybeSingle();
+
+              if (crmGroup) {
+                userGroupId = crmGroup.group_id;
+                userGroupName = (crmGroup.event_groups as any)?.name ?? null;
+              }
             }
           }
         }
