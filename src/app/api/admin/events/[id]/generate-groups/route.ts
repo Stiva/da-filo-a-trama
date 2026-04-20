@@ -59,7 +59,7 @@ export async function POST(
         const groupIds = existingGroups.map(g => g.id);
 
         if (groupIds.length > 0) {
-            if (mode === 'homogeneous' || mode === 'static_crm') {
+            if (mode === 'homogeneous' || mode === 'static_crm' || mode === 'cluster_service') {
                 await supabase.from('event_groups').delete().in('id', groupIds);
                 existingGroups = [];
             } else {
@@ -184,6 +184,67 @@ export async function POST(
 
             await insertToTable(inserts);
             return NextResponse.json({ message: 'Gruppi statici assegnati con successo!', count: inserts.length });
+        }
+
+        // ── CLUSTER SERVICE MODE: group users by their service role's cluster ──
+        if (mode === 'cluster_service') {
+            const { data: serviceRoles } = await supabase
+                .from('service_roles')
+                .select('name, cluster')
+                .eq('is_active', true);
+
+            const roleToCluster: Record<string, string> = {};
+            (serviceRoles || []).forEach((sr: any) => {
+                if (sr.cluster) roleToCluster[sr.name] = sr.cluster;
+            });
+
+            const maxSize = event.avg_people_per_group || event.max_group_size || 10;
+            const clusterMap: Record<string, string[]> = {};
+            const unassigned: string[] = [];
+
+            pool.forEach(u => {
+                const cluster = u.role ? roleToCluster[u.role] : undefined;
+                if (cluster) {
+                    if (!clusterMap[cluster]) clusterMap[cluster] = [];
+                    clusterMap[cluster].push(u.id);
+                } else {
+                    unassigned.push(u.id);
+                }
+            });
+
+            const groupsToCreate: { event_id: string; name: string }[] = [];
+            const chunks: { name: string; users: string[] }[] = [];
+
+            Object.entries(clusterMap).forEach(([cluster, users]) => {
+                let counter = 1;
+                for (let i = 0; i < users.length; i += maxSize) {
+                    const name = `${cluster} - ${counter++}`;
+                    groupsToCreate.push({ event_id: eventId, name });
+                    chunks.push({ name, users: users.slice(i, i + maxSize) });
+                }
+            });
+
+            if (unassigned.length > 0) {
+                let counter = 1;
+                for (let i = 0; i < unassigned.length; i += maxSize) {
+                    const name = `Senza cluster - ${counter++}`;
+                    groupsToCreate.push({ event_id: eventId, name });
+                    chunks.push({ name, users: unassigned.slice(i, i + maxSize) });
+                }
+            }
+
+            const { data: newGroups, error: grpErr } = await supabase
+                .from('event_groups').insert(groupsToCreate).select('id, name');
+            if (grpErr) throw grpErr;
+
+            const inserts: any[] = [];
+            chunks.forEach(chunk => {
+                const group = (newGroups || []).find(g => g.name === chunk.name)!;
+                chunk.users.forEach(uid => inserts.push(makeInsert(group.id, uid)));
+            });
+
+            await insertToTable(inserts);
+            return NextResponse.json({ message: 'Gruppi per cluster creati con successo!', count: inserts.length });
         }
 
         // ── HOMOGENEOUS MODE: chunk same-role users into separate groups ──

@@ -278,7 +278,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             const maxStep = ['static_crm', 'copy'].includes(mode) ? 2 : 4;
             const groupsEnabled = formData.workshop_groups_count > 0
               || !!formData.avg_people_per_group
-              || ['copy', 'homogeneous', 'static_crm'].includes(mode);
+              || ['copy', 'homogeneous', 'static_crm', 'cluster_service'].includes(mode);
 
             // Summary labels for completed steps
             const step1Value = formData.auto_enroll_all
@@ -290,11 +290,12 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             const modeLabels: Record<string, string> = {
               random: 'Casuale', mix_roles: 'Ruoli equamente distribuiti',
               homogeneous: 'Raggruppa ruoli omogenei', static_crm: 'Gruppi Statici CRM', copy: 'Copia evento precedente',
+              cluster_service: 'Per cluster di servizio',
             };
             const step2Value = modeLabels[mode] || mode;
 
-            const step3Value = mode === 'homogeneous'
-              ? `Max ${formData.max_group_size} per ruolo`
+            const step3Value = (mode === 'homogeneous' || mode === 'cluster_service')
+              ? `Max ${formData.max_group_size} per cluster`
               : groupSizeMode === 'count'
               ? `${formData.workshop_groups_count} gruppi`
               : `~${formData.avg_people_per_group} persone/gruppo`;
@@ -426,6 +427,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                             { value: 'homogeneous', label: 'Raggruppa ruoli omogenei', desc: 'Ogni gruppo è composto da persone con lo stesso ruolo' },
                             { value: 'static_crm', label: 'Usa i gruppi Statici del CRM', desc: 'I partecipanti vengono assegnati in base al loro gruppo statico' },
                             { value: 'copy', label: 'Copia da evento precedente', desc: 'Replica la struttura gruppi di un evento già svolto' },
+                            { value: 'cluster_service', label: 'Per cluster di servizio', desc: 'Raggruppa i partecipanti dello stesso cluster insieme' },
                           ].map(opt => (
                             <label key={opt.value} className="flex items-start gap-3 cursor-pointer p-2.5 rounded-lg border border-transparent hover:bg-white hover:border-gray-200 transition-colors">
                               <input type="radio" name="group_creation_mode" value={opt.value}
@@ -463,13 +465,19 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                     {maxStep >= 3 && groupWizardStep === 3 && (
                       <div className="bg-gray-50 rounded-lg p-4">
                         {stepTitle(3, 'Dimensione gruppi')}
-                        {mode === 'homogeneous' ? (
+                        {(mode === 'homogeneous' || mode === 'cluster_service') ? (
                           <div>
-                            <label className="block text-sm text-gray-700 mb-1">Dimensione massima per gruppo (per ruolo)</label>
+                            <label className="block text-sm text-gray-700 mb-1">
+                              {mode === 'cluster_service' ? 'Dimensione massima per gruppo (per cluster)' : 'Dimensione massima per gruppo (per ruolo)'}
+                            </label>
                             <input type="number" value={formData.max_group_size}
                               onChange={(e) => setFormData(prev => ({ ...prev, max_group_size: parseInt(e.target.value) || 1 }))}
                               min={1} required className="input w-full" />
-                            <p className="text-xs text-gray-500 mt-1">Se un ruolo supera questo limite vengono creati più gruppi per quel ruolo.</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {mode === 'cluster_service'
+                                ? 'Se un cluster supera questo limite vengono creati più gruppi per quel cluster.'
+                                : 'Se un ruolo supera questo limite vengono creati più gruppi per quel ruolo.'}
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-3">

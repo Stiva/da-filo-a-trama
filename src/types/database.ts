@@ -151,7 +151,7 @@ export type EventCategory =
 // Event visibility - public = everyone, registered = only authenticated users
 export type EventVisibility = 'public' | 'registered';
 
-export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous' | 'static_crm';
+export type EventGroupCreationMode = 'random' | 'mix_roles' | 'copy' | 'homogeneous' | 'static_crm' | 'cluster_service';
 export type EventGroupUserSource = 'bc_list' | 'event_registrants';
 
 export interface Event {

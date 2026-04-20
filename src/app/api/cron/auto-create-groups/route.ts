@@ -131,6 +131,58 @@ async function generateGroups(supabase: any, event: any) {
     return;
   }
 
+  if (mode === 'cluster_service') {
+    const { data: serviceRoles } = await supabase
+      .from('service_roles')
+      .select('name, cluster')
+      .eq('is_active', true);
+
+    const roleToCluster: Record<string, string> = {};
+    (serviceRoles || []).forEach((sr: any) => {
+      if (sr.cluster) roleToCluster[sr.name] = sr.cluster;
+    });
+
+    const maxSize = event.avg_people_per_group || event.max_group_size || 10;
+    const clusterMap: Record<string, string[]> = {};
+    const unassigned: string[] = [];
+
+    pool.forEach(u => {
+      const cluster = u.role ? roleToCluster[u.role] : undefined;
+      if (cluster) { if (!clusterMap[cluster]) clusterMap[cluster] = []; clusterMap[cluster].push(u.id); }
+      else unassigned.push(u.id);
+    });
+
+    const groupsToCreate: any[] = [];
+    const chunks: { name: string; users: string[] }[] = [];
+
+    Object.entries(clusterMap).forEach(([cluster, users]) => {
+      let counter = 1;
+      for (let i = 0; i < users.length; i += maxSize) {
+        const name = `${cluster} - ${counter++}`;
+        groupsToCreate.push({ event_id: event.id, name });
+        chunks.push({ name, users: users.slice(i, i + maxSize) });
+      }
+    });
+
+    if (unassigned.length > 0) {
+      let counter = 1;
+      for (let i = 0; i < unassigned.length; i += maxSize) {
+        const name = `Senza cluster - ${counter++}`;
+        groupsToCreate.push({ event_id: event.id, name });
+        chunks.push({ name, users: unassigned.slice(i, i + maxSize) });
+      }
+    }
+
+    const { data: newGroups } = await supabase.from('event_groups').insert(groupsToCreate).select('id, name');
+    const inserts: any[] = [];
+    chunks.forEach(chunk => {
+      const group = (newGroups || []).find((g: any) => g.name === chunk.name)!;
+      chunk.users.forEach(uid => inserts.push(makeInsert(group.id, uid)));
+    });
+    if (inserts.length > 0) await supabase.from(table).insert(inserts);
+    return;
+  }
+
   if (mode === 'homogeneous') {
     const maxSize = event.avg_people_per_group || event.max_group_size || 10;
     const roleMap: Record<string, string[]> = {};
