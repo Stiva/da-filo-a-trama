@@ -24,7 +24,7 @@ export async function GET(
         // Identifica il profile.id dell'utente
         const { data: profile } = await supabase
             .from('profiles')
-            .select('id, role')
+            .select('id, role, codice_socio')
             .eq('clerk_id', userId)
             .single();
 
@@ -35,10 +35,8 @@ export async function GET(
         // Controlla l'accesso dell'utente a questo gruppo
         let hasAccess = false;
         if (profile.role === 'admin' || profile.role === 'staff') {
-            // Admin e staff possono accedere, ma verifichiamo se e' moderatore
             hasAccess = true;
         } else {
-            // L'utente e' un partecipante normale: controlla membro o moderatore
             const [{ data: memberCheck }, { data: modCheck }] = await Promise.all([
                 supabase.from('event_group_members').select('group_id').eq('user_id', profile.id).eq('group_id', groupId).maybeSingle(),
                 supabase.from('event_group_moderators').select('group_id').eq('user_id', profile.id).eq('group_id', groupId).maybeSingle(),
@@ -46,6 +44,25 @@ export async function GET(
 
             if (memberCheck || modCheck) {
                 hasAccess = true;
+            } else if (profile.codice_socio) {
+                // static_crm: membership derived from participants.static_group matching event_groups.name
+                const { data: grp } = await supabase
+                    .from('event_groups')
+                    .select('name')
+                    .eq('id', groupId)
+                    .maybeSingle();
+
+                if (grp?.name) {
+                    const { data: participant } = await supabase
+                        .from('participants')
+                        .select('codice')
+                        .eq('codice', profile.codice_socio)
+                        .eq('static_group', grp.name)
+                        .eq('is_active_in_list', true)
+                        .maybeSingle();
+
+                    if (participant) hasAccess = true;
+                }
             }
         }
 
@@ -78,11 +95,35 @@ export async function GET(
             .select('user_id, profile:profiles(id, name, surname, scout_group)')
             .eq('group_id', groupId);
 
-        // 3. Membri
-        const { data: members } = await supabase
+        // 3. Membri — per static_crm derivati da participants.static_group
+        let members: any[] = [];
+        const { data: directMembers } = await supabase
             .from('event_group_members')
             .select('user_id, profile:profiles(id, name, surname, scout_group, service_role)')
             .eq('group_id', groupId);
+
+        if (directMembers && directMembers.length > 0) {
+            members = directMembers;
+        } else if (groupData.name) {
+            // static_crm: fetch participants matching this group name
+            const { data: crmMembers } = await supabase
+                .from('participants')
+                .select('codice, nome, cognome, gruppo, ruolo')
+                .eq('static_group', groupData.name)
+                .eq('is_active_in_list', true);
+
+            members = (crmMembers || []).map(p => ({
+                user_id: null,
+                crm_codice: p.codice,
+                profile: {
+                    id: null,
+                    name: p.nome,
+                    surname: p.cognome,
+                    scout_group: p.gruppo,
+                    service_role: p.ruolo,
+                },
+            }));
+        }
 
         // TODO: Note e allegati (possiamo restituirli qui o da altri endpoint)
 
