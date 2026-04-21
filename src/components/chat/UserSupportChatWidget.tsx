@@ -96,6 +96,7 @@ const UserSupportChatWidgetInner = () => {
   const shouldRender = useMemo(() => {
     if (loading) return false;
     if (!session && !error) return false;
+    if (session && !session.chatEnabled) return false;
     return true;
   }, [loading, error, session]);
 

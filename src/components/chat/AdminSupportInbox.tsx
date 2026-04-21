@@ -83,12 +83,29 @@ const AdminSupportInboxInner = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelId: selectedChannel.id }),
       });
-
       await refreshChannels();
     };
 
     void activateSelectedChannel();
   }, [selectedChannel?.id]);
+
+  useEffect(() => {
+    if (!selectedChannel || !session) return;
+
+    const sub = selectedChannel.on('message.new', (event) => {
+      // Only trigger push when THIS admin sent the message
+      if (event.user?.id !== session.user.id) return;
+      const text = (event.message as any)?.text?.trim();
+      if (!text) return;
+      void fetch('/api/chat/push-on-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: selectedChannel.id, messageText: text }),
+      });
+    });
+
+    return () => sub.unsubscribe();
+  }, [selectedChannel, session]);
 
   const handleOpenChannel = async (channel: StreamChannel) => {
     setSelectedChannel(channel);

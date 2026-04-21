@@ -17,6 +17,7 @@ interface ChatSessionPayload {
   apiKey: string;
   token: string;
   isAdmin: boolean;
+  chatEnabled: boolean;
   supportChannelId: string | null;
   user: {
     id: string;
@@ -43,11 +44,13 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
     const role = getRoleFromPublicMetadata(clerkUser.publicMetadata);
 
     const supabase = await createServerSupabaseClient();
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('profile_image_url, avatar_config')
-      .eq('clerk_id', userId)
-      .single();
+    const [{ data: profile }, { data: chatSetting }] = await Promise.all([
+      supabase.from('profiles').select('profile_image_url, avatar_config').eq('clerk_id', userId).single(),
+      supabase.from('app_settings').select('value').eq('key', 'service_chat_enabled').single(),
+    ]);
+
+    const isAdminOrStaff = role === 'admin' || role === 'staff';
+    const chatEnabled: boolean = isAdminOrStaff || (chatSetting?.value === true || chatSetting?.value === 'true');
 
     const streamClient = createStreamServerClient();
     const streamUserId = getChatUserIdFromClerkId(userId);
@@ -66,11 +69,13 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
       role: streamRole,
     });
 
-    const supportChannelId = await getActiveOrCreateSupportChannelId({
-      streamClient,
-      customerUserId: streamUserId,
-      customerDisplayName: streamDisplayName,
-    });
+    const supportChannelId = chatEnabled
+      ? await getActiveOrCreateSupportChannelId({
+          streamClient,
+          customerUserId: streamUserId,
+          customerDisplayName: streamDisplayName,
+        })
+      : null;
 
     const token = streamClient.createToken(streamUserId);
 
@@ -78,7 +83,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
       data: {
         apiKey: getStreamApiKey(),
         token,
-        isAdmin: role === 'admin' || role === 'staff',
+        isAdmin: isAdminOrStaff,
+        chatEnabled,
         supportChannelId,
         user: {
           id: streamUserId,

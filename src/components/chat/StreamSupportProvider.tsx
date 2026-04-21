@@ -9,6 +9,7 @@ interface ChatSession {
   apiKey: string;
   token: string;
   isAdmin: boolean;
+  chatEnabled: boolean;
   supportChannelId: string | null;
   user: {
     id: string;

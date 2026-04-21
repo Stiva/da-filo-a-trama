@@ -1,4 +1,5 @@
 import AdminSupportInbox from '@/components/chat/AdminSupportInbox';
+import ChatToggle from '@/components/chat/ChatToggle';
 
 export default function AdminSupportPage() {
   return (
@@ -9,6 +10,8 @@ export default function AdminSupportPage() {
           Gestisci richieste utenti, apri sessioni e rispondi con allegati.
         </p>
       </header>
+
+      <ChatToggle />
 
       <AdminSupportInbox />
     </div>
