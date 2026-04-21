@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import RichTextContent from '@/components/RichTextContent';
@@ -17,6 +17,17 @@ interface PoiInfo {
     id: string;
     nome: string;
     tipo: string;
+}
+
+interface PoolUser {
+    id: string;
+    name: string;
+    surname: string;
+    scout_group?: string;
+    service_role?: string;
+    currentGroupId?: string;
+    currentGroupName?: string;
+    is_crm_only?: boolean;
 }
 
 function ModeratorAutocomplete({
@@ -73,6 +84,111 @@ function ModeratorAutocomplete({
     );
 }
 
+function MemberAutocomplete({
+    groupId, groupName, pool, onAssign,
+}: {
+    groupId: string;
+    groupName: string;
+    pool: PoolUser[];
+    onAssign: (userId: string, groupId: string) => void;
+}) {
+    const [search, setSearch] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const [pending, setPending] = useState<PoolUser | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = pool.filter(u => {
+        if (u.currentGroupId === groupId) return false;
+        const q = search.toLowerCase();
+        return (u.name + ' ' + u.surname + ' ' + (u.scout_group || '')).toLowerCase().includes(q);
+    });
+
+    const handleSelect = (user: PoolUser) => {
+        setSearch('');
+        setIsOpen(false);
+        if (user.currentGroupId && user.currentGroupId !== groupId) {
+            setPending(user);
+        } else {
+            onAssign(user.id, groupId);
+        }
+    };
+
+    return (
+        <>
+            <div className="relative flex-1" ref={wrapperRef}>
+                <input
+                    type="text"
+                    className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 h-[38px] transition"
+                    placeholder="Cerca partecipante da aggiungere..."
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
+                    onFocus={() => setIsOpen(true)}
+                />
+                {isOpen && search.length > 0 && (
+                    <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-auto">
+                        {filtered.length > 0 ? filtered.map(u => (
+                            <li key={u.id}
+                                className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b last:border-0"
+                                onMouseDown={e => { e.preventDefault(); handleSelect(u); }}>
+                                <div className="font-medium text-gray-800">{u.name} {u.surname}</div>
+                                <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                                    <span>{u.scout_group || 'Nessun gruppo censito'}</span>
+                                    {u.currentGroupName && (
+                                        <span className="text-orange-600 font-medium">• In: {u.currentGroupName}</span>
+                                    )}
+                                    {u.is_crm_only && (
+                                        <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100 px-1.5 py-0.5 rounded">CRM</span>
+                                    )}
+                                </div>
+                            </li>
+                        )) : (
+                            <li className="px-3 py-2 text-sm text-gray-500 italic">Nessun match trovato</li>
+                        )}
+                    </ul>
+                )}
+            </div>
+
+            {pending && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40" onClick={() => setPending(null)}>
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-base font-semibold text-gray-900 mb-3">Conferma spostamento</h3>
+                        <p className="text-sm text-gray-700 mb-5">
+                            Se procedi rimuoverai{' '}
+                            <strong>{pending.name} {pending.surname}{pending.scout_group ? ` - ${pending.scout_group}` : ''}</strong>{' '}
+                            dal gruppo <strong>{pending.currentGroupName}</strong> per assegnarlo al gruppo{' '}
+                            <strong>{groupName}</strong>. Confermi?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setPending(null)}
+                                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                onClick={() => { onAssign(pending.id, groupId); setPending(null); }}
+                                className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                            >
+                                Conferma
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 export default function AdminEventGroupsPage() {
     const params = useParams();
     const eventId = params.id as string;
@@ -84,6 +200,32 @@ export default function AdminEventGroupsPage() {
     const [pois, setPois] = useState<PoiInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const allUsersPool = useMemo<PoolUser[]>(() => {
+        const pool: PoolUser[] = unassignedUsers.map(u => ({
+            id: u.id,
+            name: (u as any).name || '',
+            surname: (u as any).surname || '',
+            scout_group: (u as any).scout_group,
+            service_role: (u as any).service_role,
+            is_crm_only: (u as any).is_crm_only,
+        }));
+        groups.forEach(group => {
+            [...(group.members || []), ...(group.crm_members || [])].forEach((m: any) => {
+                pool.push({
+                    id: m.user_id || m.crm_codice,
+                    name: m.profile?.name || m.participant?.nome || '',
+                    surname: m.profile?.surname || m.participant?.cognome || '',
+                    scout_group: m.profile?.scout_group || m.participant?.gruppo,
+                    service_role: m.profile?.service_role || m.participant?.ruolo,
+                    currentGroupId: group.id,
+                    currentGroupName: group.name,
+                    is_crm_only: !!m.crm_codice,
+                });
+            });
+        });
+        return pool;
+    }, [unassignedUsers, groups]);
 
     useEffect(() => {
         if (eventId) {
@@ -450,39 +592,49 @@ export default function AdminEventGroupsPage() {
                                             </Link>
                                         </div>
                                     ) : (
-                                        <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
-                                            {[...(group.members || []), ...(group.crm_members || [])].length > 0 ? (
-                                                [...(group.members || []), ...(group.crm_members || [])].map((member: any) => (
-                                                    <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium text-gray-800">{member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome}</span>
-                                                                {member.crm_codice && (
-                                                                    <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded">
-                                                                        CRM
-                                                                    </span>
-                                                                )}
+                                        <>
+                                            <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+                                                {[...(group.members || []), ...(group.crm_members || [])].length > 0 ? (
+                                                    [...(group.members || []), ...(group.crm_members || [])].map((member: any) => (
+                                                        <div key={member.user_id || member.crm_codice} className={`text-sm text-gray-700 p-2 rounded flex justify-between items-center ${member.crm_codice ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-medium text-gray-800">{member.profile?.name || member.participant?.nome} {member.profile?.surname || member.participant?.cognome}</span>
+                                                                    {member.crm_codice && (
+                                                                        <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider bg-amber-100/50 px-1.5 py-0.5 rounded">
+                                                                            CRM
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                                    {member.profile?.scout_group || member.participant?.gruppo || 'Nessun gruppo'}
+                                                                    {(member.profile?.service_role || member.participant?.ruolo) && ` - ${member.profile?.service_role || member.participant?.ruolo}`}
+                                                                </div>
                                                             </div>
-                                                            <div className="text-xs text-gray-500 mt-0.5">
-                                                                {member.profile?.scout_group || member.participant?.gruppo || 'Nessun gruppo'}
-                                                                {(member.profile?.service_role || member.participant?.ruolo) && ` - ${member.profile?.service_role || member.participant?.ruolo}`}
-                                                            </div>
+                                                            <button
+                                                                onClick={() => handleRemoveMember(group.id, member.user_id || member.crm_codice)}
+                                                                className="text-gray-400 hover:text-red-600 transition p-1 ml-2"
+                                                                title="Rimuovi dal gruppo"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleRemoveMember(group.id, member.user_id || member.crm_codice)}
-                                                            className="text-gray-400 hover:text-red-600 transition p-1 ml-2"
-                                                            title="Rimuovi dal gruppo"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-sm text-gray-500 italic">Nessun partecipante assegnato</p>
-                                            )}
-                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 italic">Nessun partecipante assegnato</p>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2 mt-3">
+                                                <MemberAutocomplete
+                                                    groupId={group.id}
+                                                    groupName={group.name}
+                                                    pool={allUsersPool}
+                                                    onAssign={handleAssignMember}
+                                                />
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
