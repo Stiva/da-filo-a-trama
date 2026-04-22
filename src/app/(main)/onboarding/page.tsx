@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import {
@@ -34,7 +34,7 @@ interface FormData {
 
 const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 
-export default function OnboardingPage() {
+function OnboardingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const guestMode = searchParams.get('mode') === 'guest';
