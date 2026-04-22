@@ -545,3 +545,11 @@ function OnboardingInner() {
     </main>
   );
 }
+
+export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingInner />
+    </Suspense>
+  );
+}
