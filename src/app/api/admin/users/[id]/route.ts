@@ -172,6 +172,14 @@ export async function PUT(
       .eq('id', id)
       .single();
 
+    // Validate codice_socio format early to give a clear error (4–8 digits)
+    if (body.codice_socio && !/^[0-9]{4,8}$/.test(body.codice_socio)) {
+      return NextResponse.json(
+        { error: 'Formato codice socio non valido (deve contenere 4–8 cifre numeriche).' },
+        { status: 400 }
+      );
+    }
+
     // Auto-populate service_role from CRM "participants" table if linking occurs
     const futureCodice = body.codice_socio !== undefined ? body.codice_socio : existingProfile?.codice_socio;
     const futureRole = (body as any).service_role !== undefined ? (body as any).service_role : existingProfile?.service_role;
@@ -222,9 +230,16 @@ export async function PUT(
         );
       }
       if (error.code === '23514') {
-        // Check constraint violation (es. service_role non valido)
         console.error('Constraint violation PUT admin/users/[id]:', error);
-        // Retry senza service_role se era quello il problema
+        const constraintDetail = (error.message || '') + (error.hint || '') + (error.details || '');
+        // If the violation is on codice_socio format, return a clear 400
+        if (constraintDetail.toLowerCase().includes('codice_socio') || constraintDetail.toLowerCase().includes('codice socio')) {
+          return NextResponse.json(
+            { error: 'Formato codice socio non valido (deve contenere 4–8 cifre numeriche).' },
+            { status: 400 }
+          );
+        }
+        // Otherwise assume it's service_role: retry without it
         delete (updateData as any).service_role;
         const { data: retryData, error: retryError } = await supabase
           .from('profiles')
@@ -232,7 +247,12 @@ export async function PUT(
           .eq('id', id)
           .select()
           .single();
-        if (retryError) throw retryError;
+        if (retryError) {
+          return NextResponse.json(
+            { error: 'Errore nel salvataggio del profilo.', debug: { code: retryError.code, message: retryError.message } },
+            { status: 500 }
+          );
+        }
         return NextResponse.json({
           data: retryData as Profile,
           message: 'Profilo aggiornato (ruolo di servizio non importato dal CRM).',

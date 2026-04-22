@@ -102,7 +102,14 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     if (body.name !== undefined) updateData.name = body.name;
     if (body.surname !== undefined) updateData.surname = body.surname;
     if (body.codice_socio !== undefined) {
-      updateData.codice_socio = body.codice_socio === '' ? null : body.codice_socio;
+      const cod = body.codice_socio === '' ? null : body.codice_socio;
+      if (cod && !/^[0-9]{4,8}$/.test(cod)) {
+        return NextResponse.json(
+          { error: 'Formato codice socio non valido (deve contenere 4–8 cifre numeriche).' },
+          { status: 400 }
+        );
+      }
+      updateData.codice_socio = cod;
     }
     if (body.scout_group !== undefined) updateData.scout_group = body.scout_group;
     if (body.preferences !== undefined) {
