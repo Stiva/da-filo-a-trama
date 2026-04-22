@@ -23,12 +23,12 @@ export default async function DashboardPage() {
   const supabase = createServiceRoleClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, onboarding_completed, first_name, profile_setup_complete, is_guest')
+    .select('id, onboarding_completed, first_name, profile_setup_complete, role')
     .eq('clerk_id', userId)
     .single();
 
   if (!profile || !profile.onboarding_completed) {
-    redirect(profile?.is_guest ? '/guest-onboarding' : '/onboarding');
+    redirect(profile?.role === 'guest' ? '/guest-onboarding' : '/onboarding');
   }
 
   const firstName = profile?.first_name || user?.firstName || 'Scout';
