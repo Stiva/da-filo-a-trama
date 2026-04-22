@@ -57,6 +57,18 @@ export default async function HomePage() {
               Accedi
             </Link>
           </div>
+
+          {/* Guest link */}
+          <p className="mt-6 text-sm text-gray-500">
+            Sei un ospite dell&apos;evento?{' '}
+            <Link
+              href="/sign-up?mode=guest"
+              className="font-semibold underline underline-offset-2 hover:text-gray-700 transition-colors"
+              style={{ color: 'var(--scout-azure)' }}
+            >
+              Registrati come ospite
+            </Link>
+          </p>
         </div>
       </main>
 

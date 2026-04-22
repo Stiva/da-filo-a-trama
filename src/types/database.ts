@@ -48,7 +48,7 @@ export interface Profile {
   scout_group: string | null;
   static_group?: string | null;
   service_role: ServiceRole | null;
-  role: 'user' | 'staff' | 'admin';
+  role: 'user' | 'staff' | 'admin' | 'guest';
   preferences: string[];
   avatar_config: AvatarConfig;
   profile_image_url: string | null;

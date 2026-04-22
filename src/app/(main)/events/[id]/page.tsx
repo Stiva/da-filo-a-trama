@@ -131,6 +131,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventWithEnrollment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
   const [conflictingEvent, setConflictingEvent] = useState<{ id: string; title: string } | null>(null);
@@ -142,6 +143,10 @@ export default function EventDetailPage() {
     if (eventId) {
       fetchEvent();
     }
+    fetch('/api/profiles')
+      .then(r => r.json())
+      .then(r => { if (r.data?.role) setUserRole(r.data.role); })
+      .catch(() => {});
   }, [eventId]);
 
   const fetchEvent = async () => {
@@ -546,8 +551,18 @@ export default function EventDetailPage() {
                 </div>
               )}
 
+              {/* Guest notice */}
+              {userRole === 'guest' && (
+                <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Sei registrato come ospite. Puoi consultare il programma ma non iscriverti agli eventi.
+                </div>
+              )}
+
               {/* Action Buttons & Check-in - Responsive grid or stack */}
-              {!event.is_placeholder && !event.auto_enroll_all && (
+              {!event.is_placeholder && !event.auto_enroll_all && userRole !== 'guest' && (
                 <div className="space-y-4">
 
                   {/* Conflitto temporale: banner di conferma inline */}

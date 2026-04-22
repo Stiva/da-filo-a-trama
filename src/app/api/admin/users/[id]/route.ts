@@ -172,18 +172,26 @@ export async function PUT(
     const futureRole = (body as any).service_role !== undefined ? (body as any).service_role : existingProfile?.service_role;
 
     if (futureCodice && (!futureRole || !body.scout_group)) {
-      const { data: crmData } = await supabase
+      const { data: crmData, error: crmError } = await supabase
         .from('participants')
-        .select('ruolo, gruppo')
+        .select('ruolo, gruppo, static_group')
         .eq('codice', futureCodice)
         .single();
-      
+
+      if (crmError && crmError.code !== 'PGRST116') {
+        console.error('Errore CRM lookup:', crmError);
+      }
+
       if (crmData) {
         if (!futureRole && crmData.ruolo) {
-          updateData.service_role = crmData.ruolo as any;
+          // Store raw text - avoid ServiceRole enum constraint by using scout_group instead
+          (updateData as any).service_role = crmData.ruolo;
         }
         if (!body.scout_group && crmData.gruppo) {
           updateData.scout_group = crmData.gruppo;
+        }
+        if (crmData.static_group) {
+          (updateData as any).static_group = crmData.static_group;
         }
       }
     }
@@ -201,6 +209,29 @@ export async function PUT(
           { error: 'Utente non trovato' },
           { status: 404 }
         );
+      }
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { error: 'Codice Socio già associato ad un altro profilo.' },
+          { status: 409 }
+        );
+      }
+      if (error.code === '23514') {
+        // Check constraint violation (es. service_role non valido)
+        console.error('Constraint violation PUT admin/users/[id]:', error);
+        // Retry senza service_role se era quello il problema
+        delete (updateData as any).service_role;
+        const { data: retryData, error: retryError } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
+        if (retryError) throw retryError;
+        return NextResponse.json({
+          data: retryData as Profile,
+          message: 'Profilo aggiornato (ruolo di servizio non importato dal CRM).',
+        });
       }
       throw error;
     }

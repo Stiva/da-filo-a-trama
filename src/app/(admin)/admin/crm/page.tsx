@@ -356,24 +356,38 @@ export default function CRMPage() {
                         {person.codice}
                       </td>
                     )}
-                    {visibleColumns.includes('nome') && (
+                    {visibleColumns.includes('cognome') && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {person.nome} {person.cognome}
+                        {person.cognome}
                         {!person.is_active_in_list && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Rimosso</span>}
                       </td>
                     )}
-                    {visibleColumns.includes('email') && (
+                    {visibleColumns.includes('nome') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {person.nome}
+                      </td>
+                    )}
+                    {visibleColumns.includes('email_contatto') && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {person.email_contatto || '-'}
                       </td>
                     )}
-                    {visibleColumns.includes('gruppo') && (
+                    {visibleColumns.includes('regione') && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.gruppo}<br/>
-                        <span className="text-xs text-gray-400">{person.regione}</span>
+                        {person.regione || '-'}
                       </td>
                     )}
-                    {visibleColumns.includes('app') && (
+                    {visibleColumns.includes('gruppo') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.gruppo || '-'}
+                      </td>
+                    )}
+                    {visibleColumns.includes('ruolo') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.ruolo || '-'}
+                      </td>
+                    )}
+                    {visibleColumns.includes('is_app_registered') && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                         {person.is_app_registered ? (
                           <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
@@ -415,7 +429,7 @@ export default function CRMPage() {
                     )}
                     {visibleColumns.map(colId => {
                       if (!['codice', 'cognome', 'nome', 'email_contatto', 'regione', 'gruppo', 'ruolo', 'is_app_registered', 'is_checked_in', 'is_medical_staff', 'fire_warden_level'].includes(colId)) {
-                        let val = (person as any)[colId];
+                        const val = (person as any)[colId];
                         return <td key={colId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{val?.toString() || '-'}</td>;
                       }
                       return null;

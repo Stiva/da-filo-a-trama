@@ -133,22 +133,29 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
     const futureCodice = body.codice_socio !== undefined ? body.codice_socio : existingProfile?.codice_socio;
     const isStaff = body.is_staff === true;
     const isNazionale = body.is_nazionale === true;
+    const isGuest = body.is_guest === true;
 
-    if (isStaff || isNazionale) {
+    if (isGuest) {
+      updateData.role = 'guest';
+      // No CRM check, no codice_socio required
+      if (body.codice_socio) {
+        updateData.codice_socio = body.codice_socio;
+      }
+    } else if (isStaff || isNazionale) {
       if (body.staff_secret !== 'grumbiotto') {
         return NextResponse.json(
           { error: 'Codice segreto non valido.' },
           { status: 400 }
         );
       }
-      
+
       if (isNazionale) {
         updateData.service_role = 'Gomitolo Team';
         updateData.role = 'user'; // Assicuriamo che rimanga utente per gli esterni
       } else {
         updateData.service_role = 'Staff evento';
         updateData.role = 'staff'; // Assure database role is set to staff
-        
+
         // Update Clerk metadata synchronously to grant admin panel access
         try {
           const client = await clerkClient();
@@ -170,14 +177,14 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
         .select('ruolo, gruppo, static_group')
         .eq('codice', futureCodice)
         .single();
-      
+
       if (!crmData) {
         return NextResponse.json(
           { error: 'Codice socio non trovato nella lista iscritti BC.' },
           { status: 400 }
         );
       }
-      
+
       // Override using exclusively CRM values
       updateData.service_role = crmData.ruolo || null;
       updateData.scout_group = crmData.gruppo || null;
@@ -268,6 +275,25 @@ export async function PUT(request: Request): Promise<NextResponse<ApiResponse<Pr
             });
           }
         }
+      }
+
+      // 23514 = check constraint violation (es. service_role non presente nella lista valida)
+      // Ritenta senza service_role per salvare comunque il profilo
+      if (error.code === '23514') {
+        console.warn('Check constraint su service_role, ritento senza service_role:', (updateData as any).service_role);
+        delete (updateData as any).service_role;
+
+        const fallbackResult = existingProfile
+          ? await supabase.from('profiles').update(updateData).eq('clerk_id', userId).select().single()
+          : await supabase.from('profiles').insert({ email, role: 'user', ...updateData }).select().single();
+
+        if (fallbackResult.data) {
+          return NextResponse.json({
+            data: fallbackResult.data as Profile,
+            message: 'Profilo aggiornato con successo',
+          });
+        }
+        if (fallbackResult.error) throw fallbackResult.error;
       }
 
       throw error;

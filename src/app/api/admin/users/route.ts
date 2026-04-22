@@ -78,7 +78,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Us
     });
 
     // Filtri legacy/espliciti (per retrocompatibilità se usati in altre parti)
-    if (roleFilter && ['user', 'staff', 'admin'].includes(roleFilter)) {
+    if (roleFilter && ['user', 'staff', 'admin', 'guest'].includes(roleFilter)) {
       query = query.eq('role', roleFilter);
     }
 
@@ -151,7 +151,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
       );
     }
 
-    if (!['user', 'staff', 'admin'].includes(newRole)) {
+    if (!['user', 'staff', 'admin', 'guest'].includes(newRole)) {
       return NextResponse.json(
         { error: 'Ruolo non valido' },
         { status: 400 }
