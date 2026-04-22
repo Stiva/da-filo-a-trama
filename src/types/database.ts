@@ -107,6 +107,7 @@ export interface ProfileUpdate {
   preferences_set?: boolean;
   is_staff?: boolean;
   is_nazionale?: boolean;
+  is_guest?: boolean;
   staff_secret?: string;
   is_medical_staff?: boolean;
   fire_warden_level?: FireWardenLevel | null;
