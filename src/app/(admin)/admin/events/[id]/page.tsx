@@ -73,7 +73,7 @@ export default async function EditEventPage({ params }: PageProps) {
           {event.checkin_enabled && (
             <CheckinQRCodeDialog eventId={event.id} eventTitle={event.title} />
           )}
-          {event.workshop_groups_count > 0 && (
+          {(event.workshop_groups_count > 0 || !!event.avg_people_per_group) && (
             <div className="flex gap-2">
               {event.group_creation_mode === 'copy' && (
                 <CloneGroupsButton

@@ -63,7 +63,7 @@ export async function POST(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        const useCRM: boolean = event.auto_enroll_all || event.group_user_source === 'bc_list';
+        const useCRM: boolean = event.group_user_source === 'bc_list';
         const eligibleRoles: string[] = event.group_eligible_roles || [];
         const mode: string = event.group_creation_mode;
 

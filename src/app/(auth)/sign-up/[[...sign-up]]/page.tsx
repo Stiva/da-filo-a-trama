@@ -1,6 +1,13 @@
 import { SignUp } from '@clerk/nextjs';
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
+  const params = await searchParams;
+  const redirectUrl = params.mode === 'guest' ? '/guest-onboarding' : '/onboarding';
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-scout-cream">
       {/* Decorative background */}
@@ -38,7 +45,7 @@ export default function SignUpPage() {
               identityPreviewEditButton: 'text-agesci-blue',
             },
           }}
-          fallbackRedirectUrl="/onboarding"
+          fallbackRedirectUrl={redirectUrl}
           signInUrl="/sign-in"
         />
       </div>
