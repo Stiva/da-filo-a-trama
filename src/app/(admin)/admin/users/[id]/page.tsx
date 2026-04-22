@@ -435,37 +435,31 @@ export default function AdminUserDetailPage({
           {/* Status Card */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Stato Account</h2>
+            <p className="text-xs text-gray-400 mb-4">Salvare dopo aver modificato</p>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Onboarding</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.onboarding_completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                  {user.onboarding_completed ? 'Si' : 'No'}
-                </span>
-              </div>
+            <div className="space-y-3">
+              {(
+                [
+                  { key: 'onboarding_completed', label: 'Onboarding' },
+                  { key: 'avatar_completed', label: 'Avatar' },
+                  { key: 'preferences_set', label: 'Preferenze' },
+                ] as const
+              ).map(({ key, label }) => (
+                <label key={key} className="flex items-center justify-between cursor-pointer">
+                  <span className="text-gray-600 text-sm">{label}</span>
+                  <input
+                    type="checkbox"
+                    checked={formData[key]}
+                    onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                    className="w-4 h-4 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                  />
+                </label>
+              ))}
 
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Avatar</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.avatar_completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                  {user.avatar_completed ? 'Si' : 'No'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Preferenze</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.preferences_set ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                  {user.preferences_set ? 'Si' : 'No'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Profilo Completo</span>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.profile_setup_complete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                  {user.profile_setup_complete ? 'Si' : 'No'}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <span className="text-gray-600 text-sm">Profilo Completo</span>
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.profile_setup_complete ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {user.profile_setup_complete ? 'Sì' : 'No'}
                 </span>
               </div>
             </div>

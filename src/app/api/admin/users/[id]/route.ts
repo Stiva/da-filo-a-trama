@@ -158,6 +158,11 @@ export async function PUT(
       }
     }
 
+    // When admin marks onboarding complete, also mark profile as fully set up
+    if (body.onboarding_completed === true) {
+      (updateData as any).profile_setup_complete = true;
+    }
+
     const supabase = createServiceRoleClient();
 
     // Fetch existing profile to determine if service_role needs auto-assignment from CRM
