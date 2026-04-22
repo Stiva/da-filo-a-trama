@@ -216,6 +216,18 @@ export default function AdminUsersPage() {
     exportToCSV(exportData, columnsToExport, 'Utenti_App');
   };
 
+  const handleSafetyExport = async () => {
+    const res = await fetch('/api/admin/safety-export');
+    if (!res.ok) { alert('Errore export sicurezza'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Sicurezza_${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       {/* Header - Responsive */}
@@ -239,6 +251,14 @@ export default function AdminUsersPage() {
           >
             <Download className="w-5 h-5 mr-1" />
             Esporta
+          </button>
+          <button
+            onClick={handleSafetyExport}
+            className="flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none"
+            title="Esporta Excel con medici e addetti antincendio"
+          >
+            <Shield className="w-5 h-5 mr-1" />
+            Export Sicurezza
           </button>
           {hasFilters && (
             <button
