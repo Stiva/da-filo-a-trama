@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import {
   PREFERENCE_TAGS,
@@ -36,8 +36,6 @@ const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 
 function OnboardingInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const guestMode = searchParams.get('mode') === 'guest';
   const { user, isLoaded } = useUser();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('info');
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +53,7 @@ function OnboardingInner() {
     avatar_config: { ...DEFAULT_AVATAR_CONFIG, seed: generateRandomSeed() },
     is_staff: false,
     is_nazionale: false,
-    is_guest: guestMode,
+    is_guest: false,
     staff_secret: '',
     is_medical_staff: false,
     fire_warden_level: '',
@@ -101,15 +99,15 @@ function OnboardingInner() {
         setError('Compila tutti i campi obbligatori.');
         return;
       }
-      if (!formData.is_staff && !formData.is_nazionale && !formData.is_guest && !formData.codice_socio) {
+      if (!formData.is_nazionale && !formData.codice_socio) {
         setError('Compila tutti i campi obbligatori.');
         return;
       }
-      if ((formData.is_staff || formData.is_nazionale) && formData.staff_secret !== 'grumbiotto') {
+      if (formData.is_nazionale && formData.staff_secret !== 'grumbiotto') {
         setError('La parola chiave Segreta non è valida.');
         return;
       }
-      if (!formData.is_staff && !formData.is_nazionale && !formData.is_guest && !/^[0-9]{4,8}$/.test(formData.codice_socio)) {
+      if (!formData.is_nazionale && !/^[0-9]{4,8}$/.test(formData.codice_socio)) {
         setError('Il Codice Socio deve essere un numero composto da 4 a 8 cifre.');
         return;
       }
@@ -279,33 +277,13 @@ function OnboardingInner() {
                   />
                 </div>
 
-                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <input 
-                      type="checkbox" 
-                      id="is_staff"
-                      checked={formData.is_staff}
-                      onChange={(e) => setFormData(prev => ({...prev, is_staff: e.target.checked, is_nazionale: false, is_guest: false}))}
-                      className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="is_staff" className="font-semibold text-agesci-blue cursor-pointer select-none text-base">
-                      🙋‍♂️ Sono un membro dello Staff dell'Evento
-                    </label>
-                    <p className="text-xs text-agesci-blue/70 mt-1">
-                      Seleziona questa opzione se fai parte dell'organizzazione centrale dell'evento Nazionale.
-                    </p>
-                  </div>
-                </div>
-
                 <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100 flex items-start gap-3">
                   <div className="pt-0.5">
                     <input
                       type="checkbox"
                       id="is_nazionale"
                       checked={formData.is_nazionale}
-                      onChange={(e) => setFormData(prev => ({...prev, is_nazionale: e.target.checked, is_staff: false, is_guest: false}))}
+                      onChange={(e) => setFormData(prev => ({...prev, is_nazionale: e.target.checked, is_staff: false}))}
                       className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
                     />
                   </div>
@@ -319,27 +297,7 @@ function OnboardingInner() {
                   </div>
                 </div>
 
-                <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <input
-                      type="checkbox"
-                      id="is_guest"
-                      checked={formData.is_guest}
-                      onChange={(e) => setFormData(prev => ({...prev, is_guest: e.target.checked, is_staff: false, is_nazionale: false}))}
-                      className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="is_guest" className="font-semibold text-agesci-blue cursor-pointer select-none text-base">
-                      🎟️ Sono un ospite dell&apos;evento
-                    </label>
-                    <p className="text-xs text-agesci-blue/70 mt-1">
-                      Seleziona se sei un ospite invitato (relatore, moderatore esterno, giornalista, ecc.). Non è richiesto il codice socio.
-                    </p>
-                  </div>
-                </div>
-
-                {(formData.is_staff || formData.is_nazionale) && (
+                {formData.is_nazionale && (
                   <div className="animate-in fade-in slide-in-from-top-2">
                     <label className="block text-sm font-medium text-agesci-blue mb-1">
                       Parola Segreta Organizzazione *
@@ -351,35 +309,33 @@ function OnboardingInner() {
                       onChange={(e) => setFormData((prev) => ({ ...prev, staff_secret: e.target.value.toLowerCase() }))}
                       className="input w-full border-blue-300 focus:border-blue-500 focus:ring-blue-500"
                       placeholder="Inserisci il codice segreto"
-                      required={formData.is_staff || formData.is_nazionale}
+                      required={formData.is_nazionale}
                     />
                   </div>
                 )}
 
-                {!formData.is_guest && (
-                  <div>
-                    <label className="block text-sm font-medium text-agesci-blue mb-1">
-                      Codice Socio {!(formData.is_staff || formData.is_nazionale) && '*'}
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={8}
-                      value={formData.codice_socio}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
-                      className="input w-full"
-                      placeholder="Da 6 a 8 cifre"
-                      required={!(formData.is_staff || formData.is_nazionale)}
-                    />
-                    <p className="text-xs text-agesci-blue/60 mt-1">
-                      {(formData.is_staff || formData.is_nazionale)
-                        ? 'Facoltativo per staff/esterni.'
-                        : 'Il tuo identificativo numerico AGESCI univoco.'
-                      }
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-agesci-blue mb-1">
+                    Codice Socio {!formData.is_nazionale && '*'}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={8}
+                    value={formData.codice_socio}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, codice_socio: e.target.value.replace(/[^0-9]/g, '') }))}
+                    className="input w-full"
+                    placeholder="Da 6 a 8 cifre"
+                    required={!formData.is_nazionale}
+                  />
+                  <p className="text-xs text-agesci-blue/60 mt-1">
+                    {formData.is_nazionale
+                      ? 'Facoltativo per il Gomitolo Team.'
+                      : 'Il tuo identificativo numerico AGESCI univoco.'
+                    }
+                  </p>
+                </div>
 
 
 
