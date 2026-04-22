@@ -31,12 +31,17 @@ interface PoolUser {
 }
 
 function ModeratorAutocomplete({
-    groupId, staffUsers, onAssign
+    groupId, groupName, staffUsers, allPool, onAssign
 }: {
-    groupId: string, staffUsers: Profile[], onAssign: (groupId: string, userId: string) => void
+    groupId: string;
+    groupName: string;
+    staffUsers: Profile[];
+    allPool: PoolUser[];
+    onAssign: (groupId: string, userId: string, removeFromGroup: boolean) => void;
 }) {
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
+    const [pending, setPending] = useState<{ user: Profile; currentGroupName: string } | null>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -50,37 +55,82 @@ function ModeratorAutocomplete({
     }, []);
 
     const filtered = staffUsers.filter(u =>
-        (u.name + ' ' + u.surname + ' ' + (u.service_role || '')).toLowerCase().includes(search.toLowerCase())
+        (u.name + ' ' + u.surname + ' ' + (u.service_role || '') + ' ' + (u.scout_group || '')).toLowerCase().includes(search.toLowerCase())
     );
 
+    const handleSelect = (u: Profile) => {
+        setSearch('');
+        setIsOpen(false);
+        const poolEntry = allPool.find(p => p.id === u.id && p.currentGroupId && p.currentGroupId !== groupId);
+        if (poolEntry?.currentGroupName) {
+            setPending({ user: u, currentGroupName: poolEntry.currentGroupName });
+        } else {
+            onAssign(groupId, u.id, false);
+        }
+    };
+
     return (
-        <div className="relative flex-1" ref={wrapperRef}>
-            <input
-                type="text"
-                className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 h-[38px] transition"
-                placeholder="Cerca per nome o ruolo..."
-                value={search}
-                onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
-                onFocus={() => setIsOpen(true)}
-            />
-            {isOpen && search.length > 0 && (
-                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-auto">
-                    {filtered.length > 0 ? filtered.map(u => (
-                        <li key={u.id} className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b last:border-0"
-                            onClick={() => {
-                                onAssign(groupId, u.id);
-                                setSearch('');
-                                setIsOpen(false);
-                            }}>
-                            <div className="font-medium text-gray-800">{u.name} {u.surname}</div>
-                            {u.service_role && <div className="text-xs text-gray-500">{u.service_role}</div>}
-                        </li>
-                    )) : (
-                        <li className="px-3 py-2 text-sm text-gray-500 italic">Nessun match trovato</li>
-                    )}
-                </ul>
+        <>
+            <div className="relative flex-1" ref={wrapperRef}>
+                <input
+                    type="text"
+                    className="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 h-[38px] transition"
+                    placeholder="Cerca qualsiasi partecipante..."
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
+                    onFocus={() => setIsOpen(true)}
+                />
+                {isOpen && search.length > 0 && (
+                    <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-auto">
+                        {filtered.length > 0 ? filtered.map(u => {
+                            const poolEntry = allPool.find(p => p.id === u.id);
+                            return (
+                                <li key={u.id} className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm border-b last:border-0"
+                                    onMouseDown={e => { e.preventDefault(); handleSelect(u); }}>
+                                    <div className="font-medium text-gray-800">{u.name} {u.surname}</div>
+                                    <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                                        {u.service_role && <span>{u.service_role}</span>}
+                                        {u.scout_group && <span>{u.scout_group}</span>}
+                                        {poolEntry?.currentGroupName && poolEntry.currentGroupId !== groupId && (
+                                            <span className="text-orange-600 font-medium">• In: {poolEntry.currentGroupName}</span>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        }) : (
+                            <li className="px-3 py-2 text-sm text-gray-500 italic">Nessun match trovato</li>
+                        )}
+                    </ul>
+                )}
+            </div>
+
+            {pending && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40" onClick={() => setPending(null)}>
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-base font-semibold text-gray-900 mb-3">Conferma assegnazione moderatore</h3>
+                        <p className="text-sm text-gray-700 mb-5">
+                            <strong>{pending.user.name} {pending.user.surname}</strong> è attualmente assegnato al gruppo{' '}
+                            <strong>{pending.currentGroupName}</strong>. Assegnandolo come moderatore di{' '}
+                            <strong>{groupName}</strong> verrà rimosso dal suo gruppo. Confermi?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setPending(null)}
+                                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                onClick={() => { onAssign(groupId, pending.user.id, true); setPending(null); }}
+                                className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                            >
+                                Conferma e rimuovi dal gruppo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
-        </div>
+        </>
     );
 }
 
@@ -255,12 +305,12 @@ export default function AdminEventGroupsPage() {
         }
     };
 
-    const handleAssignModerator = async (groupId: string, userId: string) => {
+    const handleAssignModerator = async (groupId: string, userId: string, removeFromGroup = false) => {
         try {
             const res = await fetch(`/api/admin/events/${eventId}/groups/${groupId}/moderators`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId }),
+                body: JSON.stringify({ userId, removeFromGroup }),
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -571,7 +621,9 @@ export default function AdminEventGroupsPage() {
                                         <div className="flex gap-2 mt-2">
                                             <ModeratorAutocomplete
                                                 groupId={group.id}
+                                                groupName={group.name}
                                                 staffUsers={staffUsers.filter(u => !(group.moderators || []).some(m => m.user_id === u.id))}
+                                                allPool={allUsersPool}
                                                 onAssign={handleAssignModerator}
                                             />
                                         </div>

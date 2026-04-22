@@ -7,6 +7,20 @@ interface RouteParams {
     params: Promise<{ id: string; groupId: string }>;
 }
 
+async function removeUserFromEventGroups(supabase: ReturnType<typeof createServiceRoleClient>, eventId: string, userId: string) {
+    const { data: eventGroups } = await supabase
+        .from('event_groups')
+        .select('id')
+        .eq('event_id', eventId);
+    if (!eventGroups?.length) return;
+    const groupIds = eventGroups.map(g => g.id);
+    await supabase
+        .from('event_group_members')
+        .delete()
+        .eq('user_id', userId)
+        .in('group_id', groupIds);
+}
+
 async function checkAdminRole(userId: string | null): Promise<{ isAuthorized: boolean }> {
     if (!userId) return { isAuthorized: false };
     const client = await clerkClient();
@@ -20,7 +34,7 @@ export async function POST(
     { params }: RouteParams
 ): Promise<NextResponse<ApiResponse<{ success: boolean }>>> {
     try {
-        const { groupId } = await params;
+        const { id, groupId } = await params;
         const { userId: currentUserId } = await auth();
 
         if (!currentUserId) {
@@ -33,13 +47,18 @@ export async function POST(
         }
 
         const body = await request.json();
-        const { userId } = body;
+        const { userId, removeFromGroup } = body;
 
         if (!userId) {
             return NextResponse.json({ error: 'userId è obbligatorio' }, { status: 400 });
         }
 
         const supabase = createServiceRoleClient();
+
+        // Remove user from any group in this event before assigning as moderator
+        if (removeFromGroup) {
+            await removeUserFromEventGroups(supabase, id, userId);
+        }
 
         // Check current moderators count
         const { count, error: countError } = await supabase

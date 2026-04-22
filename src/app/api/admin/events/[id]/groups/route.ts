@@ -47,12 +47,12 @@ export async function GET(
             return NextResponse.json({ error: 'Evento non trovato' }, { status: 404 });
         }
 
-        // 3. Fetch all Staff/Admin users (or specific service roles) for dropdown
+        // 3. Fetch all onboarded app users as moderator candidates
         const { data: staffUsers, error: staffError } = await supabase
             .from('profiles')
-            .select('id, name, surname, role, service_role')
-            .or('role.in.(admin,staff),service_role.in.("gomitolo team","Incaricato regionale alla Branca L/C")')
-            .order('name');
+            .select('id, name, surname, role, service_role, scout_group')
+            .eq('profile_setup_complete', true)
+            .order('surname');
 
         if (staffError) {
             throw staffError;
