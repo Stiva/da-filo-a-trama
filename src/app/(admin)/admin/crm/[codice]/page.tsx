@@ -7,6 +7,7 @@ import {
   HeartPulse, AlertTriangle, Leaf, Target, Lightbulb, Utensils, Users, ShieldAlert, Stethoscope
 } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
+import NoteAccettazioneEditor from './NoteAccettazioneEditor';
 
 interface CRMDetailPageProps {
   params: Promise<{ codice: string }>;
@@ -220,6 +221,14 @@ export default async function CRMDetailPage({ params }: CRMDetailPageProps) {
         </div>
       </div>
       
+      {/* Note Accettazione */}
+      <div className="mt-6">
+        <NoteAccettazioneEditor
+          codice={participant.codice}
+          initialNote={participant.note_accettazione ?? null}
+        />
+      </div>
+
       {/* Second Row: Sanitario & Sostenibilità */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         

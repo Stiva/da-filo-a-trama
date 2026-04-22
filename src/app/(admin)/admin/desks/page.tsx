@@ -2,7 +2,11 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Search, UserCheck } from 'lucide-react';
+import Image from 'next/image';
 import type { ParticipantCrmView } from '@/types/database';
+
+const hasDietaryNeeds = (val: string | null | undefined) =>
+  !!val && val.toLowerCase() !== 'nessuna' && val.toLowerCase() !== 'no' && val.trim() !== '';
 
 export default function CheckinDeskPage() {
   const [participants, setParticipants] = useState<ParticipantCrmView[]>([]);
@@ -124,13 +128,30 @@ export default function CheckinDeskPage() {
                 }`}
               >
                 <div className="text-center sm:text-left w-full">
-                  <h3 className="text-xl font-bold text-gray-900">{person.cognome} {person.nome}</h3>
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <h3 className="text-xl font-bold text-gray-900">{person.cognome} {person.nome}</h3>
+                    {hasDietaryNeeds(person.esigenze_alimentari) && (
+                      <Image
+                        src="/Food_diary.png"
+                        alt="Esigenze alimentari"
+                        width={28}
+                        height={28}
+                        title={person.esigenze_alimentari ?? ''}
+                        className="flex-shrink-0"
+                      />
+                    )}
+                  </div>
                   <div className="mt-1 flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-4 text-sm text-gray-500">
                     <span className="bg-gray-100 px-2 py-0.5 rounded font-mono font-bold text-gray-700">
                       {person.codice}
                     </span>
                     <span>{person.gruppo} ({person.regione})</span>
                   </div>
+                  {person.note_accettazione && (
+                    <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-left">
+                      <span className="font-semibold">Nota: </span>{person.note_accettazione}
+                    </div>
+                  )}
                 </div>
 
                 <div className="w-full sm:w-auto shrink-0 flex gap-2 sm:flex-col">

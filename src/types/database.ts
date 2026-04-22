@@ -609,6 +609,7 @@ export interface Participant {
   esigenze_mediche?: string | null;
   segnalazioni?: string | null;
   esigenze_alimentari?: string | null;
+  note_accettazione?: string | null;
   competenza_sostenibilita?: string | null;
   aspettativa_evento?: string | null;
   temi_sostenibilita?: string | null;
