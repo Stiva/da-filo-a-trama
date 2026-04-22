@@ -53,8 +53,8 @@ export async function GET(request: Request) {
 
     // Filtri per colonna dinamici
     const filterableFields = [
-      'codice', 'nome', 'cognome', 'email', 'gruppo_regione', 
-      'is_registered_in_app', 'checkin_done', 'is_medical_staff', 'fire_warden_level'
+      'codice', 'nome', 'cognome', 'email_contatto', 'gruppo',
+      'is_app_registered', 'is_checked_in', 'is_medical_staff', 'fire_warden_level'
     ];
 
     searchParams.forEach((value, key) => {
