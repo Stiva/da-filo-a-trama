@@ -43,6 +43,7 @@ export default function CRMPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [activeOnly, setActiveOnly] = useState(false);
   const { filters, setFilter, clearFilters, hasFilters, getApiParams } = useTableFilters();
@@ -130,16 +131,40 @@ export default function CRMPage() {
     // Logic for bulk delete (currently handled per participant in this page)
   };
 
-  const handleExport = () => {
-    const columnsToExport = CRM_COLUMNS.filter(c => visibleColumns.includes(c.id));
-    // Mappa i dati per l'export se necessario (es. formattazione date)
-    const exportData = participants.map(p => ({
-      ...p,
-      checked_in_at: p.checked_in_at ? format(new Date(p.checked_in_at), 'dd/MM/yyyy HH:mm', { locale: it }) : '',
-      is_medical_staff: p.is_medical_staff ? 'Sì' : 'No',
-      fire_warden_level: p.fire_warden_level || 'No'
-    }));
-    exportToCSV(exportData, columnsToExport, 'Iscritti_CRM');
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const qs = new URLSearchParams({
+        search: searchTerm,
+        activeOnly: activeOnly.toString(),
+        limit: '10000',
+        offset: '0',
+      });
+
+      const apiFilters = getApiParams();
+      Object.entries(apiFilters).forEach(([key, value]) => {
+        qs.set(key, String(value));
+      });
+
+      const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`);
+      if (!res.ok) throw new Error('Errore nel recupero dei dati per l\'export');
+      const json = await res.json();
+      const allParticipants: ParticipantCrmView[] = json.data || [];
+
+      const columnsToExport = CRM_COLUMNS.filter(c => visibleColumns.includes(c.id));
+      const exportData = allParticipants.map(p => ({
+        ...p,
+        checked_in_at: p.checked_in_at ? format(new Date(p.checked_in_at), 'dd/MM/yyyy HH:mm', { locale: it }) : '',
+        is_medical_staff: p.is_medical_staff ? 'Sì' : 'No',
+        fire_warden_level: p.fire_warden_level || 'No',
+      }));
+      exportToCSV(exportData, columnsToExport, 'Iscritti_CRM');
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Errore durante l\'esportazione. Riprova.');
+    } finally {
+      setIsExporting(false);
+    }
   };
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -160,10 +185,15 @@ export default function CRMPage() {
           />
           <button
             onClick={handleExport}
-            className="flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+            disabled={isExporting}
+            className="flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-5 h-5 mr-2" />
-            Esporta
+            {isExporting ? (
+              <div className="w-5 h-5 mr-2 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Download className="w-5 h-5 mr-2" />
+            )}
+            {isExporting ? 'Esportazione...' : 'Esporta'}
           </button>
           {hasFilters && (
             <button
