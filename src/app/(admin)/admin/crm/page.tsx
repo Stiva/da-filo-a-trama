@@ -36,11 +36,15 @@ const CRM_COLUMNS: ColumnDef[] = [
   { id: 'fire_warden_level', label: 'Antincendio', defaultVisible: false },
 ];
 
+const PAGE_SIZE = 100;
+
 export default function CRMPage() {
   const { visibleColumns, toggleColumn, isLoading: isPrefsLoading } = useAdminTablePreferences('crm_list', CRM_COLUMNS);
   const [participants, setParticipants] = useState<ParticipantCrmView[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -48,22 +52,23 @@ export default function CRMPage() {
   const [activeOnly, setActiveOnly] = useState(false);
   const { filters, setFilter, clearFilters, hasFilters, getApiParams } = useTableFilters();
 
+  const buildQs = useCallback((currentOffset: number) => {
+    const qs = new URLSearchParams({
+      search: searchTerm,
+      activeOnly: activeOnly.toString(),
+      limit: String(PAGE_SIZE),
+      offset: String(currentOffset),
+    });
+    const apiFilters = getApiParams();
+    Object.entries(apiFilters).forEach(([key, value]) => qs.set(key, String(value)));
+    return qs;
+  }, [searchTerm, activeOnly, getApiParams]);
+
   const fetchParticipants = useCallback(async () => {
     setIsLoading(true);
+    setOffset(0);
     try {
-      const qs = new URLSearchParams({
-        search: searchTerm,
-        activeOnly: activeOnly.toString(),
-        limit: '100'
-      });
-
-      // Add column filters
-      const apiFilters = getApiParams();
-      Object.entries(apiFilters).forEach(([key, value]) => {
-        qs.set(key, String(value));
-      });
-
-      const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`);
+      const res = await fetch(`/api/admin/crm/participants?${buildQs(0).toString()}`);
       if (!res.ok) throw new Error('Errore nel caricamento dei dati');
       const json = await res.json();
       setParticipants(json.data || []);
@@ -73,7 +78,23 @@ export default function CRMPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, activeOnly, getApiParams]);
+  }, [buildQs]);
+
+  const handleLoadMore = async () => {
+    const nextOffset = offset + PAGE_SIZE;
+    setIsLoadingMore(true);
+    try {
+      const res = await fetch(`/api/admin/crm/participants?${buildQs(nextOffset).toString()}`);
+      if (!res.ok) throw new Error('Errore nel caricamento dei dati');
+      const json = await res.json();
+      setParticipants(prev => [...prev, ...(json.data || [])]);
+      setOffset(nextOffset);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -484,11 +505,21 @@ export default function CRMPage() {
             </tbody>
           </table>
         </div>
-        {participants.length === 100 && (
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 text-center text-sm text-gray-500">
-            Mostrati i primi 100 risultati. Utilizza la ricerca per trovare altri contatti.
-          </div>
-        )}
+        <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between text-sm text-gray-500">
+          <span>Mostrati {participants.length} di {totalCount} contatti</span>
+          {participants.length < totalCount && (
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              {isLoadingMore ? (
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : null}
+              {isLoadingMore ? 'Caricamento...' : `Carica altri 100`}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -42,8 +42,9 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize] = useState(100);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -52,34 +53,35 @@ export default function AdminUsersPage() {
 
   // Filtri
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [onboardingFilter, setOnboardingFilter] = useState<string>('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const buildParams = useCallback((targetPage: number) => {
+    const params = new URLSearchParams();
+    params.set('page', targetPage.toString());
+    params.set('pageSize', pageSize.toString());
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (roleFilter) params.set('role', roleFilter);
+    if (onboardingFilter) params.set('onboarding', onboardingFilter);
+    const apiFilters = getApiParams();
+    Object.entries(apiFilters).forEach(([key, value]) => params.set(key, value));
+    return params;
+  }, [pageSize, debouncedSearch, roleFilter, onboardingFilter, getApiParams]);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
+    setPage(1);
     try {
-      const params = new URLSearchParams();
-      params.set('page', page.toString());
-      params.set('pageSize', pageSize.toString());
-      if (search) params.set('search', search);
-      if (roleFilter) params.set('role', roleFilter);
-      if (onboardingFilter) params.set('onboarding', onboardingFilter);
-
-      // Add column filters
-      const apiFilters = getApiParams();
-      Object.entries(apiFilters).forEach(([key, value]) => {
-        params.set(key, value);
-      });
-
-      const response = await fetch(`/api/admin/users?${params}`);
+      const response = await fetch(`/api/admin/users?${buildParams(1)}`);
       const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Errore nel caricamento');
-      }
-
+      if (!response.ok) throw new Error(result.error || 'Errore nel caricamento');
       const data = result.data as UsersResponse;
       setUsers(data.profiles || []);
       setTotal(data.total || 0);
@@ -88,19 +90,29 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, search, roleFilter, onboardingFilter]);
+  }, [buildParams]);
+
+  const handleLoadMore = async () => {
+    const nextPage = page + 1;
+    setIsLoadingMore(true);
+    try {
+      const response = await fetch(`/api/admin/users?${buildParams(nextPage)}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Errore nel caricamento');
+      const data = result.data as UsersResponse;
+      setUsers(prev => [...prev, ...(data.profiles || [])]);
+      setPage(nextPage);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore sconosciuto');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers, filters]);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const handleRoleChange = async (profileId: string, newRole: string) => {
     if (!confirm(`Sei sicuro di voler cambiare il ruolo a "${newRole}"?`)) {
@@ -146,7 +158,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  const totalPages = Math.ceil(total / pageSize);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -207,13 +218,23 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleExport = () => {
-    const columnsToExport = APP_USERS_COLUMNS.filter(c => visibleColumns.includes(c.id));
-    const exportData = users.map(u => ({
-      ...u,
-      created_at: format(new Date(u.created_at), 'dd/MM/yyyy HH:mm', { locale: it })
-    }));
-    exportToCSV(exportData, columnsToExport, 'Utenti_App');
+  const handleExport = async () => {
+    try {
+      const params = buildParams(1);
+      params.set('pageSize', '10000');
+      const response = await fetch(`/api/admin/users?${params}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Errore export');
+      const allUsers: Profile[] = (result.data as UsersResponse).profiles || [];
+      const columnsToExport = APP_USERS_COLUMNS.filter(c => visibleColumns.includes(c.id));
+      const exportData = allUsers.map(u => ({
+        ...u,
+        created_at: format(new Date(u.created_at), 'dd/MM/yyyy HH:mm', { locale: it })
+      }));
+      exportToCSV(exportData, columnsToExport, 'Utenti_App');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante l\'esportazione');
+    }
   };
 
   const handleSafetyExport = async () => {
@@ -291,7 +312,7 @@ export default function AdminUsersPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
             <select
               value={roleFilter}
-              onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+              onChange={(e) => setRoleFilter(e.target.value)}
               className="input w-full"
             >
               <option value="">Tutti</option>
@@ -306,7 +327,7 @@ export default function AdminUsersPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Stato Profilo</label>
             <select
               value={onboardingFilter}
-              onChange={(e) => { setOnboardingFilter(e.target.value); setPage(1); }}
+              onChange={(e) => setOnboardingFilter(e.target.value)}
               className="input w-full"
             >
               <option value="">Tutti</option>
@@ -538,20 +559,37 @@ export default function AdminUsersPage() {
                   </table>
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
-                    <p className="text-sm text-gray-500">Pagina {page} di {totalPages} ({total} risultati)</p>
-                    <div className="flex gap-2">
-                        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">Precedente</button>
-                        <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">Successiva</button>
-                    </div>
-                  </div>
-                )}
+                {/* Load More */}
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                  <p className="text-sm text-gray-500">Mostrati {users.length} di {total} utenti</p>
+                  {users.length < total && (
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                      {isLoadingMore && <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />}
+                      {isLoadingMore ? 'Caricamento...' : 'Carica altri 100'}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Mobile Card View (Dynamic) */}
               <div className="md:hidden space-y-4">
+                {users.length < total && (
+                  <div className="flex items-center justify-between text-sm text-gray-500 px-1">
+                    <span>Mostrati {users.length} di {total}</span>
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 disabled:opacity-50"
+                    >
+                      {isLoadingMore && <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />}
+                      {isLoadingMore ? 'Caricamento...' : 'Carica altri 100'}
+                    </button>
+                  </div>
+                )}
                 {users.map((profile) => (
                   <div key={profile.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
                     <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
