@@ -73,7 +73,7 @@ export default function CRMPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, activeOnly]);
+  }, [searchTerm, activeOnly, getApiParams]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
