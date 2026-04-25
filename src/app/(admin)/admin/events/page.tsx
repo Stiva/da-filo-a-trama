@@ -192,7 +192,7 @@ export default function AdminEventsPage() {
       return (
         event.title.toLowerCase().includes(q) ||
         event.custom_id?.toLowerCase().includes(q) ||
-        event.speaker?.toLowerCase().includes(q)
+        event.speaker_name?.toLowerCase().includes(q)
       );
     })
     .filter(event => {
