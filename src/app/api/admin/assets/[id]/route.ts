@@ -135,7 +135,7 @@ export async function PUT(
 
 /**
  * DELETE /api/admin/assets/[id]
- * Elimina asset (admin only) - elimina anche il file da Storage
+ * Elimina asset (admin/staff) - elimina anche il file da Storage
  */
 export async function DELETE(
   _request: Request,
@@ -149,14 +149,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Solo admin può eliminare assets
+    // Admin e staff possono eliminare assets
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
     const role = (clerkUser.publicMetadata as { role?: string })?.role;
 
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'staff') {
       return NextResponse.json(
-        { error: 'Solo gli admin possono eliminare assets' },
+        { error: 'Forbidden' },
         { status: 403 }
       );
     }
