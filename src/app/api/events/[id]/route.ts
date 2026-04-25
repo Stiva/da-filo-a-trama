@@ -39,13 +39,12 @@ export async function GET(
       throw eventError;
     }
 
-    // Conta iscrizioni confermate (escludendo admin e staff)
+    // Conta iscrizioni confermate (tutti i ruoli)
     const { count: enrollmentCount } = await supabase
       .from('enrollments')
-      .select('*, profiles!inner(role)', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('event_id', id)
-      .eq('status', 'confirmed')
-      .eq('profiles.role', 'user');
+      .eq('status', 'confirmed');
 
     // Verifica se l'utente e' iscritto
     let isEnrolled = false;
