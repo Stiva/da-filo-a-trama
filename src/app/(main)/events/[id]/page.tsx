@@ -96,7 +96,7 @@ function GroupPanel({ event, eventId }: { event: EventWithEnrollment; eventId: s
           ) : members.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500">Nessun partecipante assegnato.</div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto overscroll-contain">
               {members.map((m) => {
                 const p = m.profile;
                 const fullName = [p?.name, p?.surname].filter(Boolean).join(' ') || '—';
