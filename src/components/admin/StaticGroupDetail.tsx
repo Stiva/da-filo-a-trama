@@ -89,7 +89,8 @@ export default function StaticGroupDetail({ groupName, allParticipants }: Static
                         Membri Attuali ({members.length})
                     </h2>
                     
-                    <div className="bg-white border text-sm border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-white border text-sm border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
@@ -130,6 +131,7 @@ export default function StaticGroupDetail({ groupName, allParticipants }: Static
                                 )}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
 
