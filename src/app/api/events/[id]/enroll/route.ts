@@ -121,7 +121,7 @@ export async function POST(
     // Get all user's active enrollments with event times
     const { data: activeEnrollments } = await supabase
       .from('enrollments')
-      .select('id, event_id, events(title, start_time, end_time)')
+      .select('id, event_id, events(title, start_time, end_time, is_published)')
       .eq('user_id', profile.id)
       .in('status', ['confirmed', 'waitlist']);
 
@@ -132,12 +132,16 @@ export async function POST(
       const overlap = activeEnrollments.find(e => {
         // Ignora l'evento corrente (già gestito sopra) e assicurati che events esista
         if (!e.events || e.event_id === eventId) return false;
-        
+
         // Handling supabase join array or single object format correctly (it returns object for inner join single)
         const eventData = Array.isArray(e.events) ? e.events[0] : e.events;
+
+        // Gli eventi in bozza non vengono considerati ai fini dell'overlapping
+        if (!eventData.is_published) return false;
+
         const eStart = new Date(eventData.start_time);
         const eEnd = new Date(eventData.end_time);
-        
+
         // Controllo sovrapposizione: inizio1 < fine2 AND fine1 > inizio2
         return eStart < newEnd && eEnd > newStart;
       });

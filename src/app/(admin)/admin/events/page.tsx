@@ -187,6 +187,15 @@ export default function AdminEventsPage() {
       return true;
     })
     .filter(event => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        event.title.toLowerCase().includes(q) ||
+        event.custom_id?.toLowerCase().includes(q) ||
+        event.speaker_name?.toLowerCase().includes(q)
+      );
+    })
+    .filter(event => {
       // Apply column filters (client-side)
       return Object.values(filters).every(filter => {
         if (!filter.value) return true;
