@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { Event, EventListItem, ApiResponse } from '@/types/database';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/events
  * Lista eventi pubblicati con filtri opzionali
