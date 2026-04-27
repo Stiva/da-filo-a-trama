@@ -258,10 +258,10 @@ export async function POST(
 
     const supabase = createServiceRoleClient();
 
-    // Check if user is already enrolled
+    // Check if user is already enrolled (cerca anche cancelled per riattivazione)
     const { data: existingEnrollment, error: existingError } = await supabase
       .from('enrollments')
-      .select('id')
+      .select('id, status')
       .eq('event_id', eventId)
       .eq('user_id', profileId)
       .maybeSingle();
@@ -270,7 +270,7 @@ export async function POST(
       throw existingError;
     }
 
-    if (existingEnrollment) {
+    if (existingEnrollment && existingEnrollment.status !== 'cancelled') {
       return NextResponse.json(
         { error: 'Utente gia iscritto a questo evento' },
         { status: 409 }
@@ -278,16 +278,31 @@ export async function POST(
     }
 
     // Admin enrollment always forces confirmed status, bypassing capacity limits
-    const { data, error } = await supabase
-      .from('enrollments')
-      .insert({
-        event_id: eventId,
-        user_id: profileId,
-        status: 'confirmed',
-        waitlist_position: null,
-      })
-      .select('id')
-      .single();
+    const nowIso = new Date().toISOString();
+    const writePayload = {
+      status: 'confirmed' as const,
+      waitlist_position: null,
+      registration_time: nowIso,
+      checked_in_at: null,
+      updated_at: nowIso,
+    };
+
+    const { data, error } = existingEnrollment
+      ? await supabase
+          .from('enrollments')
+          .update(writePayload)
+          .eq('id', existingEnrollment.id)
+          .select('id')
+          .single()
+      : await supabase
+          .from('enrollments')
+          .insert({
+            event_id: eventId,
+            user_id: profileId,
+            ...writePayload,
+          })
+          .select('id')
+          .single();
 
     if (error) {
       throw error;

@@ -101,16 +101,15 @@ export async function POST(
       );
     }
 
-    // 3. Verifica se già iscritto
+    // 3. Verifica se già iscritto (cerca anche cancelled per riattivazione)
     const { data: existing } = await supabase
       .from('enrollments')
-      .select('id')
+      .select('id, status')
       .eq('user_id', profile.id)
       .eq('event_id', eventId)
-      .neq('status', 'cancelled')
       .maybeSingle();
 
-    if (existing) {
+    if (existing && existing.status !== 'cancelled') {
       return NextResponse.json(
         { error: 'Sei già iscritto a questo evento' },
         { status: 409 }
@@ -201,18 +200,34 @@ export async function POST(
       waitlistPosition = (wlCount || 0) + 1;
     }
 
-    // 6. Inserisci iscrizione
-    const { data: enrollment, error: insertError } = await supabase
-      .from('enrollments')
-      .insert({
-        user_id: profile.id,
-        event_id: eventId,
-        status: enrollStatus,
-        waitlist_position: waitlistPosition,
-        registration_time: new Date().toISOString(),
-      })
-      .select('id')
-      .single();
+    // 6. Inserisci o riattiva iscrizione
+    const nowIso = new Date().toISOString();
+    const payload = {
+      status: enrollStatus,
+      waitlist_position: waitlistPosition,
+      registration_time: nowIso,
+      checked_in_at: null,
+      updated_at: nowIso,
+    };
+
+    const writeQuery = existing
+      ? supabase
+          .from('enrollments')
+          .update(payload)
+          .eq('id', existing.id)
+          .select('id')
+          .single()
+      : supabase
+          .from('enrollments')
+          .insert({
+            user_id: profile.id,
+            event_id: eventId,
+            ...payload,
+          })
+          .select('id')
+          .single();
+
+    const { data: enrollment, error: insertError } = await writeQuery;
 
     if (insertError) {
       if (insertError.code === '23505') {
