@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePwaAndPush } from '@/hooks/usePwaAndPush';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 
 export default function InstallBanner() {
   const { isInstallable, isIosInstallable, isInstalled, promptInstall, subscribeToPush } = usePwaAndPush();
