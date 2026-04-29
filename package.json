@@ -25,7 +25,7 @@
     "@supabase/supabase-js": "^2.94.0",
     "@vercel/analytics": "^2.0.1",
     "date-fns": "^4.1.0",
-    "isomorphic-dompurify": "^3.3.0",
+    "dompurify": "^3.3.0",
     "leaflet": "^1.9.4",
     "lexical": "^0.40.0",
     "lucide-react": "^0.577.0",
