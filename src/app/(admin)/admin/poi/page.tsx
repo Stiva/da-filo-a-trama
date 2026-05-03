@@ -315,9 +315,12 @@ export default function AdminPoiPage() {
         </div>
       )}
 
-      {hasFilters && (
+      {(hasFilters || filterTipo !== '') && (
         <div className="mb-4 flex justify-end">
-          <button onClick={clearFilters} className="text-sm text-red-600 underline font-medium">
+          <button
+            onClick={() => { clearFilters(); setFilterTipo(''); }}
+            className="text-sm text-red-600 underline font-medium"
+          >
             Pulisci tutti i filtri
           </button>
         </div>
