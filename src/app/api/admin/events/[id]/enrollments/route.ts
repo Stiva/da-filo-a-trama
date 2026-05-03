@@ -247,7 +247,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { profileId } = body;
+    const { profileId, override } = body as { profileId?: string; override?: boolean };
 
     if (!profileId) {
       return NextResponse.json(
@@ -277,7 +277,52 @@ export async function POST(
       );
     }
 
-    // Admin enrollment always forces confirmed status, bypassing capacity limits
+    // Capacity check (admin/staff e auto_enroll_all events bypassano il cap).
+    // Si puo' forzare con { override: true } per casi eccezionali; in ogni caso
+    // il trigger DB enforce_event_capacity rimane come rete di sicurezza.
+    const { data: eventInfo, error: eventInfoError } = await supabase
+      .from('events')
+      .select('max_posti, auto_enroll_all')
+      .eq('id', eventId)
+      .single();
+
+    if (eventInfoError) {
+      throw eventInfoError;
+    }
+
+    const { data: targetProfile, error: targetProfileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', profileId)
+      .single();
+
+    if (targetProfileError) {
+      throw targetProfileError;
+    }
+
+    const targetIsStaff = targetProfile?.role === 'admin' || targetProfile?.role === 'staff';
+    const capApplies = !targetIsStaff && !eventInfo.auto_enroll_all;
+
+    if (capApplies && !override) {
+      const { count: confirmedCount } = await supabase
+        .from('enrollments')
+        .select('id, profiles!inner(role)', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .eq('status', 'confirmed')
+        .not('profiles.role', 'in', '("admin","staff")');
+
+      if ((confirmedCount ?? 0) >= eventInfo.max_posti) {
+        return NextResponse.json(
+          {
+            error: 'Posti esauriti. Aggiungi { "override": true } al body per forzare.',
+            code: 'EVENT_FULL',
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Riattiva riga cancelled o inserisce nuova (UNIQUE(user_id, event_id))
     const nowIso = new Date().toISOString();
     const writePayload = {
       status: 'confirmed' as const,
@@ -305,6 +350,14 @@ export async function POST(
           .single();
 
     if (error) {
+      // Trigger DB enforce_event_capacity puo' bloccare se override e' stato usato
+      // ma l'evento e' ancora pieno per logica trigger (race rara o regole disallineate).
+      if (error.code === '23514' || (error.message || '').includes('EVENT_FULL')) {
+        return NextResponse.json(
+          { error: 'Posti esauriti (rifiutato dal trigger DB).', code: 'EVENT_FULL' },
+          { status: 409 }
+        );
+      }
       throw error;
     }
 

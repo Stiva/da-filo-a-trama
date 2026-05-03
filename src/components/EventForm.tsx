@@ -237,7 +237,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
             </Suspense>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className={`grid gap-4 ${formData.auto_enroll_all ? '' : 'sm:grid-cols-2'}`}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Categoria *
@@ -257,19 +257,21 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Posti massimi *
-              </label>
-              <input
-                type="number"
-                value={formData.max_posti}
-                onChange={(e) => setFormData(prev => ({ ...prev, max_posti: parseInt(e.target.value) || 0 }))}
-                required
-                min={1}
-                className="input w-full"
-              />
-            </div>
+            {!formData.auto_enroll_all && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Posti massimi *
+                </label>
+                <input
+                  type="number"
+                  value={formData.max_posti}
+                  onChange={(e) => setFormData(prev => ({ ...prev, max_posti: parseInt(e.target.value) || 0 }))}
+                  required
+                  min={1}
+                  className="input w-full"
+                />
+              </div>
+            )}
           </div>
 
           {/* Sezione gruppi — wizard sequenziale */}
@@ -806,14 +808,18 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
           <div className="flex-1">
             <h2 className="text-lg font-semibold">Iscrizione automatica</h2>
             <p className="text-sm text-gray-500">
-              Iscrive automaticamente tutti gli utenti a questo evento
+              Iscrive automaticamente tutti gli utenti a questo evento. Quando attiva, il limite posti non viene applicato.
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
             <input
               type="checkbox"
               checked={formData.auto_enroll_all}
-              onChange={(e) => setFormData(prev => ({ ...prev, auto_enroll_all: e.target.checked }))}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                auto_enroll_all: e.target.checked,
+                max_posti: e.target.checked ? Math.max(prev.max_posti, 9999) : (prev.max_posti >= 9999 ? 50 : prev.max_posti),
+              }))}
               className="sr-only peer"
             />
             <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>

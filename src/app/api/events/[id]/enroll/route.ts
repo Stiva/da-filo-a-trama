@@ -9,7 +9,9 @@ interface RouteParams {
 
 /**
  * POST /api/events/[id]/enroll
- * Iscrizione a un evento (bypass RPC, usa service role)
+ * Iscrizione a un evento. Delega l'insert atomico (count + insert sotto lock)
+ * a enroll_user_to_event RPC; resta nel route solo l'orchestrazione e i
+ * controlli soft (conflitti temporali, finestra iscrizioni).
  */
 export async function POST(
   request: Request,
@@ -170,85 +172,45 @@ export async function POST(
       }
     }
 
-    // 4. Conta iscrizioni confermate (solo utenti normali)
-    const { count: currentCount } = await supabase
-      .from('enrollments')
-      .select('*, profiles!inner(role)', { count: 'exact', head: true })
-      .eq('event_id', eventId)
-      .eq('status', 'confirmed')
-      .eq('profiles.role', 'user');
+    // 4. Iscrizione atomica via RPC: lock FOR UPDATE su events serializza
+    // le richieste concorrenti, eliminando la race condition count+insert.
+    // p_user_id passato esplicitamente perche' service role non ha JWT Clerk.
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('enroll_user_to_event', {
+      p_event_id: eventId,
+      p_user_id: profile.id,
+    });
 
-    const confirmedCount = currentCount || 0;
-
-    // 5. Determina status
-    let enrollStatus: 'confirmed' | 'waitlist';
-    let waitlistPosition: number | null = null;
-
-    if (profile.role === 'admin' || profile.role === 'staff') {
-      // Admin e staff confermati sempre, non occupano posti
-      enrollStatus = 'confirmed';
-    } else if (confirmedCount < event.max_posti) {
-      enrollStatus = 'confirmed';
-    } else {
-      enrollStatus = 'waitlist';
-      // Calcola posizione in waitlist
-      const { count: wlCount } = await supabase
-        .from('enrollments')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_id', eventId)
-        .eq('status', 'waitlist');
-      waitlistPosition = (wlCount || 0) + 1;
+    if (rpcError) {
+      throw rpcError;
     }
 
-    // 6. Inserisci o riattiva iscrizione
-    const nowIso = new Date().toISOString();
-    const payload = {
-      status: enrollStatus,
-      waitlist_position: waitlistPosition,
-      registration_time: nowIso,
-      checked_in_at: null,
-      updated_at: nowIso,
+    const rpc = rpcResult as {
+      success: boolean;
+      error?: string;
+      message?: string;
+      status?: 'confirmed' | 'waitlist';
+      waitlist_position?: number | null;
     };
 
-    const writeQuery = existing
-      ? supabase
-          .from('enrollments')
-          .update(payload)
-          .eq('id', existing.id)
-          .select('id')
-          .single()
-      : supabase
-          .from('enrollments')
-          .insert({
-            user_id: profile.id,
-            event_id: eventId,
-            ...payload,
-          })
-          .select('id')
-          .single();
-
-    const { data: enrollment, error: insertError } = await writeQuery;
-
-    if (insertError) {
-      if (insertError.code === '23505') {
-        return NextResponse.json(
-          { error: 'Sei già iscritto a questo evento' },
-          { status: 409 }
-        );
-      }
-      throw insertError;
+    if (!rpc.success) {
+      const statusCode =
+        rpc.error === 'ALREADY_ENROLLED' ? 409 :
+        rpc.error === 'EVENT_NOT_FOUND' ? 404 :
+        rpc.error === 'PROFILE_NOT_FOUND' ? 400 :
+        rpc.error === 'EVENT_NOT_PUBLISHED' || rpc.error === 'EVENT_STARTED' || rpc.error === 'EVENT_FULL' ? 400 :
+        500;
+      return NextResponse.json({ error: rpc.message || 'Errore durante l\'iscrizione' }, { status: statusCode });
     }
 
     const result: EnrollmentResult = {
       success: true,
-      status: enrollStatus,
-      waitlist_position: waitlistPosition ?? undefined,
+      status: rpc.status!,
+      waitlist_position: rpc.waitlist_position ?? undefined,
     };
 
-    let message = 'Iscrizione confermata!';
-    if (enrollStatus === 'waitlist') {
-      message = `Sei in lista d'attesa (posizione ${waitlistPosition})`;
-    }
+    const message = rpc.message || (rpc.status === 'confirmed'
+      ? 'Iscrizione confermata!'
+      : `Sei in lista d'attesa (posizione ${rpc.waitlist_position})`);
 
     return NextResponse.json({
       data: { ...result, message },
@@ -265,7 +227,7 @@ export async function POST(
 
 /**
  * DELETE /api/events/[id]/enroll
- * Cancella iscrizione a un evento (bypass RPC, usa service role)
+ * Cancella iscrizione e promuove primo in waitlist via cancel_enrollment RPC.
  */
 export async function DELETE(
   request: Request,
@@ -315,79 +277,22 @@ export async function DELETE(
       }
     }
 
-    // 2. Trova e cancella iscrizione attiva
-    const { data: cancelled, error: cancelError } = await supabase
-      .from('enrollments')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('user_id', profile.id)
-      .eq('event_id', eventId)
-      .neq('status', 'cancelled')
-      .select('id, status')
-      .single();
+    // 2. Cancellazione atomica via RPC: gestisce promozione waitlist e
+    // notifica in un'unica transazione (lock FOR UPDATE sulla riga waitlist).
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('cancel_enrollment', {
+      p_event_id: eventId,
+      p_user_id: profile.id,
+    });
 
-    if (cancelError || !cancelled) {
-      return NextResponse.json(
-        { error: 'Iscrizione non trovata' },
-        { status: 404 }
-      );
+    if (rpcError) {
+      throw rpcError;
     }
 
-    // 3. Se era confirmed e utente normale, promuovi primo in waitlist
-    if (cancelled.status === 'cancelled' && (profile.role === 'user' || !profile.role)) {
-      const { data: nextInLine } = await supabase
-        .from('enrollments')
-        .select('id, user_id')
-        .eq('event_id', eventId)
-        .eq('status', 'waitlist')
-        .order('waitlist_position', { ascending: true, nullsFirst: false })
-        .order('registration_time', { ascending: true })
-        .limit(1)
-        .single();
+    const rpc = rpcResult as { success: boolean; error?: string; message?: string };
 
-      if (nextInLine) {
-        await supabase
-          .from('enrollments')
-          .update({ status: 'confirmed', waitlist_position: null, updated_at: new Date().toISOString() })
-          .eq('id', nextInLine.id);
-
-        // Ricalcola posizioni waitlist rimanenti
-        const { data: remaining } = await supabase
-          .from('enrollments')
-          .select('id')
-          .eq('event_id', eventId)
-          .eq('status', 'waitlist')
-          .order('registration_time', { ascending: true });
-
-        if (remaining && remaining.length > 0) {
-          for (let i = 0; i < remaining.length; i++) {
-            await supabase
-              .from('enrollments')
-              .update({ waitlist_position: i + 1 })
-              .eq('id', remaining[i].id);
-          }
-        }
-
-        // Notifica promozione
-        const { data: event } = await supabase
-          .from('events')
-          .select('title')
-          .eq('id', eventId)
-          .single();
-
-        if (event) {
-          await supabase
-            .from('notifications')
-            .upsert({
-              user_id: nextInLine.user_id,
-              type: 'waitlist_promoted',
-              title: 'Iscrizione confermata',
-              body: `Che fortuna! Sei ora iscritto/a all'evento ${event.title} per cui eri in lista di attesa.`,
-              action_url: `/events/${eventId}`,
-              event_id: eventId,
-              payload: { event_id: eventId, event_title: event.title },
-            }, { onConflict: 'user_id,type,event_id' });
-        }
-      }
+    if (!rpc.success) {
+      const statusCode = rpc.error === 'ENROLLMENT_NOT_FOUND' ? 404 : rpc.error === 'PROFILE_NOT_FOUND' ? 400 : 500;
+      return NextResponse.json({ error: rpc.message || 'Iscrizione non trovata' }, { status: statusCode });
     }
 
     return NextResponse.json({
