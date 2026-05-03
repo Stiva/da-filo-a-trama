@@ -204,6 +204,16 @@ export default function AdminAssetsPage() {
 
       {/* Filtri - Responsive */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        {(filterType !== '' || filterVisibility !== '' || filterEventId !== '') && (
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => { setFilterType(''); setFilterVisibility(''); setFilterEventId(''); }}
+              className="text-sm text-red-600 hover:text-red-700 font-medium underline"
+            >
+              Pulisci filtri
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

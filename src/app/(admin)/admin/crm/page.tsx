@@ -216,9 +216,9 @@ export default function CRMPage() {
             )}
             {isExporting ? 'Esportazione...' : 'Esporta'}
           </button>
-          {hasFilters && (
+          {(hasFilters || searchTerm !== '' || activeOnly) && (
             <button
-              onClick={clearFilters}
+              onClick={() => { clearFilters(); setSearchTerm(''); setActiveOnly(false); }}
               className="text-xs text-red-600 hover:text-red-700 font-medium underline px-2"
             >
               Pulisci filtri

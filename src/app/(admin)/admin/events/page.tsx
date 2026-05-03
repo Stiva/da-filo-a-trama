@@ -50,6 +50,13 @@ export default function AdminEventsPage() {
   const [sortField, setSortField] = useState<'title' | 'start_time' | 'category' | 'max_posti' | 'is_published' | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const hasAnyFilter = hasFilters || searchQuery !== '' || publishFilter !== 'all';
+  const clearAllFilters = () => {
+    clearFilters();
+    setSearchQuery('');
+    setPublishFilter('all');
+  };
+
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -331,6 +338,14 @@ export default function AdminEventsPage() {
               {option.label}
             </button>
           ))}
+          {hasAnyFilter && (
+            <button
+              onClick={clearAllFilters}
+              className="text-sm text-red-600 hover:text-red-700 font-medium underline px-2"
+            >
+              Pulisci filtri
+            </button>
+          )}
           <div className="flex items-center ml-auto gap-3 border-l pl-4 border-gray-200">
             <div className="flex bg-gray-100 p-1 rounded-lg">
               <button

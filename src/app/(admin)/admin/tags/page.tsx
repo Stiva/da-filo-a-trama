@@ -265,6 +265,14 @@ export default function TagsPage() {
               {option.label}
             </button>
           ))}
+          {filterActive !== 'all' && (
+            <button
+              onClick={() => setFilterActive('all')}
+              className="flex-shrink-0 text-sm text-red-600 hover:text-red-700 font-medium underline px-2"
+            >
+              Pulisci filtri
+            </button>
+          )}
           <div className="flex items-center ml-auto border-l pl-4 border-gray-200">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
               <input

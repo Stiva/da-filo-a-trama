@@ -281,9 +281,9 @@ export default function AdminUsersPage() {
             <Shield className="w-5 h-5 mr-1" />
             Export Sicurezza
           </button>
-          {hasFilters && (
+          {(hasFilters || search !== '' || roleFilter !== '' || onboardingFilter !== '') && (
             <button
-              onClick={clearFilters}
+              onClick={() => { clearFilters(); setSearch(''); setRoleFilter(''); setOnboardingFilter(''); }}
               className="text-sm text-red-600 hover:text-red-700 font-medium underline px-2"
             >
               Pulisci filtri
