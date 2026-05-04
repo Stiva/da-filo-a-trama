@@ -3,6 +3,7 @@ import Image from 'next/image';
 import UserSupportChatWidget from '@/components/chat/UserSupportChatWidget';
 import InstallBanner from '@/components/pwa/InstallBanner';
 import FooterSponsors from '@/components/FooterSponsors';
+import FooterSupporter from '@/components/FooterSupporter';
 
 export default function MainLayout({
   children,
@@ -20,10 +21,13 @@ export default function MainLayout({
       {/* Footer */}
       <footer className="bg-agesci-blue text-white py-12 mt-16 border-t border-agesci-blue/20">
         <div className="container-scout space-y-8 flex flex-col">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-b border-white/10 pb-8">
-            <FooterSponsors />
-            
-            <div className="flex items-center justify-center shrink-0">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-8 border-b border-white/10 pb-8">
+            <div className="flex flex-col gap-8 w-full md:flex-1">
+              <FooterSponsors />
+              <FooterSupporter />
+            </div>
+
+            <div className="flex items-center justify-center shrink-0 self-center">
               <Image
                 src="/Logo completo.png"
                 alt="Da Filo a Trama"
