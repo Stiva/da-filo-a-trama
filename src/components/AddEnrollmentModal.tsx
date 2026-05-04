@@ -81,7 +81,7 @@ export default function AddEnrollmentModal({
       const response = await fetch(`/api/admin/events/${eventId}/enrollments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId: selectedProfile.id }),
+        body: JSON.stringify({ profileId: selectedProfile.id, override: true }),
       });
 
       const result = await response.json();
