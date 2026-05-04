@@ -20,10 +20,14 @@ interface SponsorSection {
   sponsors: Sponsor[];
 }
 
+const SUPPORTER_SECTION_ID = 'supporter';
+const SUPPORTER_SECTION_TITLE = 'Progetto sostenuto da';
+
 const DEFAULT_SECTIONS: SponsorSection[] = [
   { id: '1', title: 'Evento realizzato con il contributo di:', sponsors: [] },
   { id: '2', title: '', sponsors: [] },
-  { id: '3', title: '', sponsors: [] }
+  { id: '3', title: '', sponsors: [] },
+  { id: SUPPORTER_SECTION_ID, title: SUPPORTER_SECTION_TITLE, sponsors: [] }
 ];
 
 export default function SponsorsPage() {
@@ -62,11 +66,14 @@ export default function SponsorsPage() {
         const data = json.data?.value;
         if (data) {
           if (Array.isArray(data.sections)) {
-            // Uniamo le sezioni con il template default (garantisce sempre 3 sezioni nella UI)
+            // Uniamo le sezioni con il template default (garantisce sempre tutte le sezioni nella UI)
             const loaded = data.sections as SponsorSection[];
             const merged = DEFAULT_SECTIONS.map(def => {
               const sf = loaded.find(s => s.id === def.id);
-              return sf ? { ...sf, sponsors: sf.sponsors || [] } : def;
+              if (!sf) return def;
+              // La sezione supporter ha titolo bloccato per linee guida Fondazione
+              const title = def.id === SUPPORTER_SECTION_ID ? SUPPORTER_SECTION_TITLE : sf.title;
+              return { ...sf, title, sponsors: sf.sponsors || [] };
             });
             setSections(merged);
           } else if (Array.isArray(data.sponsors)) {
@@ -74,7 +81,8 @@ export default function SponsorsPage() {
             setSections([
               { id: '1', title: 'Evento realizzato con il contributo di:', sponsors: data.sponsors },
               { id: '2', title: '', sponsors: [] },
-              { id: '3', title: '', sponsors: [] }
+              { id: '3', title: '', sponsors: [] },
+              { id: SUPPORTER_SECTION_ID, title: SUPPORTER_SECTION_TITLE, sponsors: [] }
             ]);
           }
         }
@@ -282,8 +290,9 @@ export default function SponsorsPage() {
       <div className="mb-8 flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-gray-900">Sezioni Patrocini</h1>
         <p className="text-gray-600">
-          Configura tre diverse sezioni di sponsor e patrocini. Ogni sezione è mostrata 
-          sul sito solo se possiede almeno un logo al suo interno.
+          Configura le sezioni di sponsor e patrocini mostrate nel footer. Le prime tre sezioni
+          sono libere; l&apos;ultima è il blocco dedicato &quot;Progetto sostenuto da&quot; (Fondazione di Modena),
+          con dicitura bloccata e un solo logo. Ogni sezione è visibile sul sito solo se contiene almeno un logo.
         </p>
       </div>
 
@@ -297,31 +306,45 @@ export default function SponsorsPage() {
         </div>
       )}
 
-      {/* Rendering 3 Sezioni */}
+      {/* Rendering Sezioni */}
       <div className="space-y-12">
-        {sections.map((section, secIndex) => (
-          <div key={section.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b border-gray-200 p-5 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+        {sections.map((section, secIndex) => {
+          const isSupporter = section.id === SUPPORTER_SECTION_ID;
+          const canAddLogo = !isSupporter || section.sponsors.length === 0;
+          return (
+          <div key={section.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${isSupporter ? 'border-agesci-blue/30' : 'border-gray-200'}`}>
+            <div className={`border-b p-5 flex flex-col sm:flex-row gap-4 sm:items-center justify-between ${isSupporter ? 'bg-agesci-blue/5 border-agesci-blue/20' : 'bg-gray-50 border-gray-200'}`}>
               <div className="flex-1">
                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">
-                    SEZIONE {secIndex + 1}
+                    {isSupporter ? 'BLOCCO DEDICATO · LOGO UNICO' : `SEZIONE ${secIndex + 1}`}
                  </label>
-                 <input
-                    type="text"
-                    value={section.title}
-                    onChange={e => handleUpdateSectionTitle(section.id, e.target.value)}
-                    onBlur={handleSaveInlineEdit}
-                    placeholder="Es: Evento realizzato con il contributo di:"
-                    className="w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:ring-0 focus:border-agesci-blue p-0 text-lg font-semibold text-gray-900 placeholder:text-gray-300"
-                 />
+                 {isSupporter ? (
+                    <div className="text-lg font-semibold text-gray-900">{SUPPORTER_SECTION_TITLE}</div>
+                 ) : (
+                    <input
+                        type="text"
+                        value={section.title}
+                        onChange={e => handleUpdateSectionTitle(section.id, e.target.value)}
+                        onBlur={handleSaveInlineEdit}
+                        placeholder="Es: Evento realizzato con il contributo di:"
+                        className="w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:ring-0 focus:border-agesci-blue p-0 text-lg font-semibold text-gray-900 placeholder:text-gray-300"
+                    />
+                 )}
+                 {isSupporter && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Dicitura bloccata per linee guida brand. Caricare un solo logo (preferibilmente versione orizzontale). Renderizzato nel footer con filetto separatore sopra.
+                    </p>
+                 )}
               </div>
-              <button
-                onClick={() => setAddingToSectionId(section.id)}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors shadow-sm shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                Aggiungi Logo
-              </button>
+              {canAddLogo && (
+                <button
+                    onClick={() => setAddingToSectionId(section.id)}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors shadow-sm shrink-0"
+                >
+                    <Plus className="w-4 h-4" />
+                    Aggiungi Logo
+                </button>
+              )}
             </div>
 
             <div className="p-5">
@@ -406,7 +429,8 @@ export default function SponsorsPage() {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add form modal */}
