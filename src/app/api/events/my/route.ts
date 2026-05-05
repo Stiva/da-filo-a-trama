@@ -51,8 +51,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
         events (*)
       `)
       .eq('user_id', profile.id)
-      .neq('status', 'cancelled')
-      .order('registration_time', { ascending: false });
+      .neq('status', 'cancelled');
 
     // Filtro per status
     if (statusFilter !== 'all') {
@@ -101,6 +100,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
         }
       }
     }
+
+    myEvents.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
     return NextResponse.json({ data: myEvents });
   } catch (error) {
