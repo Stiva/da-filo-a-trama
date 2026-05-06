@@ -322,6 +322,38 @@ export async function POST(
       }
     }
 
+    // Con override esplicito usiamo la RPC admin_force_enroll_user, che imposta
+    // app.bypass_capacity per la transazione e fa scavalcare il trigger
+    // enforce_event_capacity. Senza override, INSERT/UPDATE diretti: il trigger
+    // resta come rete di sicurezza.
+    if (override) {
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_force_enroll_user', {
+        p_event_id: eventId,
+        p_user_id: profileId,
+      });
+
+      if (rpcError) {
+        throw rpcError;
+      }
+
+      const result = rpcResult as { success: boolean; enrollment_id?: string; error?: string; message?: string };
+
+      if (!result.success) {
+        const status = result.error === 'ALREADY_ENROLLED' ? 409
+          : result.error === 'EVENT_NOT_FOUND' || result.error === 'PROFILE_NOT_FOUND' ? 404
+          : 500;
+        return NextResponse.json(
+          { error: result.message || result.error || 'Errore', code: result.error },
+          { status }
+        );
+      }
+
+      return NextResponse.json({
+        data: { id: result.enrollment_id! },
+        message: 'Utente iscritto con successo',
+      });
+    }
+
     // Riattiva riga cancelled o inserisce nuova (UNIQUE(user_id, event_id))
     const nowIso = new Date().toISOString();
     const writePayload = {
@@ -350,8 +382,6 @@ export async function POST(
           .single();
 
     if (error) {
-      // Trigger DB enforce_event_capacity puo' bloccare se override e' stato usato
-      // ma l'evento e' ancora pieno per logica trigger (race rara o regole disallineate).
       if (error.code === '23514' || (error.message || '').includes('EVENT_FULL')) {
         return NextResponse.json(
           { error: 'Posti esauriti (rifiutato dal trigger DB).', code: 'EVENT_FULL' },
