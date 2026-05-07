@@ -98,7 +98,7 @@ export async function GET(
                       profile:profiles(id, name, surname)
                     ),
                     attachments:event_group_attachments(
-                      id, file_url, file_name, created_at,
+                      id, file_url, file_name, created_at, user_id, uploaded_by_role,
                       profile:profiles(id, name, surname)
                     )
                 `)
@@ -124,7 +124,7 @@ export async function GET(
                           profile:profiles(id, name, surname)
                         ),
                         attachments:event_group_attachments(
-                          id, file_url, file_name, created_at,
+                          id, file_url, file_name, created_at, user_id, uploaded_by_role,
                           profile:profiles(id, name, surname)
                         )
                     `);
@@ -204,7 +204,7 @@ export async function GET(
           profile:profiles(id, name, surname)
         ),
         attachments:event_group_attachments(
-          id, file_url, file_name, created_at,
+          id, file_url, file_name, created_at, user_id, uploaded_by_role,
           profile:profiles(id, name, surname)
         )
       `)

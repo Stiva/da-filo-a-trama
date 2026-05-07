@@ -4,6 +4,7 @@ import EventForm from '@/components/EventForm';
 import CloneGroupsButton from '@/components/CloneGroupsButton';
 import CheckinQRCodeDialog from '@/components/CheckinQRCodeDialog';
 import GenerateGroupsButton from '@/components/GenerateGroupsButton';
+import AdminEventAssets from '@/components/AdminEventAssets';
 import type { Event } from '@/types/database';
 
 // Force dynamic rendering
@@ -143,6 +144,8 @@ export default async function EditEventPage({ params }: PageProps) {
           </div>
         </div>
       )}
+
+      {!event.is_placeholder && <AdminEventAssets eventId={event.id} />}
 
       <EventForm event={event} isEditing />
     </div>
