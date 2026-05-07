@@ -1,6 +1,7 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sanitizeFolderPath } from '@/lib/folderPath';
 import type { Asset, AssetType, AssetVisibility, ApiResponse } from '@/types/database';
 
 /**
@@ -111,6 +112,7 @@ export async function POST(
       title: body.title || null,
       description: body.description || null,
       sort_order: body.sort_order || 0,
+      folder_path: sanitizeFolderPath(body.folder_path),
     };
 
     const { data, error } = await supabase

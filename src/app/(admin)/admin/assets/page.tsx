@@ -356,6 +356,9 @@ export default function AdminAssetsPage() {
                       Tipo
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cartella
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Evento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -402,6 +405,13 @@ export default function AdminAssetsPage() {
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getFileTypeColor(asset.tipo)}`}>
                           {asset.tipo.toUpperCase()}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {asset.folder_path ? (
+                          <span className="font-mono text-xs">{asset.folder_path}</span>
+                        ) : (
+                          <span className="text-gray-300">root</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {getEventName(asset.event_id)}

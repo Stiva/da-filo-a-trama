@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useRouter } from 'next/navigation';
+import { sanitizeFolderPath } from '@/lib/folderPath';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
 
 const ASSET_TYPES: { value: AssetType; label: string }[] = [
@@ -28,11 +29,13 @@ interface AssetFormProps {
 export default function AssetForm({ asset, isEditing = false }: AssetFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderListId = useId();
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [existingFolders, setExistingFolders] = useState<string[]>([]);
   const [inputMode, setInputMode] = useState<InputMode>(isEditing ? 'url' : 'upload');
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
@@ -46,6 +49,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     visibilita: asset?.visibilita || 'public' as AssetVisibility,
     title: asset?.title || '',
     description: asset?.description || '',
+    folder_path: asset?.folder_path || '',
   });
 
   // Fetch eventi per il dropdown
@@ -62,6 +66,31 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       }
     };
     fetchEvents();
+  }, []);
+
+  // Fetch cartelle esistenti per autocomplete
+  useEffect(() => {
+    const fetchFolders = async () => {
+      try {
+        const response = await fetch('/api/admin/assets');
+        const result = await response.json();
+        if (response.ok && Array.isArray(result.data)) {
+          const paths = new Set<string>();
+          for (const a of result.data as Asset[]) {
+            const p = (a.folder_path ?? '').trim();
+            if (!p) continue;
+            const segments = p.split('/');
+            for (let i = 1; i <= segments.length; i++) {
+              paths.add(segments.slice(0, i).join('/'));
+            }
+          }
+          setExistingFolders([...paths].sort((a, b) => a.localeCompare(b, 'it')));
+        }
+      } catch (err) {
+        console.error('Errore nel caricamento cartelle:', err);
+      }
+    };
+    fetchFolders();
   }, []);
 
   // Handle file upload
@@ -173,6 +202,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         title: formData.title || null,
         description: formData.description || null,
         mime_type: formData.mime_type || null,
+        folder_path: sanitizeFolderPath(formData.folder_path),
       };
 
       const response = await fetch(url, {
@@ -457,6 +487,28 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Cartella */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-lg font-semibold mb-4">Cartella</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Path della cartella (es. <code>Canzoni/Con un filo</code>). Lascia vuoto per la root.
+          Puoi scegliere una cartella esistente o digitarne una nuova: usa <code>/</code> per le sottocartelle.
+        </p>
+        <input
+          type="text"
+          value={formData.folder_path}
+          onChange={(e) => setFormData(prev => ({ ...prev, folder_path: e.target.value }))}
+          list={folderListId}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+          placeholder="Es. Canzoni/Con un filo"
+        />
+        <datalist id={folderListId}>
+          {existingFolders.map((p) => (
+            <option key={p} value={p} />
+          ))}
+        </datalist>
       </div>
 
       {/* Event Association */}

@@ -416,6 +416,7 @@ export interface Asset {
   title: string | null;
   description: string | null;
   sort_order: number;
+  folder_path: string;
   created_at: string;
   uploaded_by: string | null;
 }
