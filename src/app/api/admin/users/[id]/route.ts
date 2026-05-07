@@ -1,20 +1,34 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import type { Profile, ApiResponse, ProfileUpdate } from '@/types/database';
+import type {
+  Profile,
+  ApiResponse,
+  ProfileUpdate,
+  EventCategory,
+  EnrollmentStatus,
+} from '@/types/database';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+interface AdminUserEvent {
+  id: string;
+  title: string;
+  category: EventCategory;
+  start_time: string;
+  poi: { id: string; nome: string } | null;
+  workshop_groups_count: number;
+  enrollment_status: EnrollmentStatus;
+  waitlist_position: number | null;
+  user_group_name: string | null;
+  user_group_location: string | null;
+}
+
 interface ProfileWithEnrollments extends Profile {
   enrollments_count?: number;
-  events_enrolled?: Array<{
-    id: string;
-    title: string;
-    start_time: string;
-    status: string;
-  }>;
+  events_enrolled?: AdminUserEvent[];
 }
 
 /**
@@ -61,41 +75,164 @@ export async function GET(
       throw profileError;
     }
 
-    // Ottieni iscrizioni con dettagli eventi
+    // Ottieni iscrizioni con dettagli eventi e POI
     const { data: enrollments, error: enrollmentsError } = await supabase
       .from('enrollments')
       .select(`
         id,
         status,
-        created_at,
+        waitlist_position,
+        registration_time,
         events (
           id,
           title,
-          start_time
+          category,
+          start_time,
+          workshop_groups_count,
+          auto_enroll_all,
+          is_published,
+          poi:location_poi_id ( id, nome )
         )
       `)
       .eq('user_id', id)
-      .order('created_at', { ascending: false });
+      .neq('status', 'cancelled');
 
     if (enrollmentsError) {
       console.error('Errore enrollments:', enrollmentsError);
     }
 
+    const events: AdminUserEvent[] = [];
+    for (const e of (enrollments || []) as any[]) {
+      const ev = Array.isArray(e.events) ? e.events[0] : e.events;
+      if (!ev) continue;
+      const poi = Array.isArray(ev.poi) ? ev.poi[0] : ev.poi;
+      events.push({
+        id: ev.id,
+        title: ev.title,
+        category: ev.category as EventCategory,
+        start_time: ev.start_time,
+        poi: poi ? { id: poi.id, nome: poi.nome } : null,
+        workshop_groups_count: ev.workshop_groups_count ?? 0,
+        enrollment_status: e.status as EnrollmentStatus,
+        waitlist_position: e.waitlist_position ?? null,
+        user_group_name: null,
+        user_group_location: null,
+      });
+    }
+
+    // Includi auto_enroll_all events non ancora in enrollments (escludendo cancellazioni esplicite)
+    const enrolledEventIds = new Set(events.map((e) => e.id));
+    const { data: cancelled } = await supabase
+      .from('enrollments')
+      .select('event_id')
+      .eq('user_id', id)
+      .eq('status', 'cancelled');
+    const cancelledIds = new Set((cancelled || []).map((c: any) => c.event_id));
+
+    const { data: autoEvents } = await supabase
+      .from('events')
+      .select('id, title, category, start_time, workshop_groups_count, poi:location_poi_id ( id, nome )')
+      .eq('auto_enroll_all', true)
+      .eq('is_published', true);
+
+    for (const ev of (autoEvents || []) as any[]) {
+      if (enrolledEventIds.has(ev.id) || cancelledIds.has(ev.id)) continue;
+      const poi = Array.isArray(ev.poi) ? ev.poi[0] : ev.poi;
+      events.push({
+        id: ev.id,
+        title: ev.title,
+        category: ev.category as EventCategory,
+        start_time: ev.start_time,
+        poi: poi ? { id: poi.id, nome: poi.nome } : null,
+        workshop_groups_count: ev.workshop_groups_count ?? 0,
+        enrollment_status: 'confirmed' as EnrollmentStatus,
+        waitlist_position: null,
+        user_group_name: null,
+        user_group_location: null,
+      });
+    }
+
+    // Per gli eventi che prevedono gruppi di lavoro, recupera il gruppo dell'utente
+    const groupEventIds = events.filter((e) => e.workshop_groups_count > 0).map((e) => e.id);
+
+    if (groupEventIds.length > 0) {
+      const groupSelect =
+        'group_id, event_groups!inner(event_id, name, poi:location_poi_id(nome))';
+
+      const [{ data: modGroups }, { data: memberGroups }] = await Promise.all([
+        supabase
+          .from('event_group_moderators')
+          .select(groupSelect)
+          .eq('user_id', id)
+          .in('event_groups.event_id', groupEventIds),
+        supabase
+          .from('event_group_members')
+          .select(groupSelect)
+          .eq('user_id', id)
+          .in('event_groups.event_id', groupEventIds),
+      ]);
+
+      const groupByEventId = new Map<string, { name: string; location: string | null }>();
+      const collect = (rows: any[] | null) => {
+        for (const row of rows || []) {
+          const g = Array.isArray(row.event_groups) ? row.event_groups[0] : row.event_groups;
+          if (!g?.event_id) continue;
+          if (groupByEventId.has(g.event_id)) continue;
+          const groupPoi = Array.isArray(g.poi) ? g.poi[0] : g.poi;
+          groupByEventId.set(g.event_id, {
+            name: g.name,
+            location: groupPoi?.nome ?? null,
+          });
+        }
+      };
+      collect(modGroups as any[] | null);
+      collect(memberGroups as any[] | null);
+
+      // Fallback static_crm: deriva il gruppo dal participants.static_group dell'utente
+      const missingGroupEventIds = groupEventIds.filter((eid) => !groupByEventId.has(eid));
+      if (missingGroupEventIds.length > 0 && profile.codice_socio) {
+        const { data: participant } = await supabase
+          .from('participants')
+          .select('static_group')
+          .eq('codice', profile.codice_socio)
+          .eq('is_active_in_list', true)
+          .maybeSingle();
+
+        if (participant?.static_group) {
+          const { data: staticGroups } = await supabase
+            .from('event_groups')
+            .select('event_id, name, poi:location_poi_id(nome)')
+            .in('event_id', missingGroupEventIds)
+            .eq('name', participant.static_group);
+
+          for (const sg of (staticGroups || []) as any[]) {
+            if (groupByEventId.has(sg.event_id)) continue;
+            const sgPoi = Array.isArray(sg.poi) ? sg.poi[0] : sg.poi;
+            groupByEventId.set(sg.event_id, {
+              name: sg.name,
+              location: sgPoi?.nome ?? null,
+            });
+          }
+        }
+      }
+
+      for (const ev of events) {
+        const g = groupByEventId.get(ev.id);
+        if (g) {
+          ev.user_group_name = g.name;
+          ev.user_group_location = g.location;
+        }
+      }
+    }
+
+    events.sort(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    );
+
     const profileWithEnrollments: ProfileWithEnrollments = {
       ...(profile as Profile),
-      enrollments_count: enrollments?.length || 0,
-      events_enrolled: enrollments?.map((e: any) => {
-        // Since supabase join with `events ( ... )` usually returns a single object for many-to-one
-        // but Typescript might type it as an array if it doesn't know. We check if it's an array or object.
-        const eventItem = Array.isArray(e.events) ? e.events[0] : e.events;
-
-        return {
-          id: eventItem?.id,
-          title: eventItem?.title,
-          start_time: eventItem?.start_time,
-          status: e.status,
-        };
-      }),
+      enrollments_count: events.length,
+      events_enrolled: events,
     };
 
     return NextResponse.json({ data: profileWithEnrollments });

@@ -3,19 +3,27 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Profile, ServiceRole } from '@/types/database';
+import type { Profile, ServiceRole, EventCategory, EnrollmentStatus } from '@/types/database';
 import { SERVICE_ROLE_LABELS } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import Autocomplete from '@/components/Autocomplete';
 
+interface AdminUserEvent {
+  id: string;
+  title: string;
+  category: EventCategory;
+  start_time: string;
+  poi: { id: string; nome: string } | null;
+  workshop_groups_count: number;
+  enrollment_status: EnrollmentStatus;
+  waitlist_position: number | null;
+  user_group_name: string | null;
+  user_group_location: string | null;
+}
+
 interface ProfileWithEnrollments extends Profile {
   enrollments_count?: number;
-  events_enrolled?: Array<{
-    id: string;
-    title: string;
-    start_time: string;
-    status: string;
-  }>;
+  events_enrolled?: AdminUserEvent[];
 }
 
 export default function AdminUserDetailPage({
@@ -170,17 +178,31 @@ export default function AdminUserDetailPage({
     }
   };
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800';
-      case 'waitlist':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const formatEventDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('it-IT', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getCategoryColor = (cat: EventCategory) => {
+    const colors: Record<EventCategory, string> = {
+      workshop: 'bg-blue-100 text-blue-800',
+      conferenza: 'bg-purple-100 text-purple-800',
+      laboratorio: 'bg-green-100 text-green-800',
+      gioco: 'bg-yellow-100 text-yellow-800',
+      spiritualita: 'bg-indigo-100 text-indigo-800',
+      servizio: 'bg-orange-100 text-orange-800',
+      natura: 'bg-emerald-100 text-emerald-800',
+      arte: 'bg-pink-100 text-pink-800',
+      musica: 'bg-rose-100 text-rose-800',
+      altro: 'bg-gray-100 text-gray-800',
+    };
+    return colors[cat] || colors.altro;
   };
 
   if (isLoading) {
@@ -399,29 +421,90 @@ export default function AdminUserDetailPage({
             </h2>
 
             {user.events_enrolled && user.events_enrolled.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {user.events_enrolled.map((event) => (
-                  <div
+                  <Link
                     key={event.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    href={`/events/${event.id}`}
+                    className="block bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors overflow-hidden"
                   >
-                    <div>
-                      <p className="font-medium text-gray-900">{event.title}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(event.start_time).toLocaleDateString('it-IT', {
-                          day: 'numeric',
-                          month: 'long',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
+                    <div className="p-4 flex flex-col md:flex-row md:items-center gap-4">
+                      {/* Status Badge */}
+                      <div className="md:w-24 flex-shrink-0">
+                        {event.enrollment_status === 'confirmed' ? (
+                          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                            Confermato
+                          </span>
+                        ) : event.enrollment_status === 'waitlist' ? (
+                          <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+                            #{event.waitlist_position} attesa
+                          </span>
+                        ) : (
+                          <span className="inline-block px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
+                            {event.enrollment_status}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Event Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${getCategoryColor(event.category)}`}>
+                            {event.category}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {event.title}
+                        </h3>
+                        <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
+                          <span className="flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatEventDate(event.start_time)}
+                          </span>
+                          {event.poi?.nome && (
+                            <span className="flex items-center">
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              </svg>
+                              {event.poi.nome}
+                            </span>
+                          )}
+                        </div>
+                        {event.workshop_groups_count > 0 && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            {event.user_group_name ? (
+                              <>
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs font-medium rounded">
+                                  Gruppo: {event.user_group_name}
+                                </span>
+                                {event.user_group_location && event.user_group_location !== event.poi?.nome && (
+                                  <span className="text-xs text-gray-500">
+                                    @ {event.user_group_location}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">
+                                Gruppo non assegnato
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Arrow */}
+                      <div className="hidden md:block text-gray-400">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusBadgeColor(event.status)}`}>
-                      {event.status === 'confirmed' ? 'Confermato' :
-                        event.status === 'waitlist' ? 'Lista attesa' :
-                          event.status === 'cancelled' ? 'Cancellato' : event.status}
-                    </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
