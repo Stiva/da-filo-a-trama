@@ -1,9 +1,21 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { ApiResponse } from '@/types/database';
 
 const BUCKET_NAME = 'assets';
+
+type UploaderRole = 'user' | 'staff' | 'admin';
+
+async function getCallerRole(userId: string): Promise<UploaderRole> {
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(userId);
+    const role = (clerkUser.publicMetadata as { role?: string })?.role;
+    if (role === 'admin' || role === 'staff') {
+        return role;
+    }
+    return 'user';
+}
 
 interface RouteParams {
     params: Promise<{ id: string; groupId: string }>;
@@ -25,7 +37,7 @@ export async function GET(
 
         const { data: attachments, error } = await supabase
             .from('event_group_attachments')
-            .select('id, file_name, file_url, created_at, user_id, profile:profiles(id, name, surname)')
+            .select('id, file_name, file_url, created_at, user_id, uploaded_by_role, profile:profiles(id, name, surname)')
             .eq('group_id', groupId)
             .order('created_at', { ascending: false });
 
@@ -74,6 +86,8 @@ export async function POST(
             return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
         }
 
+        const uploaderRole = await getCallerRole(userId);
+
         // Carica file su Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${groupId}/${crypto.randomUUID()}.${fileExt}`;
@@ -100,9 +114,10 @@ export async function POST(
                 group_id: groupId,
                 user_id: profile.id,
                 file_name: displayName,
-                file_url: urlData.publicUrl
+                file_url: urlData.publicUrl,
+                uploaded_by_role: uploaderRole,
             })
-            .select('id, file_name, file_url, created_at, user_id, profile:profiles(id, name, surname)')
+            .select('id, file_name, file_url, created_at, user_id, uploaded_by_role, profile:profiles(id, name, surname)')
             .single();
 
         if (dbError) throw dbError;
@@ -136,6 +151,28 @@ export async function DELETE(
         }
 
         const supabase = createServiceRoleClient();
+
+        const { data: attachment, error: fetchError } = await supabase
+            .from('event_group_attachments')
+            .select('id, user_id, uploaded_by_role')
+            .eq('id', asset_id)
+            .single();
+
+        if (fetchError || !attachment) {
+            return NextResponse.json({ error: 'Allegato non trovato' }, { status: 404 });
+        }
+
+        const callerRole = await getCallerRole(userId);
+        const isCallerAdmin = callerRole === 'admin' || callerRole === 'staff';
+        const isUploadedByAdmin = attachment.uploaded_by_role === 'admin' || attachment.uploaded_by_role === 'staff';
+
+        if (!isCallerAdmin && isUploadedByAdmin) {
+            // Solo admin/staff possono eliminare contenuti caricati da admin/staff.
+            return NextResponse.json(
+                { error: 'Non hai i permessi per eliminare questo allegato' },
+                { status: 403 }
+            );
+        }
 
         const { error } = await supabase
             .from('event_group_attachments')

@@ -272,6 +272,7 @@ export interface EventGroupAttachment {
   user_id: string;
   file_name: string;
   file_url: string;
+  uploaded_by_role: 'user' | 'staff' | 'admin';
   created_at: string;
   profile?: Profile;
 }

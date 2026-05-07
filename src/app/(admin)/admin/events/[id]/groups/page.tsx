@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import RichTextContent from '@/components/RichTextContent';
+import AdminGroupAttachments from '@/components/AdminGroupAttachments';
 import type { EventGroup, EventGroupModerator, EventGroupMember, Profile } from '@/types/database';
 
 interface EventInfo {
@@ -723,41 +724,13 @@ export default function AdminEventGroupsPage() {
                                 </div>
 
                                 {/* Allegati */}
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3 flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                        </svg>
-                                        Allegati ({group.attachments?.length || 0})
-                                    </h3>
-                                    <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
-                                        {group.attachments && group.attachments.length > 0 ? (
-                                            group.attachments.map(att => (
-                                                <a
-                                                    key={att.id}
-                                                    href={att.file_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-3 bg-gray-50 p-3 rounded hover:bg-gray-100 transition shadow-sm"
-                                                >
-                                                    <div className="bg-blue-100 p-2 rounded text-blue-600">
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                        </svg>
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-gray-900 truncate">{att.file_name}</p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {att.profile?.name} {att.profile?.surname} • {new Date(att.created_at).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                </a>
-                                            ))
-                                        ) : (
-                                            <p className="text-sm text-gray-500 italic">Nessun file allegato.</p>
-                                        )}
-                                    </div>
-                                </div>
+                                <AdminGroupAttachments
+                                    eventId={eventId}
+                                    groupId={group.id}
+                                    initialAttachments={group.attachments || []}
+                                    onChange={fetchData}
+                                />
+
                             </div>
                         </div>
                     ))}

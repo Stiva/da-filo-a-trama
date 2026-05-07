@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 
 // For simplicity, we just reuse the basic attachment structure
 interface GroupAttachment {
@@ -9,6 +10,7 @@ interface GroupAttachment {
     file_url: string;
     created_at: string;
     user_id: string;
+    uploaded_by_role?: 'user' | 'staff' | 'admin';
     profile: { name: string; surname: string };
 }
 
@@ -18,6 +20,10 @@ interface GroupEventAssetsProps {
 }
 
 export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsProps) {
+    const { user } = useUser();
+    const callerRole = (user?.publicMetadata as { role?: string } | undefined)?.role;
+    const isCallerAdmin = callerRole === 'admin' || callerRole === 'staff';
+
     const [assets, setAssets] = useState<GroupAttachment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,41 +144,52 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
             {/* Existing assets list */}
             {assets.length > 0 && (
                 <div className="space-y-2 mb-6">
-                    {assets.map((asset) => (
-                        <div
-                            key={asset.id}
-                            className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg"
-                        >
-                            <span className="w-8 h-8 flex items-center justify-center bg-indigo-100 text-indigo-700 text-xs font-bold rounded">
-                                F
-                            </span>
-                            <div className="flex-1 min-w-0">
-                                <a
-                                    href={asset.file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="font-medium text-gray-900 hover:text-indigo-600 truncate block"
-                                    tabIndex={0}
-                                    aria-label={`Apri ${asset.file_name}`}
-                                >
-                                    {asset.file_name}
-                                </a>
-                                <p className="text-xs text-gray-500">
-                                    Caricato da {asset.profile?.name} {asset.profile?.surname}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => handleDelete(asset.id)}
-                                className="p-2 text-red-500 hover:text-red-700 transition-colors flex items-center justify-center"
-                                title="Elimina"
-                                aria-label={`Elimina ${asset.file_name}`}
+                    {assets.map((asset) => {
+                        const isAdminUpload = asset.uploaded_by_role === 'admin' || asset.uploaded_by_role === 'staff';
+                        const canDelete = isCallerAdmin || !isAdminUpload;
+                        return (
+                            <div
+                                key={asset.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg border ${isAdminUpload ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'}`}
                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </div>
-                    ))}
+                                <span className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded ${isAdminUpload ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                    F
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <a
+                                        href={asset.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`font-medium text-gray-900 truncate block ${isAdminUpload ? 'hover:text-amber-700' : 'hover:text-indigo-600'}`}
+                                        tabIndex={0}
+                                        aria-label={`Apri ${asset.file_name}`}
+                                    >
+                                        {asset.file_name}
+                                    </a>
+                                    <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                                        <span>Caricato da {asset.profile?.name} {asset.profile?.surname}</span>
+                                        {isAdminUpload && (
+                                            <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider bg-amber-100 px-1.5 py-0.5 rounded">
+                                                Staff
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                                {canDelete && (
+                                    <button
+                                        onClick={() => handleDelete(asset.id)}
+                                        className="p-2 text-red-500 hover:text-red-700 transition-colors flex items-center justify-center"
+                                        title="Elimina"
+                                        aria-label={`Elimina ${asset.file_name}`}
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
