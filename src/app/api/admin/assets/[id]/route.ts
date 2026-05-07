@@ -1,6 +1,7 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sanitizeFolderPath } from '@/lib/folderPath';
 import type { Asset, ApiResponse } from '@/types/database';
 
 interface RouteParams {
@@ -102,6 +103,7 @@ export async function PUT(
     if (body.title !== undefined) updateData.title = body.title;
     if (body.description !== undefined) updateData.description = body.description;
     if (body.sort_order !== undefined) updateData.sort_order = body.sort_order;
+    if (body.folder_path !== undefined) updateData.folder_path = sanitizeFolderPath(body.folder_path);
 
     const { data, error } = await supabase
       .from('assets')
