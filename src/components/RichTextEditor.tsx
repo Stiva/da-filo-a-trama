@@ -17,9 +17,11 @@ import { LinkNode, TOGGLE_LINK_COMMAND, $isLinkNode } from '@lexical/link';
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 import { $patchStyleText, $getSelectionStyleValueForProperty } from '@lexical/selection';
 import {
+  $getNodeByKey,
   $getRoot,
   $getSelection,
   $isRangeSelection,
+  $isNodeSelection,
   $insertNodes,
   FORMAT_TEXT_COMMAND,
   EditorState,
@@ -46,7 +48,7 @@ import {
 } from '@lexical/list';
 import { $setBlocksType } from '@lexical/selection';
 import { $createHeadingNode, $isHeadingNode } from '@lexical/rich-text';
-import { $createImageNode, ImageNode } from '@/components/editor/ImageNode';
+import { $createImageNode, $isImageNode, ImageNode } from '@/components/editor/ImageNode';
 
 // ==========================================
 // ExtendedTextNode: preserves inline styles
@@ -203,6 +205,15 @@ const ToolbarPlugin = () => {
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
+
+    if ($isNodeSelection(selection)) {
+      const imageNode = selection.getNodes().find($isImageNode);
+      if (imageNode) {
+        setIsLink(Boolean(imageNode.getLinkUrl()));
+        return;
+      }
+    }
+
     if (!$isRangeSelection(selection)) return;
 
     setIsBold(selection.hasFormat('bold'));
@@ -316,6 +327,34 @@ const ToolbarPlugin = () => {
   };
 
   const handleToggleLink = () => {
+    let selectedImageKey: NodeKey | null = null;
+    let currentImageLink = '';
+    editor.getEditorState().read(() => {
+      const selection = $getSelection();
+      if ($isNodeSelection(selection)) {
+        const imageNode = selection.getNodes().find($isImageNode);
+        if (imageNode) {
+          selectedImageKey = imageNode.getKey();
+          currentImageLink = imageNode.getLinkUrl() || '';
+        }
+      }
+    });
+
+    if (selectedImageKey) {
+      const url = window.prompt(
+        "URL del link per l'immagine (lascia vuoto per rimuovere)",
+        currentImageLink
+      );
+      if (url === null) return;
+      editor.update(() => {
+        const node = $getNodeByKey(selectedImageKey!);
+        if (node && $isImageNode(node)) {
+          node.setLinkUrl(url || undefined);
+        }
+      });
+      return;
+    }
+
     if (isLink) {
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
       return;
