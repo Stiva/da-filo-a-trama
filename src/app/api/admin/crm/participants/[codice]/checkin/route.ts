@@ -22,7 +22,12 @@ export async function POST(
       .eq('clerk_id', session.userId)
       .single();
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'staff')) {
+    if (
+      !profile ||
+      (profile.role !== 'admin' &&
+        profile.role !== 'staff' &&
+        profile.role !== 'segreteria')
+    ) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

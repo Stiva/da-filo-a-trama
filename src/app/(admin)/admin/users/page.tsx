@@ -165,6 +165,8 @@ export default function AdminUsersPage() {
         return 'bg-red-100 text-red-800';
       case 'staff':
         return 'bg-blue-100 text-blue-800';
+      case 'segreteria':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -317,6 +319,7 @@ export default function AdminUsersPage() {
             >
               <option value="">Tutti</option>
               <option value="user">Utente</option>
+              <option value="segreteria">Segreteria/Informazione</option>
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
             </select>
@@ -429,6 +432,7 @@ export default function AdminUsersPage() {
                                                 value={filters.role?.value} 
                                                 options={[
                                                   { value: 'user', label: 'Utente' },
+                                                  { value: 'segreteria', label: 'Segreteria/Informazione' },
                                                   { value: 'staff', label: 'Staff' },
                                                   { value: 'admin', label: 'Admin' },
                                                 ]}
@@ -500,6 +504,7 @@ export default function AdminUsersPage() {
                                               className={`px-2 py-1 text-xs font-medium rounded border-0 cursor-pointer ${getRoleBadgeColor(profile.role)}`}
                                             >
                                               <option value="user">Utente</option>
+                                              <option value="segreteria">Segreteria/Informazione</option>
                                               <option value="staff">Staff</option>
                                               <option value="admin">Admin</option>
                                             </select>
