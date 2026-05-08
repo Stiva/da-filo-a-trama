@@ -18,6 +18,17 @@ const isAdminRoute = createRouteMatcher([
   '/api/admin(.*)',
 ]);
 
+// Sottoinsieme di route accessibili anche al ruolo "segreteria" (admin light):
+// Lista Iscritti APP, Check-in Desk, Service Chat e relative API.
+const isSegreteriaAllowedRoute = createRouteMatcher([
+  '/admin',
+  '/admin/users(.*)',
+  '/admin/desks(.*)',
+  '/admin/support(.*)',
+  '/api/admin/users(.*)',
+  '/api/admin/crm/participants(.*)',
+]);
+
 export default clerkMiddleware(async (auth, request) => {
   // Proteggi tutte le route non pubbliche
   if (!isPublicRoute(request)) {
@@ -37,9 +48,15 @@ export default clerkMiddleware(async (auth, request) => {
     const user = await client.users.getUser(userId);
     const role = (user.publicMetadata as { role?: string })?.role;
 
-    if (role !== 'admin' && role !== 'staff') {
-      return new Response('Forbidden', { status: 403 });
+    if (role === 'admin' || role === 'staff') {
+      return;
     }
+
+    if (role === 'segreteria' && isSegreteriaAllowedRoute(request)) {
+      return;
+    }
+
+    return new Response('Forbidden', { status: 403 });
   }
 });
 

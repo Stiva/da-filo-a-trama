@@ -52,7 +52,7 @@ export async function GET(
     const clerkUser = await client.users.getUser(userId);
     const role = (clerkUser.publicMetadata as { role?: string })?.role;
 
-    if (role !== 'admin' && role !== 'staff') {
+    if (role !== 'admin' && role !== 'staff' && role !== 'segreteria') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

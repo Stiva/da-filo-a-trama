@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const client = await clerkClient();
   const clerkUser = await client.users.getUser(userId);
   const role = (clerkUser.publicMetadata as { role?: string })?.role;
-  const isAdmin = role === 'admin' || role === 'staff';
+  const isAdmin = role === 'admin' || role === 'staff' || role === 'segreteria';
 
   // Verifica se l'onboarding e' completato (usa service role per bypassare RLS)
   const supabase = createServiceRoleClient();

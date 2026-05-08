@@ -3,8 +3,17 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import AdminSupportPendingBadge from '@/components/chat/AdminSupportPendingBadge';
 import UserDropdownMenu from '@/components/UserDropdownMenu';
+
+// Per il ruolo "segreteria" mostriamo solo gli href della sezione admin light:
+// Lista Iscritti APP, Check-in Desk, Service Chat.
+const SEGRETERIA_ALLOWED_HREFS = new Set<string>([
+  '/admin/users',
+  '/admin/desks',
+  '/admin/support',
+]);
 
 export default function AdminLayout({
   children,
@@ -13,6 +22,11 @@ export default function AdminLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useUser();
+  const userRole = (user?.publicMetadata as { role?: string } | undefined)?.role;
+  const isSegreteria = userRole === 'segreteria';
+  const filterForSegreteria = <T extends { href: string }>(links: T[]): T[] =>
+    isSegreteria ? links.filter((l) => SEGRETERIA_ALLOWED_HREFS.has(l.href)) : links;
 
   const adminToolsLinks = [
     {
@@ -243,7 +257,7 @@ export default function AdminLayout({
               Admin tools
             </p>
 
-            {adminToolsLinks.map((link) => (
+            {filterForSegreteria(adminToolsLinks).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -262,11 +276,13 @@ export default function AdminLayout({
               </Link>
             ))}
 
-            <p className="text-xs uppercase text-gray-500 font-semibold mt-6 mb-4 px-3">
-              Mappa ed Eventi
-            </p>
+            {!isSegreteria && (
+              <p className="text-xs uppercase text-gray-500 font-semibold mt-6 mb-4 px-3">
+                Mappa ed Eventi
+              </p>
+            )}
 
-            {mapAndEventsLinks.map((link) => (
+            {(isSegreteria ? [] : mapAndEventsLinks).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -289,7 +305,7 @@ export default function AdminLayout({
               Comunicazioni
             </p>
 
-            {communicationsLinks.map((link) => (
+            {filterForSegreteria(communicationsLinks).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -309,11 +325,13 @@ export default function AdminLayout({
               </Link>
             ))}
 
-            <p className="text-xs uppercase text-gray-500 font-semibold mt-6 mb-4 px-3">
-              Configurazione
-            </p>
+            {!isSegreteria && (
+              <p className="text-xs uppercase text-gray-500 font-semibold mt-6 mb-4 px-3">
+                Configurazione
+              </p>
+            )}
 
-            {configLinks.map((link) => (
+            {(isSegreteria ? [] : configLinks).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

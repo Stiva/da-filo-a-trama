@@ -45,7 +45,7 @@ export default function AdminUserDetailPage({
     surname: '',
     codice_socio: '',
     scout_group: '',
-    role: 'user' as 'user' | 'staff' | 'admin' | 'guest',
+    role: 'user' as 'user' | 'staff' | 'admin' | 'guest' | 'segreteria',
     onboarding_completed: false,
     avatar_completed: false,
     preferences_set: false,
@@ -355,10 +355,11 @@ export default function AdminUserDetailPage({
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as 'user' | 'staff' | 'admin' | 'guest' })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as 'user' | 'staff' | 'admin' | 'guest' | 'segreteria' })}
                     className="input w-full"
                   >
                     <option value="user">Utente</option>
+                    <option value="segreteria">Segreteria/Informazione</option>
                     <option value="staff">Staff</option>
                     <option value="admin">Admin</option>
                     <option value="guest">Ospite</option>

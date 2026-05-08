@@ -23,7 +23,7 @@ interface ChatSessionPayload {
     id: string;
     name: string;
     image?: string;
-    role: 'user' | 'staff' | 'admin';
+    role: 'user' | 'staff' | 'admin' | 'segreteria';
   };
 }
 
@@ -49,7 +49,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<ChatSessionPayload
       supabase.from('app_settings').select('value').eq('key', 'service_chat_enabled').single(),
     ]);
 
-    const isAdminOrStaff = role === 'admin' || role === 'staff';
+    const isAdminOrStaff = role === 'admin' || role === 'staff' || role === 'segreteria';
     const chatEnabled: boolean = isAdminOrStaff || (chatSetting?.value === true || chatSetting?.value === 'true');
 
     const streamClient = createStreamServerClient();

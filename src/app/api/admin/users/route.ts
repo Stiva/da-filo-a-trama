@@ -27,7 +27,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Us
     const clerkUser = await client.users.getUser(userId);
     const role = (clerkUser.publicMetadata as { role?: string })?.role;
 
-    if (role !== 'admin' && role !== 'staff') {
+    if (role !== 'admin' && role !== 'staff' && role !== 'segreteria') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -78,7 +78,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Us
     });
 
     // Filtri legacy/espliciti (per retrocompatibilità se usati in altre parti)
-    if (roleFilter && ['user', 'staff', 'admin', 'guest'].includes(roleFilter)) {
+    if (roleFilter && ['user', 'staff', 'admin', 'guest', 'segreteria'].includes(roleFilter)) {
       query = query.eq('role', roleFilter);
     }
 
@@ -134,13 +134,6 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
     const clerkUser = await client.users.getUser(userId);
     const role = (clerkUser.publicMetadata as { role?: string })?.role;
 
-    if (role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Solo gli admin possono modificare i ruoli' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const { profileId, newRole } = body;
 
@@ -151,10 +144,23 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<P
       );
     }
 
-    if (!['user', 'staff', 'admin', 'guest'].includes(newRole)) {
+    if (!['user', 'staff', 'admin', 'guest', 'segreteria'].includes(newRole)) {
       return NextResponse.json(
         { error: 'Ruolo non valido' },
         { status: 400 }
+      );
+    }
+
+    // Lo staff può assegnare solo i ruoli "user", "guest" e "segreteria";
+    // i ruoli elevati ("admin", "staff") restano riservati agli admin.
+    const isAdmin = role === 'admin';
+    const isStaff = role === 'staff';
+    const staffAssignable = ['user', 'guest', 'segreteria'];
+
+    if (!isAdmin && !(isStaff && staffAssignable.includes(newRole))) {
+      return NextResponse.json(
+        { error: 'Non sei autorizzato ad assegnare questo ruolo' },
+        { status: 403 }
       );
     }
 
