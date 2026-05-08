@@ -8,6 +8,7 @@ import type { Profile, ServiceRole, EventCategory, EnrollmentStatus } from '@/ty
 import { SERVICE_ROLE_LABELS } from '@/types/database';
 import AvatarPreview from '@/components/AvatarPreview';
 import Autocomplete from '@/components/Autocomplete';
+import ReadOnlyProfileFields from '@/components/admin/ReadOnlyProfileFields';
 
 interface AdminUserEvent {
   id: string;
@@ -297,131 +298,122 @@ export default function AdminUserDetailPage({
             <div className="flex items-start gap-6 mb-6">
               <AvatarPreview config={user.avatar_config} size="lg" />
               <div className="flex-1 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="input w-full"
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
-                    <input
-                      type="text"
-                      value={formData.surname}
-                      onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
-                      className="input w-full"
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Codice Socio</label>
-                  <input
-                    type="text"
-                    value={formData.codice_socio}
-                    onChange={(e) => setFormData({ ...formData, codice_socio: e.target.value })}
-                    className="input w-full"
-                    placeholder="Es. 123456"
-                    disabled={isReadOnly}
-                  />
-                </div>
-
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Scout</label>
-                  {isReadOnly ? (
-                    <input
-                      type="text"
-                      value={formData.scout_group}
-                      className="input w-full"
-                      disabled
-                    />
-                  ) : (
-                    <Autocomplete
-                      value={formData.scout_group}
-                      onChange={(val) => setFormData({ ...formData, scout_group: val })}
-                      options={scoutGroups}
-                      placeholder="Es. Roma 123 o lascia vuoto"
-                    />
-                  )}
-                </div>
-
-                {user.service_role && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo di Servizio</label>
-                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 font-medium inline-block">
-                      {SERVICE_ROLE_LABELS[user.service_role as ServiceRole] || user.service_role}
+                {isReadOnly ? (
+                  <ReadOnlyProfileFields user={user} />
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
+                        <input
+                          type="text"
+                          value={formData.surname}
+                          onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
+                          className="input w-full"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-                
-                {user.static_group && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Statico Assegnato</label>
-                    <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md text-sm text-purple-700 font-bold inline-block">
-                      {user.static_group}
-                    </div>
-                  </div>
-                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as 'user' | 'staff' | 'admin' | 'guest' | 'segreteria' })}
-                    className="input w-full"
-                    disabled={isReadOnly}
-                  >
-                    <option value="user">Utente</option>
-                    <option value="segreteria">Segreteria/Informazione</option>
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                    <option value="guest">Ospite</option>
-                  </select>
-                </div>
-
-                <div className="pt-4 border-t border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                    Sicurezza e Emergenza
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Codice Socio</label>
                       <input
-                        type="checkbox"
-                        id="is_medical_staff_admin"
-                        checked={formData.is_medical_staff}
-                        onChange={(e) => setFormData({ ...formData, is_medical_staff: e.target.checked })}
-                        className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
-                        disabled={isReadOnly}
+                        type="text"
+                        value={formData.codice_socio}
+                        onChange={(e) => setFormData({ ...formData, codice_socio: e.target.value })}
+                        className="input w-full"
+                        placeholder="Es. 123456"
                       />
-                      <label htmlFor="is_medical_staff_admin" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
-                        🩺 Medico / Infermiere
-                      </label>
                     </div>
+
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Scout</label>
+                      <Autocomplete
+                        value={formData.scout_group}
+                        onChange={(val) => setFormData({ ...formData, scout_group: val })}
+                        options={scoutGroups}
+                        placeholder="Es. Roma 123 o lascia vuoto"
+                      />
+                    </div>
+
+                    {user.service_role && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo di Servizio</label>
+                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 font-medium inline-block">
+                          {SERVICE_ROLE_LABELS[user.service_role as ServiceRole] || user.service_role}
+                        </div>
+                      </div>
+                    )}
+
+                    {user.static_group && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Statico Assegnato</label>
+                        <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-md text-sm text-purple-700 font-bold inline-block">
+                          {user.static_group}
+                        </div>
+                      </div>
+                    )}
 
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Addetto Antincendio</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Ruolo</label>
                       <select
-                        value={formData.fire_warden_level}
-                        onChange={(e) => setFormData({ ...formData, fire_warden_level: e.target.value })}
-                        className="input w-full text-sm"
-                        disabled={isReadOnly}
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value as 'user' | 'staff' | 'admin' | 'guest' | 'segreteria' })}
+                        className="input w-full"
                       >
-                        <option value="">Nessuno / Non addetto</option>
-                        <option value="basso">Rischio Basso (Livello 1)</option>
-                        <option value="medio">Rischio Medio (Livello 2)</option>
-                        <option value="alto">Rischio Alto (Livello 3)</option>
+                        <option value="user">Utente</option>
+                        <option value="segreteria">Segreteria/Informazione</option>
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                        <option value="guest">Ospite</option>
                       </select>
                     </div>
-                  </div>
-                </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                        Sicurezza e Emergenza
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                          <input
+                            type="checkbox"
+                            id="is_medical_staff_admin"
+                            checked={formData.is_medical_staff}
+                            onChange={(e) => setFormData({ ...formData, is_medical_staff: e.target.checked })}
+                            className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                          />
+                          <label htmlFor="is_medical_staff_admin" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                            🩺 Medico / Infermiere
+                          </label>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Addetto Antincendio</label>
+                          <select
+                            value={formData.fire_warden_level}
+                            onChange={(e) => setFormData({ ...formData, fire_warden_level: e.target.value })}
+                            className="input w-full text-sm"
+                          >
+                            <option value="">Nessuno / Non addetto</option>
+                            <option value="basso">Rischio Basso (Livello 1)</option>
+                            <option value="medio">Rischio Medio (Livello 2)</option>
+                            <option value="alto">Rischio Alto (Livello 3)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
