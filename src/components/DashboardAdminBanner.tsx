@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import { useUser } from '@clerk/nextjs';
 
 function ShieldIcon({ className }: { className?: string }) {
   return (
@@ -11,14 +8,8 @@ function ShieldIcon({ className }: { className?: string }) {
   );
 }
 
-export default function DashboardAdminBanner() {
-  const { isLoaded, user } = useUser();
-
-  if (!isLoaded || !user) return null;
-
-  const role = (user.publicMetadata as { role?: string } | undefined)?.role;
+export default function DashboardAdminBanner({ role }: { role: string | null | undefined }) {
   const isAdmin = role === 'admin' || role === 'staff' || role === 'segreteria';
-
   if (!isAdmin) return null;
 
   const isSegreteria = role === 'segreteria';

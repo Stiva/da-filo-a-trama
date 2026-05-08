@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import type { Profile, ServiceRole, EventCategory, EnrollmentStatus } from '@/types/database';
 import { SERVICE_ROLE_LABELS } from '@/types/database';
@@ -35,8 +34,9 @@ export default function AdminUserDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { user: clerkUser } = useUser();
-  const currentRole = (clerkUser?.publicMetadata as { role?: string } | undefined)?.role;
+  // Source of truth: profiles.role da Supabase (Clerk publicMetadata può
+  // essere stale o non sincronizzato per alcuni utenti).
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
   const isReadOnly = currentRole === 'segreteria';
 
   const [user, setUser] = useState<ProfileWithEnrollments | null>(null);
@@ -62,7 +62,18 @@ export default function AdminUserDetailPage({
   useEffect(() => {
     fetchUser();
     fetchScoutGroups();
+    fetchCurrentRole();
   }, [id]);
+
+  const fetchCurrentRole = async () => {
+    try {
+      const res = await fetch('/api/profiles');
+      const json = await res.json();
+      if (res.ok && json.data?.role) setCurrentRole(json.data.role);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchScoutGroups = async () => {
     try {

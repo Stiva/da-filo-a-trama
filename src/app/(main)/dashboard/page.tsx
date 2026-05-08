@@ -151,9 +151,9 @@ export default async function DashboardPage() {
             </section>
           ))}
 
-        {/* Admin Section - Visible only to admins/staff/segreteria.
-            Reso lato client (useUser) per evitare publicMetadata stale lato server. */}
-        <DashboardAdminBanner />
+        {/* Admin Section - source of truth: Supabase profile.role
+            (Clerk publicMetadata può essere stale o non sincronizzato) */}
+        <DashboardAdminBanner role={profile.role} />
 
         {/* Quick Actions Grid */}
         <section className="mb-10">
