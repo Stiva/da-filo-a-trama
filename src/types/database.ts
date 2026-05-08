@@ -400,7 +400,7 @@ export const POI_TYPE_LABELS: Record<PoiCategory, string> = {
 // ============================================
 // ASSETS
 // ============================================
-export type AssetType = 'pdf' | 'image' | 'video' | 'audio' | 'document';
+export type AssetType = 'pdf' | 'image' | 'video' | 'audio' | 'document' | 'link';
 export type AssetVisibility = 'public' | 'registered' | 'staff';
 
 export interface Asset {

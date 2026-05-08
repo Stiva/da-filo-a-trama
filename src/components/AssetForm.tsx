@@ -11,6 +11,7 @@ const ASSET_TYPES: { value: AssetType; label: string }[] = [
   { value: 'video', label: 'Video' },
   { value: 'audio', label: 'Audio' },
   { value: 'document', label: 'Documento' },
+  { value: 'link', label: 'Link' },
 ];
 
 const VISIBILITY_OPTIONS: { value: AssetVisibility; label: string; description: string }[] = [
@@ -19,7 +20,7 @@ const VISIBILITY_OPTIONS: { value: AssetVisibility; label: string; description: 
   { value: 'staff', label: 'Staff', description: 'Solo staff e admin' },
 ];
 
-type InputMode = 'upload' | 'url';
+type InputMode = 'upload' | 'url' | 'link';
 
 interface AssetFormProps {
   asset?: Asset;
@@ -36,7 +37,9 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [existingFolders, setExistingFolders] = useState<string[]>([]);
-  const [inputMode, setInputMode] = useState<InputMode>(isEditing ? 'url' : 'upload');
+  const [inputMode, setInputMode] = useState<InputMode>(
+    isEditing ? (asset?.tipo === 'link' ? 'link' : 'url') : 'upload',
+  );
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -139,12 +142,16 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
 
   // Handle URL input (for manual URL entry)
   const handleUrlChange = (url: string) => {
-    setFormData(prev => ({
-      ...prev,
-      file_url: url,
-      tipo: detectFileType(url),
-      mime_type: detectMimeType(url),
-    }));
+    setFormData(prev => {
+      // In modalita 'link' il tipo e' fissato a 'link'
+      const isLink = inputMode === 'link';
+      return {
+        ...prev,
+        file_url: url,
+        tipo: isLink ? 'link' : detectFileType(url),
+        mime_type: isLink ? '' : detectMimeType(url),
+      };
+    });
   };
 
   // Auto-detect file type from URL
@@ -154,7 +161,14 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     if (lowercaseUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return 'image';
     if (lowercaseUrl.match(/\.(mp4|webm|mov|avi)(\?|$)/)) return 'video';
     if (lowercaseUrl.match(/\.(mp3|wav|ogg|m4a)(\?|$)/)) return 'audio';
-    return 'document';
+    // URL valido senza estensione file riconosciuta -> link esterno (YouTube, Drive, ecc.)
+    try {
+      // eslint-disable-next-line no-new
+      new URL(url);
+      return 'link';
+    } catch {
+      return 'document';
+    }
   };
 
   // Auto-detect mime type from URL
@@ -177,12 +191,20 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     e.preventDefault();
 
     if (!formData.file_url) {
-      setError('URL file obbligatorio. Carica un file o inserisci un URL.');
+      setError(
+        formData.tipo === 'link'
+          ? 'URL del link obbligatorio.'
+          : 'URL file obbligatorio. Carica un file o inserisci un URL.',
+      );
       return;
     }
 
-    if (!formData.file_name) {
-      setError('Nome file obbligatorio');
+    // Per i link il file_name puo' essere vuoto: deriva da title o URL.
+    const isLink = formData.tipo === 'link';
+    const effectiveFileName =
+      formData.file_name || (isLink ? formData.title || formData.file_url : '');
+    if (!effectiveFileName) {
+      setError('Nome o titolo obbligatorio');
       return;
     }
 
@@ -198,10 +220,12 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
 
       const payload = {
         ...formData,
+        file_name: effectiveFileName,
         event_id: formData.event_id || null,
         title: formData.title || null,
         description: formData.description || null,
-        mime_type: formData.mime_type || null,
+        mime_type: isLink ? null : formData.mime_type || null,
+        file_size_bytes: isLink ? null : formData.file_size_bytes,
         folder_path: sanitizeFolderPath(formData.folder_path),
       };
 
@@ -260,6 +284,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       case 'image': return '🖼️';
       case 'video': return '🎬';
       case 'audio': return '🎵';
+      case 'link': return '🔗';
       default: return '📁';
     }
   };
@@ -282,12 +307,15 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       {/* File Source Selection */}
       {!isEditing && (
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Sorgente File</h2>
-          <div className="flex gap-4">
+          <h2 className="text-lg font-semibold mb-4">Sorgente</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
             <button
               type="button"
-              onClick={() => setInputMode('upload')}
-              className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
+              onClick={() => {
+                setInputMode('upload');
+                setFormData(prev => ({ ...prev, tipo: 'document' }));
+              }}
+              className={`p-4 border-2 rounded-lg transition-colors text-left ${
                 inputMode === 'upload'
                   ? 'border-agesci-blue bg-agesci-blue/5'
                   : 'border-gray-200 hover:border-gray-300'
@@ -299,16 +327,42 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
             </button>
             <button
               type="button"
-              onClick={() => setInputMode('url')}
-              className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
+              onClick={() => {
+                setInputMode('url');
+                if (formData.tipo === 'link') {
+                  setFormData(prev => ({ ...prev, tipo: 'document' }));
+                }
+              }}
+              className={`p-4 border-2 rounded-lg transition-colors text-left ${
                 inputMode === 'url'
                   ? 'border-agesci-blue bg-agesci-blue/5'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
+              <div className="text-2xl mb-2">🌐</div>
+              <div className="font-medium">URL File</div>
+              <div className="text-sm text-gray-500">URL diretto a un file esistente</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInputMode('link');
+                setFormData(prev => ({
+                  ...prev,
+                  tipo: 'link',
+                  mime_type: '',
+                  file_size_bytes: null,
+                }));
+              }}
+              className={`p-4 border-2 rounded-lg transition-colors text-left ${
+                inputMode === 'link'
+                  ? 'border-agesci-blue bg-agesci-blue/5'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
               <div className="text-2xl mb-2">🔗</div>
-              <div className="font-medium">URL Esterno</div>
-              <div className="text-sm text-gray-500">Inserisci URL di un file esistente</div>
+              <div className="font-medium">Link Esterno</div>
+              <div className="text-sm text-gray-500">YouTube, Drive, Notion, sito web</div>
             </button>
           </div>
         </div>
@@ -365,16 +419,20 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       )}
 
       {/* URL Input Section */}
-      {(inputMode === 'url' || isEditing) && (
+      {(inputMode === 'url' || inputMode === 'link' || isEditing) && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">
-            {isEditing ? 'Informazioni File' : 'URL Esterno'}
+            {inputMode === 'link'
+              ? 'Link Esterno'
+              : isEditing
+                ? 'Informazioni File'
+                : 'URL Esterno'}
           </h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL File *
+                URL *
               </label>
               <input
                 type="url"
@@ -382,26 +440,34 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
                 onChange={(e) => handleUrlChange(e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-                placeholder="https://esempio.com/file.pdf"
+                placeholder={
+                  inputMode === 'link'
+                    ? 'https://www.youtube.com/watch?v=...'
+                    : 'https://esempio.com/file.pdf'
+                }
               />
               <p className="text-xs text-gray-500 mt-1">
-                Tipo e MIME vengono rilevati automaticamente dall'estensione
+                {inputMode === 'link'
+                  ? 'Link a un sito esterno (YouTube, Drive, Notion, ecc.).'
+                  : 'Tipo e MIME vengono rilevati automaticamente dall\'estensione.'}
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome File *
-              </label>
-              <input
-                type="text"
-                value={formData.file_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, file_name: e.target.value }))}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
-                placeholder="documento.pdf"
-              />
-            </div>
+            {inputMode !== 'link' && formData.tipo !== 'link' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome File *
+                </label>
+                <input
+                  type="text"
+                  value={formData.file_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, file_name: e.target.value }))}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+                  placeholder="documento.pdf"
+                />
+              </div>
+            )}
 
             {/* File Info Display */}
             {formData.file_url && (
@@ -410,9 +476,11 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
                   <span className="text-2xl">{getFileTypeIcon(formData.tipo)}</span>
                   <div className="flex-1">
                     <p className="font-medium text-sm">{formData.tipo.toUpperCase()}</p>
-                    <p className="text-xs text-gray-500">{formData.mime_type || 'MIME non rilevato'}</p>
+                    {formData.tipo !== 'link' && (
+                      <p className="text-xs text-gray-500">{formData.mime_type || 'MIME non rilevato'}</p>
+                    )}
                   </div>
-                  {formData.file_size_bytes && (
+                  {formData.file_size_bytes && formData.tipo !== 'link' && (
                     <p className="text-sm text-gray-600">{formatFileSize(formData.file_size_bytes)}</p>
                   )}
                 </div>
@@ -456,14 +524,15 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo File
+                Tipo
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{getFileTypeIcon(formData.tipo)}</span>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value as AssetType }))}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue"
+                  disabled={inputMode === 'link' || formData.tipo === 'link'}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue disabled:bg-gray-50 disabled:text-gray-500"
                 >
                   {ASSET_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
@@ -474,17 +543,19 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dimensione
-              </label>
-              <input
-                type="text"
-                value={formatFileSize(formData.file_size_bytes) || 'Non disponibile'}
-                disabled
-                className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-500"
-              />
-            </div>
+            {formData.tipo !== 'link' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dimensione
+                </label>
+                <input
+                  type="text"
+                  value={formatFileSize(formData.file_size_bytes) || 'Non disponibile'}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-500"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
