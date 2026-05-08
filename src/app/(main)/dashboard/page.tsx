@@ -18,6 +18,7 @@ export default async function DashboardPage() {
   const clerkUser = await client.users.getUser(userId);
   const role = (clerkUser.publicMetadata as { role?: string })?.role;
   const isAdmin = role === 'admin' || role === 'staff' || role === 'segreteria';
+  const isSegreteria = role === 'segreteria';
 
   // Verifica se l'onboarding e' completato (usa service role per bypassare RLS)
   const supabase = createServiceRoleClient();
@@ -184,20 +185,33 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Quick Admin Stats */}
-                <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-white/20">
-                  <Link href="/admin/events" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
-                    <div className="text-2xl font-bold">Eventi</div>
-                    <div className="text-white/70 text-sm">Gestione</div>
-                  </Link>
-                  <Link href="/admin/users" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
-                    <div className="text-2xl font-bold">Utenti</div>
-                    <div className="text-white/70 text-sm">CRM</div>
-                  </Link>
-                  <Link href="/admin/content" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
-                    <div className="text-2xl font-bold">Contenuti</div>
-                    <div className="text-white/70 text-sm">Editor</div>
-                  </Link>
-                </div>
+                {isSegreteria ? (
+                  <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-white/20">
+                    <Link href="/admin/users" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                      <div className="text-2xl font-bold">Utenti</div>
+                      <div className="text-white/70 text-sm">CRM</div>
+                    </Link>
+                    <Link href="/admin/desks" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                      <div className="text-2xl font-bold">Check-in</div>
+                      <div className="text-white/70 text-sm">Desk</div>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-white/20">
+                    <Link href="/admin/events" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                      <div className="text-2xl font-bold">Eventi</div>
+                      <div className="text-white/70 text-sm">Gestione</div>
+                    </Link>
+                    <Link href="/admin/users" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                      <div className="text-2xl font-bold">Utenti</div>
+                      <div className="text-white/70 text-sm">CRM</div>
+                    </Link>
+                    <Link href="/admin/content" className="text-center hover:bg-white/10 rounded-lg py-2 transition-colors">
+                      <div className="text-2xl font-bold">Contenuti</div>
+                      <div className="text-white/70 text-sm">Editor</div>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </section>
