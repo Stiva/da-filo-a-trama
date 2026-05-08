@@ -132,8 +132,9 @@ export async function POST(
     });
   } catch (error) {
     console.error('Errore POST /api/admin/assets:', error);
+    const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Errore nella creazione dell\'asset' },
+      { error: `Errore nella creazione dell'asset: ${detail}` },
       { status: 500 }
     );
   }

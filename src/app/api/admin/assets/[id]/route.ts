@@ -128,8 +128,9 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Errore PUT /api/admin/assets/[id]:', error);
+    const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Errore nell\'aggiornamento dell\'asset' },
+      { error: `Errore nell'aggiornamento dell'asset: ${detail}` },
       { status: 500 }
     );
   }

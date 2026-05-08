@@ -453,7 +453,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
               </p>
             </div>
 
-            {inputMode !== 'link' && formData.tipo !== 'link' && (
+            {formData.tipo !== 'link' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nome File *
@@ -531,7 +531,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value as AssetType }))}
-                  disabled={inputMode === 'link' || formData.tipo === 'link'}
+                  disabled={!isEditing && (inputMode === 'link' || formData.tipo === 'link')}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-agesci-blue disabled:bg-gray-50 disabled:text-gray-500"
                 >
                   {ASSET_TYPES.map((type) => (
