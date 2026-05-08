@@ -482,15 +482,15 @@ export default function AdminUsersPage() {
                                 if (colId === 'utente') {
                                     return (
                                         <td key={colId} className="px-6 py-4 whitespace-nowrap">
-                                          <div className="flex items-center">
+                                          <Link href={`/admin/users/${profile.id}`} className="flex items-center group">
                                             <AvatarPreview config={profile.avatar_config} size="sm" />
                                             <div className="ml-4">
-                                              <div className="text-sm font-bold text-gray-900">{[profile.name, profile.surname].filter(Boolean).join(' ') || profile.email}</div>
+                                              <div className="text-sm font-bold text-gray-900 group-hover:text-agesci-blue transition-colors">{[profile.name, profile.surname].filter(Boolean).join(' ') || profile.email}</div>
                                               {!visibleColumns.includes('email') && (
                                                 <div className="text-xs text-gray-500">{profile.email}</div>
                                               )}
                                             </div>
-                                          </div>
+                                          </Link>
                                         </td>
                                     );
                                 }
@@ -597,13 +597,13 @@ export default function AdminUsersPage() {
                 )}
                 {users.map((profile) => (
                   <div key={profile.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
-                    <div className="flex items-center gap-3 pb-3 border-b border-gray-50">
+                    <Link href={`/admin/users/${profile.id}`} className="flex items-center gap-3 pb-3 border-b border-gray-50">
                       <AvatarPreview config={profile.avatar_config} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 truncate">{[profile.name, profile.surname].filter(Boolean).join(' ') || profile.email}</p>
                         <p className="text-xs text-gray-500 truncate">{profile.email}</p>
                       </div>
-                    </div>
+                    </Link>
                     <div className="grid grid-cols-2 gap-y-2 text-xs">
                         {visibleColumns.map(colId => {
                             if (['utente', 'email'].includes(colId)) return null;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import { Upload, Search, Download, CheckCircle, XCircle, Trash2, ArrowLeftRight } from 'lucide-react';
 import type { ParticipantCrmView } from '@/types/database';
 import ColumnSelector from '@/components/admin/ColumnSelector';
@@ -408,14 +409,18 @@ export default function CRMPage() {
                       </td>
                     )}
                     {visibleColumns.includes('cognome') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {person.cognome}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <Link href={`/admin/crm/${person.codice}`} className="text-gray-700 hover:text-agesci-blue font-medium transition-colors">
+                          {person.cognome}
+                        </Link>
                         {!person.is_active_in_list && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Rimosso</span>}
                       </td>
                     )}
                     {visibleColumns.includes('nome') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {person.nome}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <Link href={`/admin/crm/${person.codice}`} className="text-gray-700 hover:text-agesci-blue font-medium transition-colors">
+                          {person.nome}
+                        </Link>
                       </td>
                     )}
                     {visibleColumns.includes('email_contatto') && (
