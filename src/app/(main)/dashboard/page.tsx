@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { DashboardContent, UserState } from '@/types/database';
 
+// Forza il rendering dinamico: il banner admin dipende dal ruolo Clerk corrente.
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const { userId } = await auth();
 
