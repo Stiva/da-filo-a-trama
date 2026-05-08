@@ -11,6 +11,7 @@ const ASSET_TYPES: { value: AssetType | ''; label: string }[] = [
   { value: 'video', label: 'Video' },
   { value: 'audio', label: 'Audio' },
   { value: 'document', label: 'Documento' },
+  { value: 'link', label: 'Link' },
 ];
 
 const VISIBILITY_OPTIONS: { value: AssetVisibility | ''; label: string }[] = [
@@ -79,6 +80,7 @@ export default function AdminAssetsPage() {
       case 'image': return '🖼️';
       case 'video': return '🎬';
       case 'audio': return '🎵';
+      case 'link': return '🔗';
       default: return '📁';
     }
   };
@@ -89,6 +91,7 @@ export default function AdminAssetsPage() {
       case 'image': return 'bg-blue-100 text-blue-800';
       case 'video': return 'bg-purple-100 text-purple-800';
       case 'audio': return 'bg-orange-100 text-orange-800';
+      case 'link': return 'bg-cyan-100 text-cyan-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

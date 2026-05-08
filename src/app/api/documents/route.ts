@@ -1,35 +1,29 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { directSubfolders, sanitizeFolderPath } from '@/lib/folderPath';
 import type { Asset, ApiResponse } from '@/types/database';
 
-interface DocumentsListing {
-  path: string;
-  folders: string[];
-  files: Asset[];
+interface DocumentsResponse {
+  assets: Asset[];
 }
 
 /**
- * GET /api/documents?path=Canzoni/Con%20un%20filo
- * Ritorna i contenuti della cartella richiesta (sottocartelle dirette + file diretti).
+ * GET /api/documents
+ * Lista flat di tutti gli asset visibili all'utente, NON associati a eventi.
+ * Il client costruisce l'albero gerarchico a partire da `folder_path`.
  */
-export async function GET(
-  request: Request,
-): Promise<NextResponse<ApiResponse<DocumentsListing>>> {
+export async function GET(): Promise<NextResponse<ApiResponse<DocumentsResponse>>> {
   try {
     const { userId } = await auth();
     const supabase = createServiceRoleClient();
-
-    const { searchParams } = new URL(request.url);
-    const currentPath = sanitizeFolderPath(searchParams.get('path'));
 
     let query = supabase
       .from('assets')
       .select('*')
       .is('event_id', null)
+      .order('folder_path', { ascending: true })
       .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false });
+      .order('file_name', { ascending: true });
 
     if (userId) {
       query = query.in('visibilita', ['public', 'registered']);
@@ -40,14 +34,7 @@ export async function GET(
     const { data, error } = await query;
     if (error) throw error;
 
-    const all = (data ?? []) as Asset[];
-    const folders = directSubfolders(
-      all.map((a) => a.folder_path ?? ''),
-      currentPath,
-    );
-    const files = all.filter((a) => (a.folder_path ?? '') === currentPath);
-
-    return NextResponse.json({ data: { path: currentPath, folders, files } });
+    return NextResponse.json({ data: { assets: (data ?? []) as Asset[] } });
   } catch (error) {
     console.error('Errore GET /api/documents:', error);
     return NextResponse.json(

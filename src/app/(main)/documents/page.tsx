@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import {
   DndContext,
@@ -9,237 +9,70 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
-  useDraggable,
-  useDroppable,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { sanitizeFolderPath, splitFolderPath, joinFolderPath } from '@/lib/folderPath';
-import type { Asset } from '@/types/database';
+import DocumentsTree from '@/components/DocumentsTree';
+import type { Asset, AssetType } from '@/types/database';
+import type { FilterValue } from '@/lib/buildTree';
 
-const TYPE_ICONS: Record<string, string> = {
+const TYPE_ICONS: Record<AssetType, string> = {
   pdf: '📄',
   image: '🖼️',
   video: '🎬',
   audio: '🎵',
-  document: '📁',
+  document: '📝',
+  link: '🔗',
 };
 
-const TYPE_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<FilterValue, string> = {
   all: 'Tutti',
   pdf: 'PDF',
   image: 'Immagini',
   video: 'Video',
   audio: 'Audio',
   document: 'Documenti',
+  link: 'Link',
 };
-
-interface Listing {
-  path: string;
-  folders: string[];
-  files: Asset[];
-}
 
 interface DragData {
   kind: 'file' | 'folder';
-  id: string; // asset id (file) o folder absolute path (folder)
-  // per le cartelle, il path assoluto (es. "Canzoni/Con un filo")
+  id: string;
   folderPath?: string;
 }
 
 interface DropData {
-  // path destinazione assoluto (cartella che riceve)
   targetPath: string;
 }
 
-function readPathFromUrl(): string {
-  if (typeof window === 'undefined') return '';
-  const params = new URLSearchParams(window.location.search);
-  return sanitizeFolderPath(params.get('path'));
-}
+const COLLAPSED_STORAGE_KEY = 'documents-tree-collapsed-v1';
 
-// ---------------------------------------------------------------------------
-// Card components
-
-function FileCard({ doc, draggable, isDragging }: { doc: Asset; draggable: boolean; isDragging: boolean }) {
-  const data: DragData = { kind: 'file', id: doc.id };
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: `file:${doc.id}`,
-    data,
-    disabled: !draggable,
-  });
-
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
-
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const inner = (
-    <div className="flex items-start gap-3">
-      <span className="text-3xl flex-shrink-0">{TYPE_ICONS[doc.tipo] || '📁'}</span>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-gray-900 line-clamp-2">
-          {doc.title || doc.file_name}
-        </h3>
-        {doc.description && (
-          <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-            {doc.description}
-          </p>
-        )}
-        <div className="flex items-center gap-2 mt-3 text-xs text-gray-400">
-          <span className="bg-gray-100 px-2 py-1 rounded">{doc.tipo.toUpperCase()}</span>
-          {doc.file_size_bytes && <span>{formatFileSize(doc.file_size_bytes)}</span>}
-        </div>
-      </div>
-    </div>
-  );
-
-  const className = `block p-4 bg-white rounded-xl border-2 border-gray-100 hover:border-agesci-blue hover:shadow-lg transition-all ${
-    isDragging ? 'opacity-40' : ''
-  } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`;
-
-  if (draggable) {
-    return (
-      <div ref={setNodeRef} style={style} className={className} {...attributes} {...listeners}>
-        <a
-          href={doc.file_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            // Evita apertura mentre stai trascinando
-            if (isDragging) e.preventDefault();
-          }}
-          className="block"
-        >
-          {inner}
-        </a>
-      </div>
-    );
+function readCollapsed(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(COLLAPSED_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return new Set(parsed.filter((p) => typeof p === 'string'));
+  } catch {
+    /* ignore */
   }
-
-  return (
-    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className={className}>
-      {inner}
-    </a>
-  );
+  return new Set();
 }
-
-function FolderCard({
-  name,
-  absolutePath,
-  onOpen,
-  draggable,
-  isDragging,
-  isOver,
-}: {
-  name: string;
-  absolutePath: string;
-  onOpen: () => void;
-  draggable: boolean;
-  isDragging: boolean;
-  isOver: boolean;
-}) {
-  const dragData: DragData = { kind: 'folder', id: absolutePath, folderPath: absolutePath };
-  const { attributes, listeners, setNodeRef: setDragRef, transform } = useDraggable({
-    id: `folder-drag:${absolutePath}`,
-    data: dragData,
-    disabled: !draggable,
-  });
-  const dropData: DropData = { targetPath: absolutePath };
-  const { setNodeRef: setDropRef } = useDroppable({
-    id: `folder-drop:${absolutePath}`,
-    data: dropData,
-  });
-
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
-
-  const className = `text-left p-4 bg-white rounded-xl border-2 transition-all w-full ${
-    isOver ? 'border-agesci-blue ring-2 ring-agesci-blue/40 shadow-lg' : 'border-gray-100 hover:border-agesci-blue hover:shadow-lg'
-  } ${isDragging ? 'opacity-40' : ''} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`;
-
-  const setRefs = (node: HTMLDivElement | null) => {
-    setDragRef(node);
-    setDropRef(node);
-  };
-
-  return (
-    <div ref={setRefs} style={style} className={className} {...attributes} {...listeners}>
-      <button type="button" onClick={onOpen} className="text-left w-full">
-        <div className="flex items-start gap-3">
-          <span className="text-3xl flex-shrink-0">📂</span>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 line-clamp-2">{name}</h3>
-            <div className="flex items-center gap-2 mt-3 text-xs text-gray-400">
-              <span className="bg-gray-100 px-2 py-1 rounded">CARTELLA</span>
-            </div>
-          </div>
-        </div>
-      </button>
-    </div>
-  );
-}
-
-function BreadcrumbDrop({
-  label,
-  targetPath,
-  isCurrent,
-  onClick,
-  enableDrop,
-  isOver,
-}: {
-  label: string;
-  targetPath: string;
-  isCurrent: boolean;
-  onClick: () => void;
-  enableDrop: boolean;
-  isOver: boolean;
-}) {
-  const dropData: DropData = { targetPath };
-  const { setNodeRef } = useDroppable({
-    id: `breadcrumb-drop:${targetPath || '__root__'}`,
-    data: dropData,
-    disabled: !enableDrop,
-  });
-
-  return (
-    <button
-      type="button"
-      ref={setNodeRef}
-      onClick={onClick}
-      className={`px-2 py-1 rounded transition-colors ${
-        isCurrent ? 'font-semibold text-agesci-blue' : 'text-gray-700'
-      } ${isOver ? 'bg-agesci-blue/10 ring-2 ring-agesci-blue/40' : 'hover:bg-gray-100'}`}
-      aria-current={isCurrent ? 'page' : undefined}
-    >
-      {label}
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Page
 
 export default function DocumentsPage() {
   const { user, isLoaded: userLoaded } = useUser();
   const role = (user?.publicMetadata as { role?: string } | undefined)?.role;
   const isAdmin = userLoaded && (role === 'admin' || role === 'staff');
 
-  const [currentPath, setCurrentPath] = useState<string>('');
-  const [listing, setListing] = useState<Listing>({ path: '', folders: [], files: [] });
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>('all');
-  const [activeDrag, setActiveDrag] = useState<DragData | null>(null);
-  const [overTarget, setOverTarget] = useState<string | null>(null); // targetPath ('' = root)
+  const [filter, setFilter] = useState<FilterValue>('all');
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [overTarget, setOverTarget] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -249,24 +82,32 @@ export default function DocumentsPage() {
     useSensor(KeyboardSensor),
   );
 
+  // Hydrate collapsed state from localStorage
   useEffect(() => {
-    setCurrentPath(readPathFromUrl());
-    const onPop = () => setCurrentPath(readPathFromUrl());
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    setCollapsed(readCollapsed());
   }, []);
 
-  const fetchListing = useCallback(async (path: string, signal?: AbortSignal) => {
+  // Persist collapsed state
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        COLLAPSED_STORAGE_KEY,
+        JSON.stringify([...collapsed]),
+      );
+    } catch {
+      /* ignore quota */
+    }
+  }, [collapsed]);
+
+  const fetchAssets = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
     try {
-      const url = path
-        ? `/api/documents?path=${encodeURIComponent(path)}`
-        : '/api/documents';
-      const response = await fetch(url, { signal });
+      const response = await fetch('/api/documents', { signal });
       const result = await response.json();
       if (response.ok && result.data) {
-        setListing(result.data as Listing);
+        setAssets(result.data.assets ?? []);
       } else {
         setError(result.error || 'Errore nel caricamento');
       }
@@ -281,25 +122,33 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchListing(currentPath, ctrl.signal);
+    void fetchAssets(ctrl.signal);
     return () => ctrl.abort();
-  }, [currentPath, fetchListing]);
+  }, [fetchAssets]);
 
-  const navigate = useCallback((nextPath: string) => {
-    const clean = sanitizeFolderPath(nextPath);
-    const url = clean ? `?path=${encodeURIComponent(clean)}` : window.location.pathname;
-    window.history.pushState({}, '', url);
-    setCurrentPath(clean);
-    setFilter('all');
+  const toggleCollapsed = useCallback((path: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
   }, []);
 
-  // ---- Drag & drop handlers --------------------------------------------------
-
-  const segments = useMemo(() => splitFolderPath(currentPath), [currentPath]);
+  // ---- Drag & drop -------------------------------------------------------
 
   const showToast = useCallback((kind: 'ok' | 'err', text: string) => {
     setToast({ kind, text });
     window.setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const expandFolder = useCallback((path: string) => {
+    setCollapsed((prev) => {
+      if (!prev.has(path)) return prev;
+      const next = new Set(prev);
+      next.delete(path);
+      return next;
+    });
   }, []);
 
   const moveFile = useCallback(
@@ -314,14 +163,15 @@ export default function DocumentsPage() {
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Errore spostamento');
         showToast('ok', `File spostato in /${targetPath || ''}`);
-        await fetchListing(currentPath);
+        expandFolder(targetPath);
+        await fetchAssets();
       } catch (err) {
         showToast('err', err instanceof Error ? err.message : 'Errore');
       } finally {
         setIsMutating(false);
       }
     },
-    [currentPath, fetchListing, showToast],
+    [expandFolder, fetchAssets, showToast],
   );
 
   const moveFolder = useCallback(
@@ -343,18 +193,20 @@ export default function DocumentsPage() {
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Errore spostamento');
         showToast('ok', `Cartella spostata: ${result.data?.moved ?? 0} file aggiornati`);
-        await fetchListing(currentPath);
+        expandFolder(targetParent);
+        expandFolder(toPath);
+        await fetchAssets();
       } catch (err) {
         showToast('err', err instanceof Error ? err.message : 'Errore');
       } finally {
         setIsMutating(false);
       }
     },
-    [currentPath, fetchListing, showToast],
+    [expandFolder, fetchAssets, showToast],
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveDrag((event.active.data.current as DragData) ?? null);
+    setActiveDragId(String(event.active.id));
     setOverTarget(null);
   }, []);
 
@@ -367,25 +219,22 @@ export default function DocumentsPage() {
     (event: DragEndEvent) => {
       const drag = event.active.data.current as DragData | undefined;
       const drop = event.over?.data.current as DropData | undefined;
-      setActiveDrag(null);
+      setActiveDragId(null);
       setOverTarget(null);
       if (!drag || !drop) return;
 
       const target = drop.targetPath;
 
       if (drag.kind === 'file') {
-        // No-op se già nella cartella target
-        const file = listing.files.find((f) => f.id === drag.id);
+        const file = assets.find((f) => f.id === drag.id);
         if (file && (file.folder_path ?? '') === target) return;
         void moveFile(drag.id, target);
-      } else if (drag.kind === 'folder' && drag.folderPath) {
+      } else if (drag.kind === 'folder' && drag.folderPath !== undefined) {
         if (drag.folderPath === target) return;
-        // Drop su se stessa: skip
         if (target === drag.folderPath || target.startsWith(drag.folderPath + '/')) {
           showToast('err', 'Non puoi spostare una cartella dentro se stessa');
           return;
         }
-        // No-op se la cartella e' gia' figlia diretta del target
         const currentParent = drag.folderPath.includes('/')
           ? drag.folderPath.slice(0, drag.folderPath.lastIndexOf('/'))
           : '';
@@ -393,18 +242,27 @@ export default function DocumentsPage() {
         void moveFolder(drag.folderPath, target);
       }
     },
-    [listing.files, moveFile, moveFolder, showToast],
+    [assets, moveFile, moveFolder, showToast],
   );
 
-  // ---- Rendering -------------------------------------------------------------
+  // ---- Render ------------------------------------------------------------
 
-  const filteredFiles = filter === 'all'
-    ? listing.files
-    : listing.files.filter((d) => d.tipo === filter);
+  const availableFilters: FilterValue[] = [
+    'all',
+    ...(Array.from(new Set(assets.map((a) => a.tipo))) as AssetType[]),
+  ];
 
-  const availableTypes = ['all', ...new Set(listing.files.map((d) => d.tipo))];
-
-  const dndEnabled = isAdmin;
+  const tree = (
+    <DocumentsTree
+      assets={assets}
+      filter={filter}
+      isAdmin={isAdmin}
+      collapsed={collapsed}
+      onToggle={toggleCollapsed}
+      activeDragId={activeDragId}
+      overTargetPath={overTarget}
+    />
+  );
 
   const content = (
     <div className="container mx-auto px-4 py-8">
@@ -413,48 +271,20 @@ export default function DocumentsPage() {
         <p className="text-gray-600">
           Materiali, guide e documenti utili per l&apos;evento
         </p>
-        {dndEnabled && (
+        {isAdmin && (
           <p className="mt-2 text-xs text-gray-500">
-            Suggerimento admin: trascina una card su una cartella (o sul breadcrumb) per spostarla.
+            Suggerimento admin: trascina una riga su una cartella (o sulla riga
+            &quot;Documenti&quot;) per spostarla.
           </p>
         )}
       </div>
 
-      {/* Breadcrumb */}
-      <nav className="flex items-center flex-wrap gap-1 text-sm mb-6" aria-label="Breadcrumb">
-        <BreadcrumbDrop
-          label="🏠 Documenti"
-          targetPath=""
-          isCurrent={currentPath === ''}
-          onClick={() => navigate('')}
-          enableDrop={dndEnabled && !!activeDrag}
-          isOver={dndEnabled && overTarget === ''}
-        />
-        {segments.map((seg, i) => {
-          const target = joinFolderPath(segments.slice(0, i + 1));
-          const isLast = i === segments.length - 1;
-          return (
-            <span key={target} className="flex items-center gap-1">
-              <span className="text-gray-400">/</span>
-              <BreadcrumbDrop
-                label={seg}
-                targetPath={target}
-                isCurrent={isLast}
-                onClick={() => navigate(target)}
-                enableDrop={dndEnabled && !!activeDrag}
-                isOver={dndEnabled && overTarget === target}
-              />
-            </span>
-          );
-        })}
-      </nav>
-
-      {/* Filtri tipo */}
-      {listing.files.length > 0 && (
+      {assets.length > 0 && (
         <div className="flex gap-2 mb-6 flex-wrap">
-          {availableTypes.map((type) => (
+          {availableFilters.map((type) => (
             <button
               key={type}
+              type="button"
               onClick={() => setFilter(type)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 filter === type
@@ -462,7 +292,8 @@ export default function DocumentsPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {type !== 'all' && TYPE_ICONS[type]} {TYPE_LABELS[type] || type.toUpperCase()}
+              {type !== 'all' && TYPE_ICONS[type as AssetType]}{' '}
+              {TYPE_LABELS[type] || type.toUpperCase()}
             </button>
           ))}
         </div>
@@ -477,44 +308,8 @@ export default function DocumentsPage() {
         <div className="text-center py-12">
           <p className="text-red-500">{error}</p>
         </div>
-      ) : listing.folders.length === 0 && filteredFiles.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">
-            {filter === 'all'
-              ? 'Cartella vuota'
-              : `Nessun documento di tipo "${TYPE_LABELS[filter] || filter}" in questa cartella`}
-          </p>
-        </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {listing.folders.map((name) => {
-            const target = currentPath ? `${currentPath}/${name}` : name;
-            const isDraggingThis =
-              activeDrag?.kind === 'folder' && activeDrag.folderPath === target;
-            return (
-              <FolderCard
-                key={`folder-${target}`}
-                name={name}
-                absolutePath={target}
-                onOpen={() => navigate(target)}
-                draggable={dndEnabled}
-                isDragging={isDraggingThis}
-                isOver={dndEnabled && overTarget === target && activeDrag != null && !isDraggingThis}
-              />
-            );
-          })}
-          {filteredFiles.map((doc) => {
-            const isDraggingThis = activeDrag?.kind === 'file' && activeDrag.id === doc.id;
-            return (
-              <FileCard
-                key={doc.id}
-                doc={doc}
-                draggable={dndEnabled}
-                isDragging={isDraggingThis}
-              />
-            );
-          })}
-        </div>
+        tree
       )}
 
       {(isMutating || toast) && (
@@ -534,7 +329,7 @@ export default function DocumentsPage() {
     </div>
   );
 
-  if (!dndEnabled) return content;
+  if (!isAdmin) return content;
 
   return (
     <DndContext
@@ -543,7 +338,7 @@ export default function DocumentsPage() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
-        setActiveDrag(null);
+        setActiveDragId(null);
         setOverTarget(null);
       }}
     >
