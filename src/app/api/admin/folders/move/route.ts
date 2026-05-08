@@ -87,8 +87,9 @@ export async function POST(
     });
   } catch (error) {
     console.error('Errore POST /api/admin/folders/move:', error);
+    const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Errore nello spostamento della cartella' },
+      { error: `Errore nello spostamento della cartella: ${detail}` },
       { status: 500 },
     );
   }
