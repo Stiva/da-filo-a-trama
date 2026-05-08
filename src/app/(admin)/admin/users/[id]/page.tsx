@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import type { Profile, ServiceRole, EventCategory, EnrollmentStatus } from '@/types/database';
 import { SERVICE_ROLE_LABELS } from '@/types/database';
@@ -33,6 +34,9 @@ export default function AdminUserDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user: clerkUser } = useUser();
+  const currentRole = (clerkUser?.publicMetadata as { role?: string } | undefined)?.role;
+  const isReadOnly = currentRole === 'segreteria';
 
   const [user, setUser] = useState<ProfileWithEnrollments | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -264,7 +268,7 @@ export default function AdminUserDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {user.codice_socio && (
+          {!isReadOnly && user.codice_socio && (
             <Link
               href={`/admin/crm/${encodeURIComponent(user.codice_socio)}`}
               className="px-4 py-2 bg-agesci-blue/10 text-agesci-blue hover:bg-agesci-blue/20 rounded-lg transition-colors font-medium border border-transparent"
@@ -272,12 +276,14 @@ export default function AdminUserDetailPage({
               Vedi in CRM
             </Link>
           )}
-          <button
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Elimina Utente
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Elimina Utente
+            </button>
+          )}
         </div>
       </div>
 
@@ -299,6 +305,7 @@ export default function AdminUserDetailPage({
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="input w-full"
+                      disabled={isReadOnly}
                     />
                   </div>
                   <div>
@@ -308,6 +315,7 @@ export default function AdminUserDetailPage({
                       value={formData.surname}
                       onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
                       className="input w-full"
+                      disabled={isReadOnly}
                     />
                   </div>
                 </div>
@@ -320,17 +328,27 @@ export default function AdminUserDetailPage({
                     onChange={(e) => setFormData({ ...formData, codice_socio: e.target.value })}
                     className="input w-full"
                     placeholder="Es. 123456"
+                    disabled={isReadOnly}
                   />
                 </div>
 
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gruppo Scout</label>
-                  <Autocomplete
-                    value={formData.scout_group}
-                    onChange={(val) => setFormData({ ...formData, scout_group: val })}
-                    options={scoutGroups}
-                    placeholder="Es. Roma 123 o lascia vuoto"
-                  />
+                  {isReadOnly ? (
+                    <input
+                      type="text"
+                      value={formData.scout_group}
+                      className="input w-full"
+                      disabled
+                    />
+                  ) : (
+                    <Autocomplete
+                      value={formData.scout_group}
+                      onChange={(val) => setFormData({ ...formData, scout_group: val })}
+                      options={scoutGroups}
+                      placeholder="Es. Roma 123 o lascia vuoto"
+                    />
+                  )}
                 </div>
 
                 {user.service_role && (
@@ -357,6 +375,7 @@ export default function AdminUserDetailPage({
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as 'user' | 'staff' | 'admin' | 'guest' | 'segreteria' })}
                     className="input w-full"
+                    disabled={isReadOnly}
                   >
                     <option value="user">Utente</option>
                     <option value="segreteria">Segreteria/Informazione</option>
@@ -374,12 +393,13 @@ export default function AdminUserDetailPage({
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         id="is_medical_staff_admin"
                         checked={formData.is_medical_staff}
                         onChange={(e) => setFormData({ ...formData, is_medical_staff: e.target.checked })}
                         className="w-5 h-5 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                        disabled={isReadOnly}
                       />
                       <label htmlFor="is_medical_staff_admin" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
                         🩺 Medico / Infermiere
@@ -392,6 +412,7 @@ export default function AdminUserDetailPage({
                         value={formData.fire_warden_level}
                         onChange={(e) => setFormData({ ...formData, fire_warden_level: e.target.value })}
                         className="input w-full text-sm"
+                        disabled={isReadOnly}
                       >
                         <option value="">Nessuno / Non addetto</option>
                         <option value="basso">Rischio Basso (Livello 1)</option>
@@ -404,15 +425,17 @@ export default function AdminUserDetailPage({
               </div>
             </div>
 
-            <div className="flex justify-end">
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-4 py-2 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light transition-colors disabled:opacity-50"
-              >
-                {isSaving ? 'Salvataggio...' : 'Salva Modifiche'}
-              </button>
-            </div>
+            {!isReadOnly && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light transition-colors disabled:opacity-50"
+                >
+                  {isSaving ? 'Salvataggio...' : 'Salva Modifiche'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Enrollments */}
@@ -519,7 +542,9 @@ export default function AdminUserDetailPage({
           {/* Status Card */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Stato Account</h2>
-            <p className="text-xs text-gray-400 mb-4">Salvare dopo aver modificato</p>
+            {!isReadOnly && (
+              <p className="text-xs text-gray-400 mb-4">Salvare dopo aver modificato</p>
+            )}
 
             <div className="space-y-3">
               {(
@@ -536,6 +561,7 @@ export default function AdminUserDetailPage({
                     checked={formData[key]}
                     onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
                     className="w-4 h-4 text-agesci-blue rounded border-gray-300 focus:ring-agesci-blue"
+                    disabled={isReadOnly}
                   />
                 </label>
               ))}
