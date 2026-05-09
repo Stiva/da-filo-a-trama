@@ -1,8 +1,10 @@
-import { auth, currentUser, clerkClient } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { DashboardContent, UserState } from '@/types/database';
+
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -11,58 +13,59 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
+  // currentUser() include gia' publicMetadata: la vecchia chiamata extra a
+  // clerkClient().users.getUser() poteva bloccare il primo render post-login
+  // quando l'API Clerk era lenta, lasciando l'utente fermo sulla schermata di sign-in.
   const user = await currentUser();
-
-  // Verifica ruolo admin via Clerk
-  const client = await clerkClient();
-  const clerkUser = await client.users.getUser(userId);
-  const role = (clerkUser.publicMetadata as { role?: string })?.role;
+  const role = (user?.publicMetadata as { role?: string } | undefined)?.role;
   const isAdmin = role === 'admin' || role === 'staff' || role === 'segreteria';
 
-  // Verifica se l'onboarding e' completato (usa service role per bypassare RLS)
   const supabase = createServiceRoleClient();
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, onboarding_completed, first_name, profile_setup_complete, role')
     .eq('clerk_id', userId)
-    .single();
+    .maybeSingle();
 
   if (!profile || !profile.onboarding_completed) {
     redirect(profile?.role === 'guest' ? '/guest-onboarding' : '/onboarding');
   }
 
-  const firstName = profile?.first_name || user?.firstName || 'Scout';
+  const firstName = profile.first_name || user?.firstName || 'Scout';
 
-  // Determina lo stato utente
-  let userState: UserState = 'new_user';
-  if (profile && profile.id) {
-    // Conta le iscrizioni confermate
-    const { count: enrollmentCount } = await supabase
+  const [
+    { count: enrollmentCount },
+    { data: enrolledContent },
+  ] = await Promise.all([
+    supabase
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', profile.id)
-      .eq('status', 'confirmed');
+      .eq('status', 'confirmed'),
+    supabase
+      .from('dashboard_content')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
+  ]);
 
-    if ((enrollmentCount || 0) > 0) {
-      userState = 'enrolled';
-    } else if (profile.profile_setup_complete) {
-      userState = 'profile_complete';
-    } else if (profile.onboarding_completed) {
-      userState = 'onboarding_done';
-    }
+  // Determina lo stato utente
+  let userState: UserState = 'new_user';
+  if ((enrollmentCount || 0) > 0) {
+    userState = 'enrolled';
+  } else if (profile.profile_setup_complete) {
+    userState = 'profile_complete';
+  } else if (profile.onboarding_completed) {
+    userState = 'onboarding_done';
   }
 
-  // Fetch contenuti dinamici per lo stato utente
-  const { data: dynamicContent } = await supabase
-    .from('dashboard_content')
-    .select('*')
-    .eq('is_active', true)
-    .or(`target_state.eq.${userState},target_state.eq.all`)
-    .order('display_order', { ascending: true });
+  const dynamicContent: DashboardContent[] = (enrolledContent as DashboardContent[] | null)?.filter(
+    (c) => c.target_state === userState || c.target_state === 'all'
+  ) ?? [];
 
   // Trova il contenuto "prossimi passi" per lo stato corrente
-  const prossimiPassiContent = (dynamicContent as DashboardContent[] | null)?.find(
-    (c) => c.key.startsWith('prossimi_passi') && (c.target_state === userState || c.target_state === 'all')
+  const prossimiPassiContent = dynamicContent.find(
+    (c) => c.key.startsWith('prossimi_passi')
   );
 
   const quickActions = [
