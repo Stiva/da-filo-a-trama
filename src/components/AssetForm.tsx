@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { sanitizeFolderPath } from '@/lib/folderPath';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
+
+const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
 const ASSET_TYPES: { value: AssetType; label: string }[] = [
   { value: 'pdf', label: 'PDF' },
@@ -96,38 +99,82 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     fetchFolders();
   }, []);
 
-  // Handle file upload
+  // Handle file upload (direct to Supabase Storage via signed URL)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > MAX_UPLOAD_SIZE) {
+      setError('File troppo grande. Massimo 50MB.');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
-    setUploadProgress('Caricamento in corso...');
+    setUploadProgress('Preparazione upload...');
 
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-
-      const response = await fetch('/api/admin/assets/upload', {
+      const signResponse = await fetch('/api/admin/assets/upload', {
         method: 'POST',
-        body: uploadFormData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Errore durante il caricamento');
+      const signResultText = await signResponse.text();
+      let signResult: {
+        data?: {
+          token: string;
+          path: string;
+          file_url: string;
+          file_name: string;
+          file_size_bytes: number;
+          mime_type: string;
+          tipo: string;
+        };
+        error?: string;
+      };
+      try {
+        signResult = JSON.parse(signResultText);
+      } catch {
+        throw new Error(
+          signResponse.status === 413
+            ? 'Richiesta troppo grande.'
+            : `Errore server (${signResponse.status})`,
+        );
       }
 
-      // Aggiorna form con i dati del file caricato
+      if (!signResponse.ok || !signResult.data) {
+        throw new Error(signResult.error || 'Errore durante la preparazione dell\'upload');
+      }
+
+      const { token, path, file_url, file_name, file_size_bytes, mime_type, tipo } = signResult.data;
+
+      setUploadProgress('Caricamento file...');
+
+      const supabase = getSupabaseClient();
+      const { error: uploadError } = await supabase.storage
+        .from('assets')
+        .uploadToSignedUrl(path, token, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || 'Errore durante l\'upload');
+      }
+
       setFormData(prev => ({
         ...prev,
-        file_name: result.data.file_name,
-        file_url: result.data.file_url,
-        tipo: result.data.tipo as AssetType,
-        file_size_bytes: result.data.file_size_bytes,
-        mime_type: result.data.mime_type,
+        file_name,
+        file_url,
+        tipo: tipo as AssetType,
+        file_size_bytes,
+        mime_type,
       }));
 
       setUploadProgress('File caricato con successo!');

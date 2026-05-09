@@ -3,7 +3,10 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { ApiResponse } from '@/types/database';
 
-interface UploadResult {
+interface SignedUploadResult {
+  signed_url: string;
+  token: string;
+  path: string;
   file_url: string;
   file_name: string;
   file_size_bytes: number;
@@ -11,13 +14,41 @@ interface UploadResult {
   tipo: string;
 }
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+const ALLOWED_MIME_TYPES = new Set([
+  // Images
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  // Documents
+  'application/pdf', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  // Video
+  'video/mp4', 'video/webm',
+  // Audio
+  'audio/mpeg', 'audio/wav',
+]);
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+  '.mp4', '.webm',
+  '.mp3', '.wav',
+]);
+
 /**
  * POST /api/admin/assets/upload
- * Upload file to Supabase Storage (admin only)
+ * Restituisce un URL firmato per l'upload diretto a Supabase Storage.
+ * Il client effettua l'upload direttamente, evitando il limite di body
+ * delle serverless function (~4.5MB su Vercel).
  */
 export async function POST(
   request: Request
-): Promise<NextResponse<ApiResponse<UploadResult>>> {
+): Promise<NextResponse<ApiResponse<SignedUploadResult>>> {
   try {
     const { userId } = await auth();
 
@@ -25,7 +56,6 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verifica ruolo admin via Clerk
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
     const role = (clerkUser.publicMetadata as { role?: string })?.role;
@@ -34,53 +64,40 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-
-    if (!file) {
+    let body: { fileName?: unknown; fileSize?: unknown; mimeType?: unknown };
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { error: 'Nessun file fornito' },
+        { error: 'Body JSON non valido' },
         { status: 400 }
       );
     }
 
-    // Validazione dimensione (max 50MB)
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
+    const fileName = typeof body.fileName === 'string' ? body.fileName : '';
+    const fileSize = typeof body.fileSize === 'number' ? body.fileSize : NaN;
+    const mimeType = typeof body.mimeType === 'string' ? body.mimeType : '';
+
+    if (!fileName || !mimeType || !Number.isFinite(fileSize)) {
+      return NextResponse.json(
+        { error: 'Parametri obbligatori: fileName, fileSize, mimeType' },
+        { status: 400 }
+      );
+    }
+
+    if (fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: 'File troppo grande. Massimo 50MB.' },
         { status: 400 }
       );
     }
 
-    // Security: Validazione tipo file (Allowlist)
-    const allowedMimeTypes = new Set([
-      // Images
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-      // Documents
-      'application/pdf', 'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'text/plain',
-      // Video
-      'video/mp4', 'video/webm',
-      // Audio
-      'audio/mpeg', 'audio/wav',
-    ]);
+    const lastDot = fileName.lastIndexOf('.');
+    const fileExtension = lastDot >= 0
+      ? fileName.substring(lastDot).toLowerCase()
+      : '';
 
-    const allowedExtensions = new Set([
-      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
-      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-      '.mp4', '.webm',
-      '.mp3', '.wav'
-    ]);
-
-    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-
-    if (!allowedMimeTypes.has(file.type) || !allowedExtensions.has(fileExtension)) {
+    if (!ALLOWED_MIME_TYPES.has(mimeType) || !ALLOWED_EXTENSIONS.has(fileExtension)) {
       return NextResponse.json(
         { error: 'Tipo di file non consentito. Formati supportati: documenti, immagini, video e audio comuni.' },
         { status: 400 }
@@ -89,65 +106,58 @@ export async function POST(
 
     const supabase = createServiceRoleClient();
 
-    // Genera nome file unico
     const timestamp = Date.now();
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const sanitizedName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `uploads/${timestamp}_${sanitizedName}`;
 
-    // Upload a Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: signedData, error: signedError } = await supabase.storage
       .from('assets')
-      .upload(filePath, file, {
-        contentType: file.type,
-        upsert: false,
-      });
+      .createSignedUploadUrl(filePath);
 
-    if (uploadError) {
-      console.error('Supabase Storage upload error:', uploadError);
+    if (signedError || !signedData) {
+      console.error('Supabase createSignedUploadUrl error:', signedError);
 
-      // Se il bucket non esiste, dai un messaggio chiaro
-      if (uploadError.message.includes('Bucket not found')) {
+      if (signedError?.message?.includes('Bucket not found')) {
         return NextResponse.json(
           { error: 'Storage non configurato. Crea il bucket "assets" in Supabase.' },
           { status: 500 }
         );
       }
 
-      throw uploadError;
+      return NextResponse.json(
+        { error: 'Impossibile generare URL di upload' },
+        { status: 500 }
+      );
     }
 
-    // Ottieni URL pubblico
     const { data: urlData } = supabase.storage
       .from('assets')
-      .getPublicUrl(uploadData.path);
+      .getPublicUrl(signedData.path);
 
-    // Determina tipo asset
-    const tipo = detectAssetType(file.type, file.name);
-
-    const result: UploadResult = {
+    const result: SignedUploadResult = {
+      signed_url: signedData.signedUrl,
+      token: signedData.token,
+      path: signedData.path,
       file_url: urlData.publicUrl,
-      file_name: file.name,
-      file_size_bytes: file.size,
-      mime_type: file.type,
-      tipo,
+      file_name: fileName,
+      file_size_bytes: fileSize,
+      mime_type: mimeType,
+      tipo: detectAssetType(mimeType, fileName),
     };
 
     return NextResponse.json({
       data: result,
-      message: 'File caricato con successo',
+      message: 'URL di upload generato',
     });
   } catch (error) {
     console.error('Errore POST /api/admin/assets/upload:', error);
     return NextResponse.json(
-      { error: 'Errore nel caricamento del file' },
+      { error: 'Errore nella generazione dell\'URL di upload' },
       { status: 500 }
     );
   }
 }
 
-/**
- * Determina il tipo di asset dal MIME type e nome file
- */
 function detectAssetType(mimeType: string, fileName: string): string {
   const mime = mimeType.toLowerCase();
   const name = fileName.toLowerCase();
