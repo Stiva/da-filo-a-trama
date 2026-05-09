@@ -74,22 +74,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider localization={itIT}>
-      <html lang="it" className={`${inter.variable} ${quicksand.variable} ${dancingScript.variable} ${loveYou.variable}`}>
-        <head>
-          <Script
-            id="Cookiebot"
-            src="https://consent.cookiebot.com/uc.js"
-            data-cbid="dfe926e5-9d83-49db-9a98-354d10731a44"
-            data-blockingmode="auto"
-            strategy="beforeInteractive"
-          />
-        </head>
-        <body className="min-h-screen bg-scout-cream font-sans antialiased">
+    <html lang="it" className={`${inter.variable} ${quicksand.variable} ${dancingScript.variable} ${loveYou.variable}`}>
+      <head>
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="dfe926e5-9d83-49db-9a98-354d10731a44"
+          data-blockingmode="auto"
+          strategy="beforeInteractive"
+        />
+      </head>
+      <body className="min-h-screen bg-scout-cream font-sans antialiased">
+        <ClerkProvider localization={itIT}>
           {children}
           <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
