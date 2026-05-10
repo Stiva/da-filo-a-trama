@@ -491,12 +491,12 @@ export default function AdminEventsPage() {
                                 if (colId === 'evento') {
                                     return (
                                         <td key={colId} className="px-6 py-4">
-                                          <div>
-                                            <p className="font-medium text-gray-900">{event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}</p>
+                                          <Link href={`/admin/events/${event.id}`} className="block group">
+                                            <p className="font-medium text-gray-900 group-hover:text-agesci-blue transition-colors">{event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}</p>
                                             {event.speaker_name && !visibleColumns.includes('speaker') && (
                                               <p className="text-sm text-gray-500">con {event.speaker_name}</p>
                                             )}
-                                          </div>
+                                          </Link>
                                         </td>
                                     );
                                 }
@@ -618,9 +618,11 @@ export default function AdminEventsPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-medium text-gray-900 truncate">
-                              {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
-                          </h3>
+                          <Link href={`/admin/events/${event.id}`} className="group block min-w-0 flex-1">
+                            <h3 className="font-medium text-gray-900 truncate group-hover:text-agesci-blue transition-colors">
+                                {event.category === 'laboratorio' && event.custom_id ? `${event.custom_id} - ${event.title}` : event.title}
+                            </h3>
+                          </Link>
                           <button
                             onClick={() => handleTogglePublish(event.id, event.is_published)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-full flex-shrink-0 ${event.is_published
