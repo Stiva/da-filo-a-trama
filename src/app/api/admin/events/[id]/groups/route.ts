@@ -237,19 +237,53 @@ export async function GET(
                 .from('participants')
                 .select('codice, nome, cognome, gruppo, ruolo, static_group')
                 .eq('is_active_in_list', true);
-                
+
             if (!crmError && crmParticipants) {
-                unassignedUsers = crmParticipants
-                    .filter((p: any) => !assignedCodices.has(p.codice))
-                    .map((p: any) => ({
-                        id: p.codice,
-                        name: p.nome,
-                        surname: p.cognome,
-                        scout_group: p.gruppo,
-                        service_role: p.ruolo,
-                        static_group: p.static_group,
-                        is_crm_only: true
-                    }));
+                // Carichiamo i profili App collegati (codice_socio = participants.codice) per
+                // applicare la regola: "un utente CRM viene sostituito da un utente iscritto
+                // quando questo è effettivamente presente sull'app". Senza questo, un CRM il
+                // cui profilo è stato spostato in event_group_members dal trigger 051 risulta
+                // ancora "non assegnato".
+                const codici = crmParticipants.map((p: any) => p.codice).filter(Boolean);
+                const linkedByCodice = new Map<string, any>();
+                if (codici.length > 0) {
+                    const { data: linkedProfiles } = await supabase
+                        .from('profiles')
+                        .select('id, name, surname, scout_group, service_role, codice_socio')
+                        .in('codice_socio', codici)
+                        .eq('profile_setup_complete', true);
+                    (linkedProfiles || []).forEach((p: any) => {
+                        if (p.codice_socio) linkedByCodice.set(p.codice_socio, p);
+                    });
+                }
+
+                unassignedUsers = [];
+                for (const p of crmParticipants) {
+                    const linked = linkedByCodice.get(p.codice);
+                    if (linked) {
+                        if (assignedUserIds.has(linked.id)) continue;
+                        unassignedUsers.push({
+                            id: linked.id,
+                            name: linked.name,
+                            surname: linked.surname,
+                            scout_group: linked.scout_group,
+                            service_role: linked.service_role,
+                            static_group: p.static_group,
+                            is_crm_only: false,
+                        });
+                    } else {
+                        if (assignedCodices.has(p.codice)) continue;
+                        unassignedUsers.push({
+                            id: p.codice,
+                            name: p.nome,
+                            surname: p.cognome,
+                            scout_group: p.gruppo,
+                            service_role: p.ruolo,
+                            static_group: p.static_group,
+                            is_crm_only: true,
+                        });
+                    }
+                }
             }
         } else {
             // Standard mode: fetch from enrollments
