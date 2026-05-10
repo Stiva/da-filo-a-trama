@@ -239,19 +239,20 @@ export async function GET(
                 .eq('is_active_in_list', true);
 
             if (!crmError && crmParticipants) {
-                // Carichiamo i profili App collegati (codice_socio = participants.codice) per
-                // applicare la regola: "un utente CRM viene sostituito da un utente iscritto
-                // quando questo è effettivamente presente sull'app". Senza questo, un CRM il
-                // cui profilo è stato spostato in event_group_members dal trigger 051 risulta
-                // ancora "non assegnato".
+                // Carichiamo i profili App collegati via codice_socio: un partecipante CRM
+                // con profilo registrato deve essere rappresentato dal profilo (regola
+                // "il CRM viene sostituito dall'utente iscritto"). La migrazione 069
+                // garantisce che, per questi casi, la membership viva in event_group_members
+                // (non più in event_crm_group_members), quindi qui basta intercettare il
+                // legame e controllare assignedUserIds. Manteniamo come fallback difensivo
+                // anche assignedCodices nel caso di dati legacy non ancora migrati.
                 const codici = crmParticipants.map((p: any) => p.codice).filter(Boolean);
                 const linkedByCodice = new Map<string, any>();
                 if (codici.length > 0) {
                     const { data: linkedProfiles } = await supabase
                         .from('profiles')
                         .select('id, name, surname, scout_group, service_role, codice_socio')
-                        .in('codice_socio', codici)
-                        .eq('profile_setup_complete', true);
+                        .in('codice_socio', codici);
                     (linkedProfiles || []).forEach((p: any) => {
                         if (p.codice_socio) linkedByCodice.set(p.codice_socio, p);
                     });
@@ -262,6 +263,7 @@ export async function GET(
                     const linked = linkedByCodice.get(p.codice);
                     if (linked) {
                         if (assignedUserIds.has(linked.id)) continue;
+                        if (assignedCodices.has(p.codice)) continue;
                         unassignedUsers.push({
                             id: linked.id,
                             name: linked.name,
