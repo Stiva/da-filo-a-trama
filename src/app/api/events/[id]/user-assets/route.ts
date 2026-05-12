@@ -28,7 +28,6 @@ export async function GET(
 
     const supabase = createServiceRoleClient();
 
-    // Recupera profilo utente
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
@@ -65,8 +64,11 @@ export async function GET(
 
 /**
  * POST /api/events/[id]/user-assets
- * Utente carica un asset (file o link) per l'evento
- * Prerequisiti: user_can_upload_assets abilitato e check-in effettuato
+ * Registra un asset gia' caricato (file via signed URL) oppure un link.
+ * Body JSON:
+ *   - file:  { type: 'file', url, file_name, file_size_bytes, mime_type, title? }
+ *   - link:  { type: 'link', url, title, link_type? }   (type opzionale per retrocompatibilita')
+ * Prerequisiti: user_can_upload_assets abilitato e check-in effettuato.
  */
 export async function POST(
   request: Request,
@@ -83,9 +85,18 @@ export async function POST(
       );
     }
 
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Body JSON non valido' },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceRoleClient();
 
-    // Recupera profilo utente
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
@@ -99,7 +110,6 @@ export async function POST(
       );
     }
 
-    // Verifica evento
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('id, user_can_upload_assets')
@@ -120,7 +130,6 @@ export async function POST(
       );
     }
 
-    // Verifica check-in effettuato
     const { data: enrollment, error: enrollmentError } = await supabase
       .from('enrollments')
       .select('id, checked_in_at')
@@ -143,16 +152,13 @@ export async function POST(
       );
     }
 
-    // Determina tipo di contenuto (file o link)
-    const contentType = request.headers.get('content-type') || '';
+    const assetType = body.type === 'file' ? 'file' : 'link';
 
-    if (contentType.includes('multipart/form-data')) {
-      // Upload file
-      return await handleFileUpload(request, supabase, profile.id, eventId);
+    if (assetType === 'file') {
+      return await commitFileAsset(body, supabase, profile.id, eventId);
     }
 
-    // Link
-    return await handleLinkUpload(request, supabase, profile.id, eventId);
+    return await commitLinkAsset(body, supabase, profile.id, eventId);
   } catch (error) {
     console.error('Errore POST /api/events/[id]/user-assets:', error);
     return NextResponse.json(
@@ -164,7 +170,7 @@ export async function POST(
 
 /**
  * DELETE /api/events/[id]/user-assets
- * Utente elimina un proprio asset
+ * Utente elimina un proprio asset.
  * Body: { asset_id: string }
  */
 export async function DELETE(
@@ -207,7 +213,6 @@ export async function DELETE(
       );
     }
 
-    // Recupera asset per verificare ownership e tipo
     const { data: asset, error: assetError } = await supabase
       .from('user_event_assets')
       .select('*')
@@ -223,7 +228,6 @@ export async function DELETE(
       );
     }
 
-    // Se e un file, elimina anche da Storage
     if (asset.type === 'file' && asset.url) {
       const storagePathMatch = asset.url.match(/\/storage\/v1\/object\/public\/assets\/(.+)$/);
       if (storagePathMatch) {
@@ -233,7 +237,6 @@ export async function DELETE(
       }
     }
 
-    // Elimina record
     const { error: deleteError } = await supabase
       .from('user_event_assets')
       .delete()
@@ -256,85 +259,24 @@ export async function DELETE(
   }
 }
 
-async function handleFileUpload(
-  request: Request,
+async function commitFileAsset(
+  body: Record<string, unknown>,
   supabase: ReturnType<typeof createServiceRoleClient>,
   profileId: string,
   eventId: string
 ): Promise<NextResponse<ApiResponse<UserEventAsset>>> {
-  const formData = await request.formData();
-  const file = formData.get('file') as File | null;
-  const title = (formData.get('title') as string) || '';
+  const url = typeof body.url === 'string' ? body.url : '';
+  const fileName = typeof body.file_name === 'string' ? body.file_name : '';
+  const fileSize = typeof body.file_size_bytes === 'number' ? body.file_size_bytes : null;
+  const mimeType = typeof body.mime_type === 'string' ? body.mime_type : '';
+  const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : fileName;
 
-  if (!file) {
+  if (!url || !fileName || !mimeType) {
     return NextResponse.json(
-      { error: 'Nessun file fornito' },
+      { error: 'Parametri obbligatori: url, file_name, mime_type' },
       { status: 400 }
     );
   }
-
-  const maxSizeMb = 250;
-  const maxSize = maxSizeMb * 1024 * 1024;
-  if (file.size > maxSize) {
-    return NextResponse.json(
-      { error: `File troppo grande. Massimo ${maxSizeMb}MB.` },
-      { status: 400 }
-    );
-  }
-
-  // Security: Validazione tipo file (Allowlist)
-  const allowedMimeTypes = new Set([
-    // Images
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/heic', 'image/heif',
-    // Documents
-    'application/pdf', 'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'text/plain',
-    // Video
-    'video/mp4', 'video/webm', 'video/quicktime',
-    // Audio
-    'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
-    'audio/aac', 'audio/ogg', 'audio/webm', 'audio/flac', 'audio/x-flac',
-  ]);
-
-  const allowedExtensions = new Set([
-    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
-    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.heic', '.heif',
-    '.mp4', '.webm', '.mov',
-    '.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac',
-  ]);
-
-  const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-
-  if (!allowedMimeTypes.has(file.type) || !allowedExtensions.has(fileExtension)) {
-    return NextResponse.json(
-      { error: 'Tipo di file non consentito. Formati supportati: documenti, immagini, video e audio comuni.' },
-      { status: 400 }
-    );
-  }
-
-  const timestamp = Date.now();
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const filePath = `user-uploads/${eventId}/${timestamp}_${sanitizedName}`;
-
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('assets')
-    .upload(filePath, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-
-  if (uploadError) {
-    throw uploadError;
-  }
-
-  const { data: urlData } = supabase.storage
-    .from('assets')
-    .getPublicUrl(uploadData.path);
 
   const { data, error } = await supabase
     .from('user_event_assets')
@@ -342,11 +284,11 @@ async function handleFileUpload(
       user_id: profileId,
       event_id: eventId,
       type: 'file',
-      title: title || file.name,
-      url: urlData.publicUrl,
-      file_name: file.name,
-      file_size_bytes: file.size,
-      mime_type: file.type,
+      title,
+      url,
+      file_name: fileName,
+      file_size_bytes: fileSize,
+      mime_type: mimeType,
     })
     .select()
     .single();
@@ -361,22 +303,23 @@ async function handleFileUpload(
   });
 }
 
-async function handleLinkUpload(
-  request: Request,
+async function commitLinkAsset(
+  body: Record<string, unknown>,
   supabase: ReturnType<typeof createServiceRoleClient>,
   profileId: string,
   eventId: string
 ): Promise<NextResponse<ApiResponse<UserEventAsset>>> {
-  const body = await request.json();
+  const url = typeof body.url === 'string' ? body.url : '';
+  const title = typeof body.title === 'string' ? body.title : '';
 
-  if (!body.url || !body.title) {
+  if (!url || !title) {
     return NextResponse.json(
       { error: 'URL e titolo sono obbligatori' },
       { status: 400 }
     );
   }
 
-  const linkType = body.link_type || 'other';
+  const linkType = typeof body.link_type === 'string' ? body.link_type : 'other';
 
   const { data, error } = await supabase
     .from('user_event_assets')
@@ -384,8 +327,8 @@ async function handleLinkUpload(
       user_id: profileId,
       event_id: eventId,
       type: 'link',
-      title: body.title,
-      url: body.url,
+      title,
+      url,
       link_type: linkType,
     })
     .select()

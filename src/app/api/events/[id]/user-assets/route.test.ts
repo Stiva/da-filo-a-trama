@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
-import { NextResponse } from 'next/server';
 
-// Mock dependencies
 vi.mock('@clerk/nextjs/server', () => ({
   auth: vi.fn(() => ({ userId: 'user_123' })),
 }));
@@ -10,10 +8,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 const mockSupabase = {
   from: vi.fn(),
   storage: {
-    from: vi.fn(() => ({
-      upload: vi.fn(),
-      getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://example.com/asset.png' } })),
-    })),
+    from: vi.fn(),
   },
 };
 
@@ -21,39 +16,24 @@ vi.mock('@/lib/supabase/server', () => ({
   createServiceRoleClient: vi.fn(() => mockSupabase),
 }));
 
-describe('POST /api/events/[id]/user-assets', () => {
+describe('POST /api/events/[id]/user-assets (commit)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const createMockRequest = (name: string, type: string, size: number) => {
-    const file = new File(['dummy content'], name, { type });
-    Object.defineProperty(file, 'size', { value: size });
-
-    // Mock formData to avoid Next.js / Undici issues in Node.js test environment
-    const formDataMock = new FormData();
-    formDataMock.append('file', file);
-
-    return {
-      formData: vi.fn().mockResolvedValue(formDataMock),
-      headers: new Headers({
-        'content-type': 'multipart/form-data; boundary=---boundary',
-      }),
-    } as unknown as Request;
-  };
+  const createJsonRequest = (body: Record<string, unknown>) =>
+    ({
+      json: vi.fn().mockResolvedValue(body),
+    } as unknown as Request);
 
   const setupSupabaseMocks = (
     userCanUploadAssets: boolean = true,
     checkedInAt: string | null = '2024-01-01T10:00:00Z'
   ) => {
-    // 1. mock per 'profiles'
     const profileMock = { data: { id: 'profile_123' }, error: null };
-    // 2. mock per 'events'
     const eventMock = { data: { id: 'event_123', user_can_upload_assets: userCanUploadAssets }, error: null };
-    // 3. mock per 'enrollments'
     const enrollmentMock = { data: { id: 'enrollment_123', checked_in_at: checkedInAt }, error: null };
-    // 4. mock per 'user_event_assets' insert
-    const insertMock = { data: { id: 'asset_123', url: 'https://example.com/asset.png' }, error: null };
+    const insertMock = { data: { id: 'asset_123', url: 'https://example.com/asset.m4a' }, error: null };
 
     const fromMock = vi.fn((table) => {
       const queryBuilder = {
@@ -77,58 +57,60 @@ describe('POST /api/events/[id]/user-assets', () => {
     });
 
     mockSupabase.from.mockImplementation(fromMock as any);
-
-    mockSupabase.storage.from.mockReturnValue({
-      upload: vi.fn().mockResolvedValue({ data: { path: 'path/to/file' }, error: null }),
-      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://example.com/asset.png' } }),
-    } as any);
   };
 
-  it('should reject a file with an invalid extension and mime type', async () => {
+  it('commits a file asset (post-upload) with valid metadata', async () => {
     setupSupabaseMocks();
-    const request = createMockRequest('malicious.exe', 'application/x-msdownload', 1024);
-
-    const params = Promise.resolve({ id: 'event_123' });
-    const response = await POST(request, { params });
-    const data = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(data.error).toBe('Tipo di file non consentito. Formati supportati: documenti, immagini, video e audio comuni.');
-  });
-
-  it('should allow a file with a valid extension and mime type (e.g., pdf)', async () => {
-    setupSupabaseMocks();
-    const request = createMockRequest('document.pdf', 'application/pdf', 1024);
-
-    const params = Promise.resolve({ id: 'event_123' });
-    const response = await POST(request, { params });
+    const request = createJsonRequest({
+      type: 'file',
+      url: 'https://example.com/asset.m4a',
+      file_name: 'registrazione.m4a',
+      file_size_bytes: 150 * 1024 * 1024,
+      mime_type: 'audio/mp4',
+    });
+    const response = await POST(request, { params: Promise.resolve({ id: 'event_123' }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.message).toBe('File caricato con successo');
   });
 
-  it('should allow a file with a valid extension and mime type (e.g., png)', async () => {
+  it('rejects a file commit missing required metadata', async () => {
     setupSupabaseMocks();
-    const request = createMockRequest('image.png', 'image/png', 1024);
-
-    const params = Promise.resolve({ id: 'event_123' });
-    const response = await POST(request, { params });
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data.message).toBe('File caricato con successo');
-  });
-
-  it('should reject files that are too large (>250MB)', async () => {
-    setupSupabaseMocks();
-    const request = createMockRequest('large_video.mp4', 'video/mp4', 251 * 1024 * 1024); // 251MB
-
-    const params = Promise.resolve({ id: 'event_123' });
-    const response = await POST(request, { params });
+    const request = createJsonRequest({ type: 'file', url: 'https://example.com/x' });
+    const response = await POST(request, { params: Promise.resolve({ id: 'event_123' }) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe('File troppo grande. Massimo 250MB.');
+    expect(data.error).toContain('file_name');
+  });
+
+  it('commits a link asset', async () => {
+    setupSupabaseMocks();
+    const request = createJsonRequest({
+      url: 'https://youtube.com/watch?v=x',
+      title: 'Workshop',
+      link_type: 'web',
+    });
+    const response = await POST(request, { params: Promise.resolve({ id: 'event_123' }) });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.message).toBe('Link aggiunto con successo');
+  });
+
+  it('rejects when check-in is missing', async () => {
+    setupSupabaseMocks(true, null);
+    const request = createJsonRequest({
+      type: 'file',
+      url: 'https://example.com/x',
+      file_name: 'a.pdf',
+      mime_type: 'application/pdf',
+    });
+    const response = await POST(request, { params: Promise.resolve({ id: 'event_123' }) });
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain('check-in');
   });
 });

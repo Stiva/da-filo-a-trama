@@ -3,8 +3,6 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { ApiResponse } from '@/types/database';
 
-const BUCKET_NAME = 'assets';
-
 type UploaderRole = 'user' | 'staff' | 'admin';
 
 async function getCallerRole(userId: string): Promise<UploaderRole> {
@@ -58,24 +56,36 @@ export async function POST(
     { params }: RouteParams
 ): Promise<NextResponse<ApiResponse<any>>> {
     try {
-        const { id: eventId, groupId } = await params;
+        const { groupId } = await params;
         const { userId } = await auth();
 
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const formData = await request.formData();
-        const file = formData.get('file') as File | null;
-        const title = formData.get('title') as string | null;
+        let body: Record<string, unknown>;
+        try {
+            body = await request.json();
+        } catch {
+            return NextResponse.json(
+                { error: 'Body JSON non valido' },
+                { status: 400 }
+            );
+        }
 
-        if (!file) {
-            return NextResponse.json({ error: 'Nessun file fornito' }, { status: 400 });
+        const fileUrl = typeof body.file_url === 'string' ? body.file_url : '';
+        const fileName = typeof body.file_name === 'string' ? body.file_name : '';
+        const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : fileName;
+
+        if (!fileUrl || !fileName) {
+            return NextResponse.json(
+                { error: 'Parametri obbligatori: file_url, file_name' },
+                { status: 400 }
+            );
         }
 
         const supabase = createServiceRoleClient();
 
-        // Recupera profile ID
         const { data: profile } = await supabase
             .from('profiles')
             .select('id')
@@ -88,33 +98,13 @@ export async function POST(
 
         const uploaderRole = await getCallerRole(userId);
 
-        // Carica file su Supabase Storage
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${groupId}/${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `groups/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-            .from(BUCKET_NAME)
-            .upload(filePath, file);
-
-        if (uploadError) {
-            throw uploadError;
-        }
-
-        // Ottieni public URL
-        const { data: urlData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(filePath);
-
-        const displayName = title || file.name;
-
         const { data: attachment, error: dbError } = await supabase
             .from('event_group_attachments')
             .insert({
                 group_id: groupId,
                 user_id: profile.id,
-                file_name: displayName,
-                file_url: urlData.publicUrl,
+                file_name: title,
+                file_url: fileUrl,
                 uploaded_by_role: uploaderRole,
             })
             .select('id, file_name, file_url, created_at, user_id, uploaded_by_role, profile:profiles(id, name, surname)')
