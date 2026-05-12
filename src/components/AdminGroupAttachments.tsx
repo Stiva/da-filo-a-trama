@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import type { EventGroupAttachment } from '@/types/database';
 
 interface AdminGroupAttachmentsProps {
@@ -10,6 +11,9 @@ interface AdminGroupAttachmentsProps {
     onChange?: () => void;
 }
 
+const MAX_UPLOAD_SIZE_MB = 250;
+const MAX_UPLOAD_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+
 export default function AdminGroupAttachments({
     eventId,
     groupId,
@@ -18,6 +22,7 @@ export default function AdminGroupAttachments({
 }: AdminGroupAttachmentsProps) {
     const [attachments, setAttachments] = useState<EventGroupAttachment[]>(initialAttachments);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileTitle, setFileTitle] = useState('');
@@ -33,27 +38,74 @@ export default function AdminGroupAttachments({
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedFile) return;
+
+        if (selectedFile.size > MAX_UPLOAD_SIZE) {
+            setError(`File troppo grande. Massimo ${MAX_UPLOAD_SIZE_MB}MB.`);
+            return;
+        }
+
         setIsUploading(true);
         setError(null);
-        try {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            if (fileTitle) formData.append('title', fileTitle);
+        setUploadProgress('Preparazione upload...');
 
-            const res = await fetch(`/api/events/${eventId}/groups/${groupId}/attachments`, {
-                method: 'POST',
-                body: formData,
-            });
-            const json = await res.json();
-            if (!res.ok) {
-                throw new Error(json.error || 'Errore durante il caricamento');
+        try {
+            const signRes = await fetch(
+                `/api/events/${eventId}/groups/${groupId}/attachments/upload`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: selectedFile.name,
+                        fileSize: selectedFile.size,
+                        mimeType: selectedFile.type,
+                    }),
+                },
+            );
+            const signJson = await signRes.json();
+            if (!signRes.ok || !signJson.data) {
+                throw new Error(signJson.error || 'Errore durante la preparazione dell\'upload');
             }
-            setAttachments(prev => [json.data, ...prev]);
+            const { token, path, file_url, file_name } = signJson.data;
+
+            setUploadProgress('Caricamento file...');
+
+            const supabase = getSupabaseClient();
+            const { error: uploadError } = await supabase.storage
+                .from('assets')
+                .uploadToSignedUrl(path, token, selectedFile, {
+                    contentType: selectedFile.type,
+                    upsert: false,
+                });
+            if (uploadError) {
+                throw new Error(uploadError.message || 'Errore durante l\'upload');
+            }
+
+            setUploadProgress('Salvataggio...');
+
+            const commitRes = await fetch(
+                `/api/events/${eventId}/groups/${groupId}/attachments`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_url,
+                        file_name,
+                        title: fileTitle || file_name,
+                    }),
+                },
+            );
+            const commitJson = await commitRes.json();
+            if (!commitRes.ok) {
+                throw new Error(commitJson.error || 'Errore durante il salvataggio');
+            }
+            setAttachments(prev => [commitJson.data, ...prev]);
             setSelectedFile(null);
             setFileTitle('');
+            setUploadProgress(null);
             onChange?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore sconosciuto');
+            setUploadProgress(null);
         } finally {
             setIsUploading(false);
         }
@@ -154,14 +206,14 @@ export default function AdminGroupAttachments({
                         type="file"
                         onChange={handleFileChange}
                         className="flex-1 text-sm"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mp3"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.aac,.ogg,.flac"
                     />
                     <button
                         type="submit"
                         disabled={!selectedFile || isUploading}
                         className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded disabled:opacity-50"
                     >
-                        {isUploading ? 'Carico...' : 'Carica'}
+                        {isUploading ? (uploadProgress || 'Carico...') : 'Carica'}
                     </button>
                 </div>
             </form>

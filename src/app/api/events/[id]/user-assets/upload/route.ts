@@ -1,4 +1,4 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { ApiResponse } from '@/types/database';
@@ -11,7 +11,10 @@ interface SignedUploadResult {
   file_name: string;
   file_size_bytes: number;
   mime_type: string;
-  tipo: string;
+}
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
 }
 
 const MAX_FILE_SIZE = 250 * 1024 * 1024; // 250MB
@@ -43,27 +46,24 @@ const ALLOWED_EXTENSIONS = new Set([
 ]);
 
 /**
- * POST /api/admin/assets/upload
- * Restituisce un URL firmato per l'upload diretto a Supabase Storage.
- * Il client effettua l'upload direttamente, evitando il limite di body
- * delle serverless function (~4.5MB su Vercel).
+ * POST /api/events/[id]/user-assets/upload
+ * Restituisce un signed URL per l'upload diretto a Supabase Storage,
+ * evitando il limite di body delle function Vercel (~4.5MB).
+ * Prerequisiti: enrollment confermato e check-in effettuato.
  */
 export async function POST(
-  request: Request
+  request: Request,
+  { params }: RouteParams
 ): Promise<NextResponse<ApiResponse<SignedUploadResult>>> {
   try {
+    const { id: eventId } = await params;
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const client = await clerkClient();
-    const clerkUser = await client.users.getUser(userId);
-    const role = (clerkUser.publicMetadata as { role?: string })?.role;
-
-    if (role !== 'admin' && role !== 'staff') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Autenticazione richiesta' },
+        { status: 401 }
+      );
     }
 
     let body: { fileName?: unknown; fileSize?: unknown; mimeType?: unknown };
@@ -108,9 +108,64 @@ export async function POST(
 
     const supabase = createServiceRoleClient();
 
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('clerk_id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json(
+        { error: 'Profilo non trovato' },
+        { status: 404 }
+      );
+    }
+
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id, user_can_upload_assets')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError || !event) {
+      return NextResponse.json(
+        { error: 'Evento non trovato' },
+        { status: 404 }
+      );
+    }
+
+    if (!event.user_can_upload_assets) {
+      return NextResponse.json(
+        { error: 'Il caricamento di materiale non e abilitato per questo evento' },
+        { status: 400 }
+      );
+    }
+
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from('enrollments')
+      .select('id, checked_in_at')
+      .eq('event_id', eventId)
+      .eq('user_id', profile.id)
+      .eq('status', 'confirmed')
+      .single();
+
+    if (enrollmentError || !enrollment) {
+      return NextResponse.json(
+        { error: 'Non sei iscritto a questo evento' },
+        { status: 400 }
+      );
+    }
+
+    if (!enrollment.checked_in_at) {
+      return NextResponse.json(
+        { error: 'Devi effettuare il check-in prima di caricare materiale' },
+        { status: 400 }
+      );
+    }
+
     const timestamp = Date.now();
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `uploads/${timestamp}_${sanitizedName}`;
+    const filePath = `user-uploads/${eventId}/${profile.id}/${timestamp}_${sanitizedName}`;
 
     const { data: signedData, error: signedError } = await supabase.storage
       .from('assets')
@@ -118,14 +173,12 @@ export async function POST(
 
     if (signedError || !signedData) {
       console.error('Supabase createSignedUploadUrl error:', signedError);
-
       if (signedError?.message?.includes('Bucket not found')) {
         return NextResponse.json(
           { error: 'Storage non configurato. Crea il bucket "assets" in Supabase.' },
           { status: 500 }
         );
       }
-
       return NextResponse.json(
         { error: 'Impossibile generare URL di upload' },
         { status: 500 }
@@ -136,45 +189,23 @@ export async function POST(
       .from('assets')
       .getPublicUrl(signedData.path);
 
-    const result: SignedUploadResult = {
-      signed_url: signedData.signedUrl,
-      token: signedData.token,
-      path: signedData.path,
-      file_url: urlData.publicUrl,
-      file_name: fileName,
-      file_size_bytes: fileSize,
-      mime_type: mimeType,
-      tipo: detectAssetType(mimeType, fileName),
-    };
-
     return NextResponse.json({
-      data: result,
+      data: {
+        signed_url: signedData.signedUrl,
+        token: signedData.token,
+        path: signedData.path,
+        file_url: urlData.publicUrl,
+        file_name: fileName,
+        file_size_bytes: fileSize,
+        mime_type: mimeType,
+      },
       message: 'URL di upload generato',
     });
   } catch (error) {
-    console.error('Errore POST /api/admin/assets/upload:', error);
+    console.error('Errore POST /api/events/[id]/user-assets/upload:', error);
     return NextResponse.json(
       { error: 'Errore nella generazione dell\'URL di upload' },
       { status: 500 }
     );
   }
-}
-
-function detectAssetType(mimeType: string, fileName: string): string {
-  const mime = mimeType.toLowerCase();
-  const name = fileName.toLowerCase();
-
-  if (mime === 'application/pdf' || name.endsWith('.pdf')) {
-    return 'pdf';
-  }
-  if (mime.startsWith('image/')) {
-    return 'image';
-  }
-  if (mime.startsWith('video/')) {
-    return 'video';
-  }
-  if (mime.startsWith('audio/')) {
-    return 'audio';
-  }
-  return 'document';
 }

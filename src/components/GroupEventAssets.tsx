@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 // For simplicity, we just reuse the basic attachment structure
 interface GroupAttachment {
@@ -19,6 +20,9 @@ interface GroupEventAssetsProps {
     groupId: string;
 }
 
+const MAX_UPLOAD_SIZE_MB = 250;
+const MAX_UPLOAD_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+
 export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsProps) {
     const { user } = useUser();
     const callerRole = (user?.publicMetadata as { role?: string } | undefined)?.role;
@@ -33,6 +37,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
     // File form state
     const [fileTitle, setFileTitle] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
     useEffect(() => {
         fetchAssets();
@@ -57,34 +62,81 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
         e.preventDefault();
         if (!selectedFile) return;
 
+        if (selectedFile.size > MAX_UPLOAD_SIZE) {
+            setError(`File troppo grande. Massimo ${MAX_UPLOAD_SIZE_MB}MB.`);
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
         setSuccessMessage(null);
+        setUploadProgress('Preparazione upload...');
 
         try {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            if (fileTitle) {
-                formData.append('title', fileTitle);
+            const signResponse = await fetch(
+                `/api/events/${eventId}/groups/${groupId}/attachments/upload`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: selectedFile.name,
+                        fileSize: selectedFile.size,
+                        mimeType: selectedFile.type,
+                    }),
+                },
+            );
+
+            const signResult = await signResponse.json();
+
+            if (!signResponse.ok || !signResult.data) {
+                throw new Error(signResult.error || 'Errore durante la preparazione dell\'upload');
             }
 
-            const response = await fetch(`/api/events/${eventId}/groups/${groupId}/attachments`, {
-                method: 'POST',
-                body: formData,
-            });
+            const { token, path, file_url, file_name } = signResult.data;
 
-            const result = await response.json();
+            setUploadProgress('Caricamento file...');
 
-            if (!response.ok) {
-                throw new Error(result.error || 'Errore durante il caricamento');
+            const supabase = getSupabaseClient();
+            const { error: uploadError } = await supabase.storage
+                .from('assets')
+                .uploadToSignedUrl(path, token, selectedFile, {
+                    contentType: selectedFile.type,
+                    upsert: false,
+                });
+
+            if (uploadError) {
+                throw new Error(uploadError.message || 'Errore durante l\'upload');
+            }
+
+            setUploadProgress('Salvataggio...');
+
+            const commitResponse = await fetch(
+                `/api/events/${eventId}/groups/${groupId}/attachments`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_url,
+                        file_name,
+                        title: fileTitle || file_name,
+                    }),
+                },
+            );
+
+            const commitResult = await commitResponse.json();
+
+            if (!commitResponse.ok) {
+                throw new Error(commitResult.error || 'Errore durante il salvataggio');
             }
 
             setSuccessMessage('File caricato con successo');
             setSelectedFile(null);
             setFileTitle('');
+            setUploadProgress(null);
             fetchAssets();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Errore sconosciuto');
+            setUploadProgress(null);
         } finally {
             setIsSubmitting(false);
         }
@@ -218,7 +270,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                             onChange={handleFileChange}
                             className="hidden"
                             id="group-file-upload"
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mp3"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.aac,.ogg,.flac"
                         />
                         <label
                             htmlFor="group-file-upload"
@@ -234,7 +286,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                             ) : (
                                 <div>
                                     <p className="text-sm text-gray-600">Clicca per selezionare un file</p>
-                                    <p className="text-xs text-gray-400 mt-1">Max 50MB</p>
+                                    <p className="text-xs text-gray-400 mt-1">Max {MAX_UPLOAD_SIZE_MB}MB</p>
                                 </div>
                             )}
                         </label>
@@ -246,7 +298,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                     aria-busy={isSubmitting}
                     className="w-full py-2.5 px-4 rounded-lg text-white font-medium bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 min-h-[44px] transition-all text-sm"
                 >
-                    {isSubmitting ? 'Caricamento...' : 'Carica file'}
+                    {isSubmitting ? (uploadProgress || 'Caricamento...') : 'Carica file'}
                 </button>
             </form>
         </div>
