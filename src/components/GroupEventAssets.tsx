@@ -218,7 +218,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                             onChange={handleFileChange}
                             className="hidden"
                             id="group-file-upload"
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp4,.mp3"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.aac,.ogg,.flac"
                         />
                         <label
                             htmlFor="group-file-upload"
@@ -234,7 +234,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                             ) : (
                                 <div>
                                     <p className="text-sm text-gray-600">Clicca per selezionare un file</p>
-                                    <p className="text-xs text-gray-400 mt-1">Max 50MB</p>
+                                    <p className="text-xs text-gray-400 mt-1">Max 250MB</p>
                                 </div>
                             )}
                         </label>

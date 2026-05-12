@@ -14,11 +14,12 @@ interface SignedUploadResult {
   tipo: string;
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 250 * 1024 * 1024; // 250MB
+const MAX_FILE_SIZE_MB = 250;
 
 const ALLOWED_MIME_TYPES = new Set([
   // Images
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/heic', 'image/heif',
   // Documents
   'application/pdf', 'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -28,16 +29,17 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'text/plain',
   // Video
-  'video/mp4', 'video/webm',
+  'video/mp4', 'video/webm', 'video/quicktime',
   // Audio
-  'audio/mpeg', 'audio/wav',
+  'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
+  'audio/aac', 'audio/ogg', 'audio/webm', 'audio/flac', 'audio/x-flac',
 ]);
 
 const ALLOWED_EXTENSIONS = new Set([
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-  '.mp4', '.webm',
-  '.mp3', '.wav',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.heic', '.heif',
+  '.mp4', '.webm', '.mov',
+  '.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac',
 ]);
 
 /**
@@ -87,7 +89,7 @@ export async function POST(
 
     if (fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File troppo grande. Massimo 50MB.' },
+        { error: `File troppo grande. Massimo ${MAX_FILE_SIZE_MB}MB.` },
         { status: 400 }
       );
     }

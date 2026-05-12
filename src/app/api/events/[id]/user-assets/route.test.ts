@@ -120,15 +120,15 @@ describe('POST /api/events/[id]/user-assets', () => {
     expect(data.message).toBe('File caricato con successo');
   });
 
-  it('should reject files that are too large (>50MB)', async () => {
+  it('should reject files that are too large (>250MB)', async () => {
     setupSupabaseMocks();
-    const request = createMockRequest('large_video.mp4', 'video/mp4', 51 * 1024 * 1024); // 51MB
+    const request = createMockRequest('large_video.mp4', 'video/mp4', 251 * 1024 * 1024); // 251MB
 
     const params = Promise.resolve({ id: 'event_123' });
     const response = await POST(request, { params });
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe('File troppo grande. Massimo 50MB.');
+    expect(data.error).toBe('File troppo grande. Massimo 250MB.');
   });
 });

@@ -273,11 +273,11 @@ async function handleFileUpload(
     );
   }
 
-  // Max 50MB
-  const maxSize = 50 * 1024 * 1024;
+  const maxSizeMb = 250;
+  const maxSize = maxSizeMb * 1024 * 1024;
   if (file.size > maxSize) {
     return NextResponse.json(
-      { error: 'File troppo grande. Massimo 50MB.' },
+      { error: `File troppo grande. Massimo ${maxSizeMb}MB.` },
       { status: 400 }
     );
   }
@@ -285,7 +285,7 @@ async function handleFileUpload(
   // Security: Validazione tipo file (Allowlist)
   const allowedMimeTypes = new Set([
     // Images
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/heic', 'image/heif',
     // Documents
     'application/pdf', 'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -295,16 +295,17 @@ async function handleFileUpload(
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'text/plain',
     // Video
-    'video/mp4', 'video/webm',
+    'video/mp4', 'video/webm', 'video/quicktime',
     // Audio
-    'audio/mpeg', 'audio/wav',
+    'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
+    'audio/aac', 'audio/ogg', 'audio/webm', 'audio/flac', 'audio/x-flac',
   ]);
 
   const allowedExtensions = new Set([
     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
-    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-    '.mp4', '.webm',
-    '.mp3', '.wav'
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.heic', '.heif',
+    '.mp4', '.webm', '.mov',
+    '.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac',
   ]);
 
   const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();

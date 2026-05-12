@@ -6,7 +6,8 @@ import { sanitizeFolderPath } from '@/lib/folderPath';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
 
-const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_UPLOAD_SIZE = 250 * 1024 * 1024; // 250MB
+const MAX_UPLOAD_SIZE_MB = 250;
 
 const ASSET_TYPES: { value: AssetType; label: string }[] = [
   { value: 'pdf', label: 'PDF' },
@@ -105,7 +106,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     if (!file) return;
 
     if (file.size > MAX_UPLOAD_SIZE) {
-      setError('File troppo grande. Massimo 50MB.');
+      setError(`File troppo grande. Massimo ${MAX_UPLOAD_SIZE_MB}MB.`);
       e.target.value = '';
       return;
     }
@@ -205,9 +206,9 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
   const detectFileType = (url: string): AssetType => {
     const lowercaseUrl = url.toLowerCase();
     if (lowercaseUrl.match(/\.(pdf)(\?|$)/)) return 'pdf';
-    if (lowercaseUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/)) return 'image';
+    if (lowercaseUrl.match(/\.(jpg|jpeg|png|gif|webp|svg|heic|heif)(\?|$)/)) return 'image';
     if (lowercaseUrl.match(/\.(mp4|webm|mov|avi)(\?|$)/)) return 'video';
-    if (lowercaseUrl.match(/\.(mp3|wav|ogg|m4a)(\?|$)/)) return 'audio';
+    if (lowercaseUrl.match(/\.(mp3|wav|ogg|m4a|aac|flac)(\?|$)/)) return 'audio';
     // URL valido senza estensione file riconosciuta -> link esterno (YouTube, Drive, ecc.)
     try {
       // eslint-disable-next-line no-new
@@ -229,8 +230,14 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
     if (lowercaseUrl.match(/\.svg(\?|$)/)) return 'image/svg+xml';
     if (lowercaseUrl.match(/\.mp4(\?|$)/)) return 'video/mp4';
     if (lowercaseUrl.match(/\.webm(\?|$)/)) return 'video/webm';
+    if (lowercaseUrl.match(/\.mov(\?|$)/)) return 'video/quicktime';
     if (lowercaseUrl.match(/\.mp3(\?|$)/)) return 'audio/mpeg';
     if (lowercaseUrl.match(/\.wav(\?|$)/)) return 'audio/wav';
+    if (lowercaseUrl.match(/\.m4a(\?|$)/)) return 'audio/mp4';
+    if (lowercaseUrl.match(/\.aac(\?|$)/)) return 'audio/aac';
+    if (lowercaseUrl.match(/\.ogg(\?|$)/)) return 'audio/ogg';
+    if (lowercaseUrl.match(/\.flac(\?|$)/)) return 'audio/flac';
+    if (lowercaseUrl.match(/\.(heic|heif)(\?|$)/)) return 'image/heic';
     return 'application/octet-stream';
   };
 
@@ -433,7 +440,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
               type="file"
               onChange={handleFileUpload}
               className="hidden"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg,.mp4,.webm,.mp3,.wav"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp,.svg,.heic,.heif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.aac,.ogg,.flac"
             />
 
             {isUploading ? (
@@ -454,7 +461,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
               <div>
                 <div className="text-4xl mb-2">📁</div>
                 <p className="font-medium text-gray-900">Clicca o trascina un file</p>
-                <p className="text-sm text-gray-500">PDF, immagini, video, audio, documenti (max 50MB)</p>
+                <p className="text-sm text-gray-500">PDF, immagini, video, audio, documenti (max {MAX_UPLOAD_SIZE_MB}MB)</p>
               </div>
             )}
           </div>
