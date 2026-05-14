@@ -7,6 +7,8 @@ interface MyEvent extends Event {
   enrollment_status: EnrollmentStatus;
   enrollment_date: string;
   waitlist_position: number | null;
+  user_group_name?: string | null;
+  is_group_moderator?: boolean;
 }
 
 /**
@@ -30,10 +32,10 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
 
     const supabase = createServiceRoleClient();
 
-    // Recupera profile_id dell'utente
+    // Recupera profile_id e codice_socio dell'utente
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, codice_socio')
       .eq('clerk_id', userId)
       .single();
 
@@ -98,6 +100,71 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<My
             waitlist_position: null,
           });
         }
+      }
+    }
+
+    // Recupera l'appartenenza dell'utente ai gruppi di lavoro per gli eventi della lista
+    const eventIds = myEvents.map((e) => e.id);
+    const groupInfoByEvent = new Map<string, { name: string; isModerator: boolean }>();
+
+    if (eventIds.length > 0) {
+      const groupSelect = 'group_id, event_groups!inner(event_id, name)';
+
+      const { data: modRows } = await supabase
+        .from('event_group_moderators')
+        .select(groupSelect)
+        .eq('user_id', profile.id)
+        .in('event_groups.event_id', eventIds);
+
+      for (const row of modRows || []) {
+        const eg = (row as any).event_groups;
+        if (eg?.event_id && eg?.name) {
+          groupInfoByEvent.set(eg.event_id, { name: eg.name, isModerator: true });
+        }
+      }
+
+      const { data: memberRows } = await supabase
+        .from('event_group_members')
+        .select(groupSelect)
+        .eq('user_id', profile.id)
+        .in('event_groups.event_id', eventIds);
+
+      for (const row of memberRows || []) {
+        const eg = (row as any).event_groups;
+        if (eg?.event_id && eg?.name && !groupInfoByEvent.has(eg.event_id)) {
+          groupInfoByEvent.set(eg.event_id, { name: eg.name, isModerator: false });
+        }
+      }
+
+      // Fallback static_crm: ricava il gruppo dal participants.static_group
+      const remainingEventIds = eventIds.filter((id) => !groupInfoByEvent.has(id));
+      if (remainingEventIds.length > 0 && profile.codice_socio) {
+        const { data: participant } = await supabase
+          .from('participants')
+          .select('static_group')
+          .eq('codice', profile.codice_socio)
+          .eq('is_active_in_list', true)
+          .maybeSingle();
+
+        if (participant?.static_group) {
+          const { data: staticGroups } = await supabase
+            .from('event_groups')
+            .select('event_id, name')
+            .in('event_id', remainingEventIds)
+            .eq('name', participant.static_group);
+
+          for (const sg of staticGroups || []) {
+            groupInfoByEvent.set(sg.event_id, { name: sg.name, isModerator: false });
+          }
+        }
+      }
+    }
+
+    for (const ev of myEvents) {
+      const info = groupInfoByEvent.get(ev.id);
+      if (info) {
+        ev.user_group_name = info.name;
+        ev.is_group_moderator = info.isModerator;
       }
     }
 
