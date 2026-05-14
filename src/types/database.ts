@@ -619,6 +619,7 @@ export interface Participant {
   is_active_in_list: boolean;
   is_checked_in: boolean;
   checked_in_at: string | null;
+  checked_in_by: string | null;
   static_group?: string | null;
   created_at: string;
   updated_at: string;
