@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, UserCheck } from 'lucide-react';
 import Image from 'next/image';
 import type { ParticipantCrmView } from '@/types/database';
@@ -8,42 +8,105 @@ import type { ParticipantCrmView } from '@/types/database';
 const hasDietaryNeeds = (val: string | null | undefined) =>
   !!val && val.toLowerCase() !== 'nessuna' && val.toLowerCase() !== 'no' && val.trim() !== '';
 
+// Intervallo di refresh per sincronizzare i desk delle segreterie in parallelo.
+// 4s e' un buon compromesso tra freschezza dei dati e carico server.
+const REFRESH_INTERVAL_MS = 4000;
+
 export default function CheckinDeskPage() {
   const [participants, setParticipants] = useState<ParticipantCrmView[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Per evitare troppe fetch se l'utente digita velocemente
+  // Codici per cui c'e' una richiesta in volo: evita doppi click e race tra
+  // optimistic update e refresh in background.
+  const inFlightRef = useRef<Set<string>>(new Set());
+  const searchTermRef = useRef(searchTerm);
+
   useEffect(() => {
-    // Non carichiamo tutti di default al desk per evitare lentezza. 
-    // Magari sì, ma mostriamo solo 50.
-    const delayDebounceFn = setTimeout(() => {
-      fetchParticipants();
-    }, 400);
-    return () => clearTimeout(delayDebounceFn);
+    searchTermRef.current = searchTerm;
   }, [searchTerm]);
 
-  const fetchParticipants = async () => {
-    setIsLoading(true);
+  const fetchParticipants = useCallback(async (opts?: { silent?: boolean }) => {
+    const term = searchTermRef.current;
+    if (!opts?.silent) setIsLoading(true);
     try {
       const qs = new URLSearchParams({
-        search: searchTerm,
+        search: term,
         activeOnly: 'true',
         limit: '50'
       });
-      const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`);
+      const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`, {
+        cache: 'no-store',
+      });
       if (res.ok) {
         const json = await res.json();
-        setParticipants(json.data || []);
+        const fresh: ParticipantCrmView[] = json.data || [];
+        // Merge che preserva l'ottimismo locale per le righe con richieste in
+        // volo: il server e' l'autorita' tranne durante il toggle dell'utente.
+        setParticipants(prev => {
+          const inFlight = inFlightRef.current;
+          if (inFlight.size === 0) return fresh;
+          const prevByCodice = new Map(prev.map(p => [p.codice, p]));
+          return fresh.map(row =>
+            inFlight.has(row.codice) && prevByCodice.has(row.codice)
+              ? prevByCodice.get(row.codice)!
+              : row
+          );
+        });
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoading(false);
+      if (!opts?.silent) setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Debounce della ricerca + fetch iniziale.
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchParticipants();
+    }, 400);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, fetchParticipants]);
+
+  // Polling silenzioso ogni REFRESH_INTERVAL_MS: piu' segreterie connesse
+  // vedono in ~4s le accettazioni fatte dagli altri desk. Si ferma quando il
+  // tab e' nascosto (Page Visibility) per non sprecare risorse.
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (intervalId !== null) return;
+      intervalId = setInterval(() => {
+        fetchParticipants({ silent: true });
+      }, REFRESH_INTERVAL_MS);
+    };
+
+    const stop = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        // Refresh immediato al ritorno sul tab, poi riprendi il polling.
+        fetchParticipants({ silent: true });
+        start();
+      }
+    };
+
+    if (!document.hidden) start();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchParticipants]);
 
   // Funzione per avere statistiche globali (chiamata ogni tanto)
   useEffect(() => {
@@ -53,30 +116,55 @@ export default function CheckinDeskPage() {
         if (res.ok) {
           const json = await res.json();
           setTotalCount(json.count || 0);
-          
-          // E i checkin in un'altra fetch
-          // Dato che l'API non li restituisce raggruppati, si potrebbe fare un custom endpoint,
-          // ma per rapidità facciamo fare alla pagina che tiene traccia del count.
-          // N.B: Questo conteggio esatto richiederebbe un db query `where is_checked_in = true`. 
-          // Lo omettiamo o usiamo un endpoint per ora.
         }
       } catch (err) {}
     }
     fetchGlobalStats();
   }, []);
 
-  const toggleCheckin = async (codice: string) => {
+  const setCheckin = async (codice: string, desired: boolean) => {
+    // Se c'e' gia una richiesta in volo per questo codice, evita di sovrapporre.
+    if (inFlightRef.current.has(codice)) return;
+    inFlightRef.current.add(codice);
+
+    // Snapshot per eventuale rollback
+    const snapshot = participants.find(p => p.codice === codice);
+
     // Optimistic update
-    setParticipants(prev => prev.map(p => 
-      p.codice === codice ? { ...p, is_checked_in: !p.is_checked_in } : p
+    setParticipants(prev => prev.map(p =>
+      p.codice === codice ? { ...p, is_checked_in: desired } : p
     ));
 
     try {
-      await fetch(`/api/admin/crm/participants/${codice}/checkin`, { method: 'POST' });
+      const res = await fetch(`/api/admin/crm/participants/${codice}/checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_checked_in: desired }),
+      });
+      if (!res.ok) {
+        throw new Error(`Check-in API failed: ${res.status}`);
+      }
+      const json = await res.json();
+      const updated: ParticipantCrmView | undefined = json.data;
+      if (updated) {
+        // Riconcilia con lo stato server-autoritativo (include checked_in_at,
+        // checked_in_by, ecc.).
+        setParticipants(prev => prev.map(p =>
+          p.codice === codice ? { ...p, ...updated } : p
+        ));
+      }
     } catch (err) {
       console.error(err);
-      // Revert in caso di errore
-      fetchParticipants();
+      // Rollback dello stato locale
+      if (snapshot) {
+        setParticipants(prev => prev.map(p =>
+          p.codice === codice ? snapshot : p
+        ));
+      }
+      // Refetch per allineare comunque la vista
+      fetchParticipants({ silent: true });
+    } finally {
+      inFlightRef.current.delete(codice);
     }
   };
 
@@ -103,7 +191,7 @@ export default function CheckinDeskPage() {
             className="block w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-agesci-blue focus:border-transparent transition-all shadow-sm"
           />
         </div>
-        
+
         {searchTerm.length > 0 && searchTerm.length < 3 && (
            <p className="text-center text-sm text-gray-500 mt-4">Digita almeno 3 caratteri per una ricerca più precisa</p>
         )}
@@ -121,8 +209,8 @@ export default function CheckinDeskPage() {
             </div>
           ) : (
             participants.map(person => (
-              <div 
-                key={person.codice} 
+              <div
+                key={person.codice}
                 className={`bg-white rounded-xl shadow-sm border-2 transition-all p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 ${
                   person.is_checked_in ? 'border-green-400 bg-green-50/30' : 'border-gray-200 hover:border-agesci-blue/50'
                 }`}
@@ -157,14 +245,14 @@ export default function CheckinDeskPage() {
                 <div className="w-full sm:w-auto shrink-0 flex gap-2 sm:flex-col">
                   {person.is_checked_in ? (
                     <button
-                      onClick={() => toggleCheckin(person.codice)}
+                      onClick={() => setCheckin(person.codice, false)}
                       className="w-full h-12 sm:h-auto sm:py-3 px-6 rounded-lg font-bold text-green-700 bg-green-100 hover:bg-green-200 border-2 border-green-500 transition-colors shadow-sm"
                     >
                       ✓ Check-in Effettuato
                     </button>
                   ) : (
                     <button
-                      onClick={() => toggleCheckin(person.codice)}
+                      onClick={() => setCheckin(person.codice, true)}
                       className="w-full h-12 sm:h-auto sm:py-3 px-6 rounded-lg font-bold text-white bg-agesci-blue hover:bg-agesci-blue-light transition-colors shadow-md transform active:scale-95"
                     >
                       Accetta Partecipante
