@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, UserCheck } from 'lucide-react';
+import { Search, UserCheck, Users, Clock } from 'lucide-react';
 import Image from 'next/image';
 import type { ParticipantCrmView } from '@/types/database';
 
@@ -70,6 +70,30 @@ export default function CheckinDeskPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, fetchParticipants]);
 
+  // Statistiche globali: totale attivi e numero di check-in effettuati.
+  // Vengono aggiornate sia al mount sia al polling silenzioso, così la
+  // dashboard di segreteria resta allineata con le accettazioni degli altri desk.
+  const fetchGlobalStats = useCallback(async () => {
+    try {
+      const [totalRes, checkedInRes] = await Promise.all([
+        fetch(`/api/admin/crm/participants?activeOnly=true&limit=1`, { cache: 'no-store' }),
+        fetch(`/api/admin/crm/participants?activeOnly=true&filter_is_checked_in=true&limit=1`, { cache: 'no-store' }),
+      ]);
+      if (totalRes.ok) {
+        const json = await totalRes.json();
+        setTotalCount(json.count || 0);
+      }
+      if (checkedInRes.ok) {
+        const json = await checkedInRes.json();
+        setCheckedInCount(json.count || 0);
+      }
+    } catch (err) {}
+  }, []);
+
+  useEffect(() => {
+    fetchGlobalStats();
+  }, [fetchGlobalStats]);
+
   // Polling silenzioso ogni REFRESH_INTERVAL_MS: piu' segreterie connesse
   // vedono in ~4s le accettazioni fatte dagli altri desk. Si ferma quando il
   // tab e' nascosto (Page Visibility) per non sprecare risorse.
@@ -80,6 +104,7 @@ export default function CheckinDeskPage() {
       if (intervalId !== null) return;
       intervalId = setInterval(() => {
         fetchParticipants({ silent: true });
+        fetchGlobalStats();
       }, REFRESH_INTERVAL_MS);
     };
 
@@ -95,6 +120,7 @@ export default function CheckinDeskPage() {
       } else {
         // Refresh immediato al ritorno sul tab, poi riprendi il polling.
         fetchParticipants({ silent: true });
+        fetchGlobalStats();
         start();
       }
     };
@@ -106,21 +132,7 @@ export default function CheckinDeskPage() {
       stop();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [fetchParticipants]);
-
-  // Funzione per avere statistiche globali (chiamata ogni tanto)
-  useEffect(() => {
-    const fetchGlobalStats = async () => {
-      try {
-        const res = await fetch(`/api/admin/crm/participants?activeOnly=true&limit=1`);
-        if (res.ok) {
-          const json = await res.json();
-          setTotalCount(json.count || 0);
-        }
-      } catch (err) {}
-    }
-    fetchGlobalStats();
-  }, []);
+  }, [fetchParticipants, fetchGlobalStats]);
 
   const setCheckin = async (codice: string, desired: boolean) => {
     // Se c'e' gia una richiesta in volo per questo codice, evita di sovrapporre.
@@ -130,10 +142,14 @@ export default function CheckinDeskPage() {
     // Snapshot per eventuale rollback
     const snapshot = participants.find(p => p.codice === codice);
 
-    // Optimistic update
+    // Optimistic update (riga + contatore globale, riallineati con il server più sotto)
+    const wasCheckedIn = !!snapshot?.is_checked_in;
     setParticipants(prev => prev.map(p =>
       p.codice === codice ? { ...p, is_checked_in: desired } : p
     ));
+    if (desired !== wasCheckedIn) {
+      setCheckedInCount(prev => Math.max(0, prev + (desired ? 1 : -1)));
+    }
 
     try {
       const res = await fetch(`/api/admin/crm/participants/${codice}/checkin`, {
@@ -161,8 +177,12 @@ export default function CheckinDeskPage() {
           p.codice === codice ? snapshot : p
         ));
       }
+      if (desired !== wasCheckedIn) {
+        setCheckedInCount(prev => Math.max(0, prev + (desired ? -1 : 1)));
+      }
       // Refetch per allineare comunque la vista
       fetchParticipants({ silent: true });
+      fetchGlobalStats();
     } finally {
       inFlightRef.current.delete(codice);
     }
@@ -176,6 +196,8 @@ export default function CheckinDeskPage() {
           Cerca i partecipanti e registra il loro ingresso all'evento principale.
         </p>
       </div>
+
+      <CheckinSummary checkedIn={checkedInCount} total={totalCount} />
 
       <div className="bg-white shadow-lg rounded-2xl p-6 md:p-8 border border-gray-100 mb-8">
         <div className="relative max-w-xl mx-auto">
@@ -264,6 +286,60 @@ export default function CheckinDeskPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function CheckinSummary({ checkedIn, total }: { checkedIn: number; total: number }) {
+  const remaining = Math.max(0, total - checkedIn);
+  const percent = total > 0 ? Math.min(100, Math.round((checkedIn / total) * 100)) : 0;
+
+  return (
+    <div className="bg-white shadow-lg rounded-2xl p-5 md:p-6 border border-gray-100 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200">
+          <div className="shrink-0 w-11 h-11 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Totale</div>
+            <div className="text-2xl font-bold text-gray-900 tabular-nums">{total}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
+          <div className="shrink-0 w-11 h-11 rounded-full bg-green-200 text-green-800 flex items-center justify-center">
+            <UserCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-green-700 font-semibold">Check-in effettuati</div>
+            <div className="text-2xl font-bold text-green-800 tabular-nums">{checkedIn}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="shrink-0 w-11 h-11 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-amber-700 font-semibold">Mancanti</div>
+            <div className="text-2xl font-bold text-amber-800 tabular-nums">{remaining}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <span>Avanzamento</span>
+          <span className="font-semibold text-gray-700 tabular-nums">{percent}%</span>
+        </div>
+        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-green-500 transition-all duration-500"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
