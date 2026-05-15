@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@clerk/nextjs';
+import { uploadFileResumable } from '@/lib/storage/uploadFile';
 import type { EventGroupAttachment } from '@/types/database';
 
 interface AdminGroupAttachmentsProps {
@@ -20,6 +21,7 @@ export default function AdminGroupAttachments({
     initialAttachments = [],
     onChange,
 }: AdminGroupAttachmentsProps) {
+    const { getToken } = useAuth();
     const [attachments, setAttachments] = useState<EventGroupAttachment[]>(initialAttachments);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -65,20 +67,21 @@ export default function AdminGroupAttachments({
             if (!signRes.ok || !signJson.data) {
                 throw new Error(signJson.error || 'Errore durante la preparazione dell\'upload');
             }
-            const { token, path, file_url, file_name } = signJson.data;
+            const { path, file_url, file_name } = signJson.data;
 
-            setUploadProgress('Caricamento file...');
+            setUploadProgress('Caricamento file... 0%');
 
-            const supabase = getSupabaseClient();
-            const { error: uploadError } = await supabase.storage
-                .from('assets')
-                .uploadToSignedUrl(path, token, selectedFile, {
-                    contentType: selectedFile.type,
-                    upsert: false,
-                });
-            if (uploadError) {
-                throw new Error(uploadError.message || 'Errore durante l\'upload');
-            }
+            await uploadFileResumable({
+                file: selectedFile,
+                bucket: 'assets',
+                path,
+                contentType: selectedFile.type,
+                getAuthToken: () => getToken({ template: 'supabase' }),
+                onProgress: (uploaded, total) => {
+                    const pct = Math.floor((uploaded / total) * 100);
+                    setUploadProgress(`Caricamento file... ${pct}%`);
+                },
+            });
 
             setUploadProgress('Salvataggio...');
 

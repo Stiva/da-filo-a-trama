@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useId } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { sanitizeFolderPath } from '@/lib/folderPath';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { uploadFileResumable } from '@/lib/storage/uploadFile';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
 
 const MAX_UPLOAD_SIZE = 250 * 1024 * 1024; // 250MB
@@ -33,6 +34,7 @@ interface AssetFormProps {
 
 export default function AssetForm({ asset, isEditing = false }: AssetFormProps) {
   const router = useRouter();
+  const { getToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderListId = useId();
   const [isSaving, setIsSaving] = useState(false);
@@ -153,21 +155,21 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         throw new Error(signResult.error || 'Errore durante la preparazione dell\'upload');
       }
 
-      const { token, path, file_url, file_name, file_size_bytes, mime_type, tipo } = signResult.data;
+      const { path, file_url, file_name, file_size_bytes, mime_type, tipo } = signResult.data;
 
-      setUploadProgress('Caricamento file...');
+      setUploadProgress('Caricamento file... 0%');
 
-      const supabase = getSupabaseClient();
-      const { error: uploadError } = await supabase.storage
-        .from('assets')
-        .uploadToSignedUrl(path, token, file, {
-          contentType: file.type,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message || 'Errore durante l\'upload');
-      }
+      await uploadFileResumable({
+        file,
+        bucket: 'assets',
+        path,
+        contentType: file.type,
+        getAuthToken: () => getToken({ template: 'supabase' }),
+        onProgress: (uploaded, total) => {
+          const pct = Math.floor((uploaded / total) * 100);
+          setUploadProgress(`Caricamento file... ${pct}%`);
+        },
+      });
 
       setFormData(prev => ({
         ...prev,
