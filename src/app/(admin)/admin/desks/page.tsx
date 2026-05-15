@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, UserCheck, Users, Clock } from 'lucide-react';
+import { Search, UserCheck, Users, Clock, Download } from 'lucide-react';
 import Image from 'next/image';
 import type { ParticipantCrmView } from '@/types/database';
 
@@ -12,23 +12,33 @@ const hasDietaryNeeds = (val: string | null | undefined) =>
 // 4s e' un buon compromesso tra freschezza dei dati e carico server.
 const REFRESH_INTERVAL_MS = 4000;
 
+type StatusFilter = 'all' | 'checked' | 'pending';
+
 export default function CheckinDeskPage() {
   const [participants, setParticipants] = useState<ParticipantCrmView[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [isExporting, setIsExporting] = useState(false);
   // Codici per cui c'e' una richiesta in volo: evita doppi click e race tra
   // optimistic update e refresh in background.
   const inFlightRef = useRef<Set<string>>(new Set());
   const searchTermRef = useRef(searchTerm);
+  const statusFilterRef = useRef(statusFilter);
 
   useEffect(() => {
     searchTermRef.current = searchTerm;
   }, [searchTerm]);
 
+  useEffect(() => {
+    statusFilterRef.current = statusFilter;
+  }, [statusFilter]);
+
   const fetchParticipants = useCallback(async (opts?: { silent?: boolean }) => {
     const term = searchTermRef.current;
+    const filter = statusFilterRef.current;
     if (!opts?.silent) setIsLoading(true);
     try {
       const qs = new URLSearchParams({
@@ -36,6 +46,8 @@ export default function CheckinDeskPage() {
         activeOnly: 'true',
         limit: '50'
       });
+      if (filter === 'checked') qs.set('filter_is_checked_in', 'true');
+      else if (filter === 'pending') qs.set('filter_is_checked_in', 'false');
       const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`, {
         cache: 'no-store',
       });
@@ -62,13 +74,14 @@ export default function CheckinDeskPage() {
     }
   }, []);
 
-  // Debounce della ricerca + fetch iniziale.
+  // Debounce della ricerca + fetch iniziale. Si rinnesca anche al cambio
+  // del filtro di stato attivato dal widget.
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchParticipants();
     }, 400);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, fetchParticipants]);
+  }, [searchTerm, statusFilter, fetchParticipants]);
 
   // Statistiche globali: totale attivi e numero di check-in effettuati.
   // Vengono aggiornate sia al mount sia al polling silenzioso, così la
@@ -188,6 +201,60 @@ export default function CheckinDeskPage() {
     }
   };
 
+  // Esporta la lista in CSV con gli stessi filtri attivi (ricerca + stato).
+  // Il separatore ';' e il BOM UTF-8 garantiscono l'apertura corretta su
+  // Excel con locale italiana.
+  const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const term = searchTermRef.current;
+      const filter = statusFilterRef.current;
+      const qs = new URLSearchParams({
+        search: term,
+        activeOnly: 'true',
+        limit: '10000',
+      });
+      if (filter === 'checked') qs.set('filter_is_checked_in', 'true');
+      else if (filter === 'pending') qs.set('filter_is_checked_in', 'false');
+
+      const res = await fetch(`/api/admin/crm/participants?${qs.toString()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+      const json = await res.json();
+      const rows: ParticipantCrmView[] = json.data || [];
+
+      const escape = (v: unknown) => {
+        const s = v == null ? '' : String(v);
+        return /[",;\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const header = ['Nome', 'Cognome', 'Codice socio', 'Stato'];
+      const body = rows.map(r => [
+        escape(r.nome),
+        escape(r.cognome),
+        escape(r.codice),
+        escape(r.is_checked_in ? 'Check-in effettuato' : 'In attesa'),
+      ].join(';'));
+      const csv = '﻿' + [header.join(';'), ...body].join('\r\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const today = new Date().toISOString().slice(0, 10);
+      const suffix = filter === 'checked' ? 'effettuati' : filter === 'pending' ? 'mancanti' : 'tutti';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `checkin-${suffix}-${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Esportazione fallita. Riprova.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
@@ -197,7 +264,14 @@ export default function CheckinDeskPage() {
         </p>
       </div>
 
-      <CheckinSummary checkedIn={checkedInCount} total={totalCount} />
+      <CheckinSummary
+        checkedIn={checkedInCount}
+        total={totalCount}
+        activeFilter={statusFilter}
+        onFilterChange={setStatusFilter}
+        onExport={handleExport}
+        isExporting={isExporting}
+      />
 
       <div className="bg-white shadow-lg rounded-2xl p-6 md:p-8 border border-gray-100 mb-8">
         <div className="relative max-w-xl mx-auto">
@@ -225,9 +299,11 @@ export default function CheckinDeskPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {participants.length === 0 && searchTerm.length >= 3 ? (
+          {participants.length === 0 && (searchTerm.length >= 3 || statusFilter !== 'all') ? (
             <div className="bg-gray-50 rounded-xl p-8 text-center text-gray-500 border border-gray-200">
-              Nessun partecipante trovato per "{searchTerm}"
+              {statusFilter === 'checked' && 'Nessun check-in effettuato per i criteri selezionati.'}
+              {statusFilter === 'pending' && 'Tutti i partecipanti per i criteri selezionati hanno già fatto il check-in.'}
+              {statusFilter === 'all' && `Nessun partecipante trovato per "${searchTerm}"`}
             </div>
           ) : (
             participants.map(person => (
@@ -290,14 +366,44 @@ export default function CheckinDeskPage() {
   );
 }
 
-function CheckinSummary({ checkedIn, total }: { checkedIn: number; total: number }) {
+function CheckinSummary({
+  checkedIn,
+  total,
+  activeFilter,
+  onFilterChange,
+  onExport,
+  isExporting,
+}: {
+  checkedIn: number;
+  total: number;
+  activeFilter: StatusFilter;
+  onFilterChange: (f: StatusFilter) => void;
+  onExport: () => void;
+  isExporting: boolean;
+}) {
   const remaining = Math.max(0, total - checkedIn);
   const percent = total > 0 ? Math.min(100, Math.round((checkedIn / total) * 100)) : 0;
+
+  // Click su una card: applica il filtro; se gia' attivo, lo rimuove.
+  const toggle = (f: StatusFilter) => onFilterChange(activeFilter === f ? 'all' : f);
+
+  const cardBase =
+    'flex items-center gap-3 p-3 rounded-xl border text-left transition-all focus:outline-none focus:ring-2 focus:ring-offset-1';
 
   return (
     <div className="bg-white shadow-lg rounded-2xl p-5 md:p-6 border border-gray-100 mb-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200">
+        <button
+          type="button"
+          onClick={() => toggle('all')}
+          aria-pressed={activeFilter === 'all'}
+          title="Mostra tutti i partecipanti"
+          className={`${cardBase} focus:ring-gray-400 ${
+            activeFilter === 'all'
+              ? 'bg-gray-100 border-gray-400 ring-2 ring-gray-400'
+              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+          }`}
+        >
           <div className="shrink-0 w-11 h-11 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
@@ -305,9 +411,19 @@ function CheckinSummary({ checkedIn, total }: { checkedIn: number; total: number
             <div className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Totale</div>
             <div className="text-2xl font-bold text-gray-900 tabular-nums">{total}</div>
           </div>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
+        <button
+          type="button"
+          onClick={() => toggle('checked')}
+          aria-pressed={activeFilter === 'checked'}
+          title="Filtra solo chi ha fatto il check-in"
+          className={`${cardBase} focus:ring-green-500 ${
+            activeFilter === 'checked'
+              ? 'bg-green-100 border-green-500 ring-2 ring-green-500'
+              : 'bg-green-50 border-green-200 hover:bg-green-100'
+          }`}
+        >
           <div className="shrink-0 w-11 h-11 rounded-full bg-green-200 text-green-800 flex items-center justify-center">
             <UserCheck className="w-5 h-5" />
           </div>
@@ -315,9 +431,19 @@ function CheckinSummary({ checkedIn, total }: { checkedIn: number; total: number
             <div className="text-xs uppercase tracking-wide text-green-700 font-semibold">Check-in effettuati</div>
             <div className="text-2xl font-bold text-green-800 tabular-nums">{checkedIn}</div>
           </div>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
+        <button
+          type="button"
+          onClick={() => toggle('pending')}
+          aria-pressed={activeFilter === 'pending'}
+          title="Filtra solo chi deve ancora fare il check-in"
+          className={`${cardBase} focus:ring-amber-500 ${
+            activeFilter === 'pending'
+              ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-500'
+              : 'bg-amber-50 border-amber-200 hover:bg-amber-100'
+          }`}
+        >
           <div className="shrink-0 w-11 h-11 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
@@ -325,7 +451,7 @@ function CheckinSummary({ checkedIn, total }: { checkedIn: number; total: number
             <div className="text-xs uppercase tracking-wide text-amber-700 font-semibold">Mancanti</div>
             <div className="text-2xl font-bold text-amber-800 tabular-nums">{remaining}</div>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="mt-4">
@@ -339,6 +465,23 @@ function CheckinSummary({ checkedIn, total }: { checkedIn: number; total: number
             style={{ width: `${percent}%` }}
           />
         </div>
+      </div>
+
+      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="text-xs text-gray-500">
+          {activeFilter === 'all' && 'Stai vedendo tutti i partecipanti.'}
+          {activeFilter === 'checked' && 'Stai vedendo solo i partecipanti con check-in effettuato.'}
+          {activeFilter === 'pending' && 'Stai vedendo solo i partecipanti ancora da accettare.'}
+        </div>
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={isExporting}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-agesci-blue hover:bg-agesci-blue-light transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          {isExporting ? 'Esportazione...' : 'Esporta CSV'}
+        </button>
       </div>
     </div>
   );
