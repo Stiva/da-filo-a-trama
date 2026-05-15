@@ -11,7 +11,8 @@ export default async function PushNotificationsHistoryPage() {
     .from('push_notifications_history')
     .select(`
       *,
-      sender:profiles(name, surname),
+      sender:profiles!push_notifications_history_sent_by_fkey(name, surname),
+      recipient:profiles!push_notifications_history_target_user_id_fkey(name, surname, email),
       event:events(title)
     `)
     .order('created_at', { ascending: false });
@@ -78,17 +79,26 @@ export default async function PushNotificationsHistoryPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${record.target_type === 'all' ? 'bg-purple-100 text-purple-800' : 
-                          record.target_type === 'staff' ? 'bg-red-100 text-red-800' : 
+                        ${record.target_type === 'all' ? 'bg-purple-100 text-purple-800' :
+                          record.target_type === 'staff' ? 'bg-red-100 text-red-800' :
+                          record.target_type === 'user' ? 'bg-amber-100 text-amber-800' :
                           'bg-blue-100 text-blue-800'}
                       `}>
                         {record.target_type === 'all' && 'Tutti gli Utenti'}
                         {record.target_type === 'staff' && 'Solo Staff'}
                         {record.target_type === 'event' && `Evento`}
+                        {record.target_type === 'user' && 'Utente specifico'}
                       </span>
                       {record.target_type === 'event' && record.event && (
                         <div className="text-xs text-gray-500 mt-1 truncate max-w-[150px]">
                           {record.event.title}
+                        </div>
+                      )}
+                      {record.target_type === 'user' && (
+                        <div className="text-xs text-gray-500 mt-1 truncate max-w-[150px]">
+                          {record.recipient
+                            ? `${record.recipient.name || ''} ${record.recipient.surname || ''}`.trim() || record.recipient.email
+                            : 'Utente eliminato'}
                         </div>
                       )}
                     </td>

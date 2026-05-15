@@ -588,8 +588,9 @@ export interface PushNotificationHistoryRecord {
   title: string;
   body_html: string;
   body_text: string;
-  target_type: 'all' | 'staff' | 'event';
+  target_type: 'all' | 'staff' | 'event' | 'user';
   target_event_id: string | null;
+  target_user_id: string | null;
   action_url: string | null;
   success_count: number;
   failure_count: number;
