@@ -24,7 +24,7 @@ export async function GET(
     // Recupera evento
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('*, poi:location_poi_id (*)')
+      .select('*, poi:location_poi_id (*), secondary_poi:secondary_location_poi_id (*)')
       .eq('id', id)
       .eq('is_published', true)
       .single();
@@ -37,6 +37,17 @@ export async function GET(
         );
       }
       throw eventError;
+    }
+
+    // Risolvi luogo "effettivo" in base all'impostazione globale.
+    const { data: locationSetting } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'use_secondary_event_location')
+      .maybeSingle();
+
+    if (locationSetting?.value?.enabled === true && event.secondary_poi) {
+      event.poi = event.secondary_poi;
     }
 
     // Conta iscrizioni confermate (tutti i ruoli)

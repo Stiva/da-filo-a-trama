@@ -22,6 +22,9 @@ export default function SettingsPage() {
   const [staticColors, setStaticColors] = useState<string[]>(['Blu', 'Rosso', 'Giallo', 'Verde', 'Arancione', 'Viola', 'Grigio']);
   const [newColor, setNewColor] = useState('');
 
+  // Secondary event location toggle (global)
+  const [useSecondaryEventLocation, setUseSecondaryEventLocation] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -29,11 +32,12 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const [bannerRes, colorsRes] = await Promise.all([
+        const [bannerRes, colorsRes, locationRes] = await Promise.all([
           fetch('/api/admin/settings?key=pwa_banner_config'),
-          fetch('/api/admin/settings?key=static_groups_colors')
+          fetch('/api/admin/settings?key=static_groups_colors'),
+          fetch('/api/admin/settings?key=use_secondary_event_location')
         ]);
-        
+
         if (bannerRes.ok) {
           const json = await bannerRes.json();
           if (json.data && json.data.value?.html) {
@@ -41,11 +45,18 @@ export default function SettingsPage() {
             setBannerContent(json.data.value.html);
           }
         }
-        
+
         if (colorsRes.ok) {
           const json = await colorsRes.json();
           if (json.data && Array.isArray(json.data.value?.colors)) {
             setStaticColors(json.data.value.colors);
+          }
+        }
+
+        if (locationRes.ok) {
+          const json = await locationRes.json();
+          if (json.data && typeof json.data.value?.enabled === 'boolean') {
+            setUseSecondaryEventLocation(json.data.value.enabled);
           }
         }
       } catch (error) {
@@ -85,7 +96,17 @@ export default function SettingsPage() {
         })
       });
 
-      const [bannerRes, colorsRes] = await Promise.all([bannerPromise, colorsPromise]);
+      const locationPromise = fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'use_secondary_event_location',
+          value: { enabled: useSecondaryEventLocation },
+          description: 'Se attivo, gli utenti vedono il luogo secondario degli eventi al posto del primario (massivamente)'
+        })
+      });
+
+      const [bannerRes, colorsRes, locationRes] = await Promise.all([bannerPromise, colorsPromise, locationPromise]);
 
       if (!bannerRes.ok) {
         const errorData = await bannerRes.json();
@@ -95,6 +116,11 @@ export default function SettingsPage() {
       if (!colorsRes.ok) {
         const errorData = await colorsRes.json();
         throw new Error(errorData.error || 'Errore durante il salvataggio dei colori');
+      }
+
+      if (!locationRes.ok) {
+        const errorData = await locationRes.json();
+        throw new Error(errorData.error || 'Errore durante il salvataggio del luogo evento');
       }
 
       setMessage({ type: 'success', text: 'Impostazioni salvate con successo!' });
@@ -195,6 +221,42 @@ export default function SettingsPage() {
             >
               <Plus className="h-5 w-5" />
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800">Luogo Eventi</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Permette di mostrare a tutti gli utenti, in modo massivo, il luogo secondario impostato sugli eventi al posto del luogo principale.
+            Se un evento non ha un luogo secondario, continuerà ad essere mostrato il luogo principale.
+          </p>
+        </div>
+
+        <div className="p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">
+                {useSecondaryEventLocation
+                  ? 'Scenario B — Mostra il luogo secondario'
+                  : 'Scenario A — Mostra il luogo principale'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {useSecondaryEventLocation
+                  ? 'Gli utenti vedranno il secondo luogo impostato su ciascun evento.'
+                  : 'Gli utenti vedranno il primo luogo impostato su ciascun evento.'}
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
+              <input
+                type="checkbox"
+                checked={useSecondaryEventLocation}
+                onChange={(e) => setUseSecondaryEventLocation(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-agesci-blue"></div>
+            </label>
           </div>
         </div>
       </div>

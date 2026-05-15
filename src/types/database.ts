@@ -164,6 +164,8 @@ export interface Event {
   tags: string[];
   location_poi_id: string;
   poi?: Poi;
+  secondary_location_poi_id: string | null;
+  secondary_poi?: Poi;
   start_time: string;
   end_time: string;
   max_posti: number;

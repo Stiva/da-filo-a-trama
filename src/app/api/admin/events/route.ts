@@ -29,7 +29,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<Event[]>>> {
 
     const { data, error } = await supabase
       .from('events')
-      .select('*, poi:location_poi_id(nome)')
+      .select('*, poi:location_poi_id(nome), secondary_poi:secondary_location_poi_id(nome)')
       .order('start_time', { ascending: true });
 
     if (error) {
@@ -104,6 +104,7 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
             category: body.category,
             tags: body.tags || [],
             location_poi_id: body.location_poi_id || null,
+            secondary_location_poi_id: body.secondary_location_poi_id || null,
             start_time: eventStart.toISOString(),
             end_time: eventEnd ? eventEnd.toISOString() : null,
             max_posti: body.max_posti || 50,
