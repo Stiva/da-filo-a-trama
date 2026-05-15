@@ -23,6 +23,7 @@ const EVENTS_COLUMNS: ColumnDef[] = [
   { id: 'posti', label: 'Posti', defaultVisible: true },
   { id: 'stato', label: 'Stato', defaultVisible: true },
   { id: 'luogo', label: 'Luogo', defaultVisible: true },
+  { id: 'luogo_secondario', label: 'Luogo Secondario', defaultVisible: false },
   { id: 'speaker', label: 'Speaker', defaultVisible: false },
   { id: 'custom_id', label: 'ID Personalizzato', defaultVisible: false },
   { id: 'visibility', label: 'Visibilità App', defaultVisible: false },
@@ -168,6 +169,7 @@ export default function AdminEventsPage() {
       start_time: format(new Date(event.start_time), 'dd/MM/yyyy HH:mm', { locale: it }),
       end_time: format(new Date(event.end_time), 'dd/MM/yyyy HH:mm', { locale: it }),
       luogo: event.poi?.nome || '-',
+      luogo_secondario: event.secondary_poi?.nome || '-',
       stato: event.is_published ? 'Pubblicato' : 'Bozza',
     }));
     exportToCSV(exportData, columnsToExport, 'Eventi');
@@ -212,6 +214,7 @@ export default function AdminEventsPage() {
           case 'title': return event.title.toLowerCase().includes(val) || event.custom_id?.toLowerCase().includes(val);
           case 'category': return event.category.toLowerCase().includes(val);
           case 'luogo': return event.poi?.nome?.toLowerCase().includes(val);
+          case 'luogo_secondario': return event.secondary_poi?.nome?.toLowerCase().includes(val);
           case 'is_published': return event.is_published.toString() === val;
           default: return true;
         }
@@ -539,6 +542,17 @@ export default function AdminEventsPage() {
                                     );
                                 }
 
+                                if (colId === 'luogo_secondario') {
+                                    return (
+                                        <td key={colId} className="px-6 py-4 text-sm font-medium text-gray-700">
+                                          <span className="flex items-center gap-1">
+                                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                                            {event.secondary_poi?.nome || <span className="text-gray-300 italic">—</span>}
+                                          </span>
+                                        </td>
+                                    );
+                                }
+
                                 if (colId === 'created_at' && val) {
                                     val = format(new Date(val), 'dd/MM/yy', { locale: it });
                                 } else if (typeof val === 'boolean') {
@@ -648,6 +662,7 @@ export default function AdminEventsPage() {
                             
                             if (colId === 'data') val = formatDate(event.start_time);
                             else if (colId === 'luogo') val = event.poi?.nome || 'N/A';
+                            else if (colId === 'luogo_secondario') val = event.secondary_poi?.nome || '—';
                             else if (colId === 'categoria') {
                                 return (
                                     <React.Fragment key={colId}>

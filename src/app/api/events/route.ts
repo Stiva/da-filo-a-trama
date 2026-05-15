@@ -31,7 +31,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
     const now = new Date().toISOString();
     let query = supabase
       .from('events')
-      .select('*, poi:location_poi_id ( id, nome, tipo )')
+      .select('*, poi:location_poi_id ( id, nome, tipo ), secondary_poi:secondary_location_poi_id ( id, nome, tipo )')
       .eq('is_published', true)
       .or(`publish_at.is.null,publish_at.lte.${now}`)
       .order('start_time', { ascending: true });
@@ -83,7 +83,23 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ev
       throw error;
     }
 
-    const events = (data || []) as Event[];
+    // Risolvi luogo "effettivo" in base all'impostazione globale.
+    // Quando `use_secondary_event_location` è attivo, gli eventi con un
+    // luogo secondario impostato lo espongono come `poi` agli utenti.
+    const { data: locationSetting } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'use_secondary_event_location')
+      .maybeSingle();
+
+    const useSecondary = locationSetting?.value?.enabled === true;
+
+    const events = ((data || []) as Event[]).map((e) => {
+      if (useSecondary && e.secondary_poi) {
+        return { ...e, poi: e.secondary_poi };
+      }
+      return e;
+    });
 
     // Fetch user's favourited event IDs if authenticated
     let favouritedEventIds: Set<string> = new Set();

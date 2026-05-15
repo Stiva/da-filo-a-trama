@@ -37,6 +37,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     category: event?.category || '' as EventCategory,
     tags: event?.tags || [],
     location_poi_id: event?.location_poi_id || '',
+    secondary_location_poi_id: event?.secondary_location_poi_id || '',
     start_time: event?.start_time
       ? toLocalDatetimeString(event.start_time)
       : '',
@@ -565,6 +566,29 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Luogo Secondario (opzionale)
+            </label>
+            <select
+              value={formData.secondary_location_poi_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, secondary_location_poi_id: e.target.value }))}
+              className="input w-full"
+            >
+              <option value="">Nessuno</option>
+              {pois
+                .filter((poi) => poi.id !== formData.location_poi_id)
+                .map((poi) => (
+                  <option key={poi.id} value={poi.id}>
+                    {poi.nome}
+                  </option>
+                ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Se impostato, può essere mostrato agli utenti al posto del luogo principale attivando l&apos;opzione globale nelle Impostazioni App.
+            </p>
           </div>
         </div>
       </div>
