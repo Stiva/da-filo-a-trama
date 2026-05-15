@@ -223,12 +223,28 @@ export default function CheckinDeskPage() {
       const json = await res.json();
       const rows: ParticipantCrmView[] = json.data || [];
 
+      // Ordinamento per regione (poi cognome, nome) per raggruppare gli
+      // iscritti della stessa regione. Valori nulli/vuoti in coda.
+      const collator = new Intl.Collator('it', { sensitivity: 'base' });
+      const sorted = [...rows].sort((a, b) => {
+        const ra = (a.regione ?? '').trim();
+        const rb = (b.regione ?? '').trim();
+        if (!ra && rb) return 1;
+        if (ra && !rb) return -1;
+        const byRegion = collator.compare(ra, rb);
+        if (byRegion !== 0) return byRegion;
+        const byCognome = collator.compare(a.cognome ?? '', b.cognome ?? '');
+        if (byCognome !== 0) return byCognome;
+        return collator.compare(a.nome ?? '', b.nome ?? '');
+      });
+
       const escape = (v: unknown) => {
         const s = v == null ? '' : String(v);
         return /[",;\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
       };
-      const header = ['Nome', 'Cognome', 'Codice socio', 'Stato'];
-      const body = rows.map(r => [
+      const header = ['Regione', 'Nome', 'Cognome', 'Codice socio', 'Stato'];
+      const body = sorted.map(r => [
+        escape(r.regione),
         escape(r.nome),
         escape(r.cognome),
         escape(r.codice),
