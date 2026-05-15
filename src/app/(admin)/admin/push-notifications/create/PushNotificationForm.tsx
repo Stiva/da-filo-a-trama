@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import RichTextEditor from '@/components/RichTextEditor';
-import { Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Send, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface EventProps {
@@ -11,18 +11,66 @@ interface EventProps {
   title: string;
 }
 
+interface ProfileLite {
+  id: string;
+  name: string | null;
+  surname: string | null;
+  email: string;
+  scout_group: string | null;
+}
+
+type TargetType = 'all' | 'staff' | 'event' | 'user';
+
 export default function PushNotificationForm({ events }: { events: EventProps[] }) {
   const router = useRouter();
-  
+
   const [title, setTitle] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
-  const [targetType, setTargetType] = useState<'all' | 'staff' | 'event'>('all');
+  const [targetType, setTargetType] = useState<TargetType>('all');
   const [targetEventId, setTargetEventId] = useState('');
   const [url, setUrl] = useState('');
+
+  // Selezione utente singolo (typeahead)
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<ProfileLite[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<ProfileLite | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ sent: number; failed: number } | null>(null);
+
+  // Debounced search utenti per target 'user'
+  const searchUsers = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+    setIsSearchingUsers(true);
+    try {
+      const response = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}&pageSize=10`);
+      const result = await response.json();
+      if (response.ok) {
+        setUserSearchResults(result.data?.profiles || []);
+      } else {
+        setUserSearchResults([]);
+      }
+    } catch (err) {
+      console.error('Errore ricerca utenti:', err);
+      setUserSearchResults([]);
+    } finally {
+      setIsSearchingUsers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (targetType !== 'user') return;
+    const t = setTimeout(() => searchUsers(userSearchQuery), 300);
+    return () => clearTimeout(t);
+  }, [userSearchQuery, targetType, searchUsers]);
+
+  const getFullName = (p: ProfileLite) =>
+    [p.name, p.surname].filter(Boolean).join(' ') || p.email;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +81,11 @@ export default function PushNotificationForm({ events }: { events: EventProps[] 
 
     if (targetType === 'event' && !targetEventId) {
       setError('Seleziona un evento come target.');
+      return;
+    }
+
+    if (targetType === 'user' && !selectedUser) {
+      setError('Seleziona un utente come destinatario.');
       return;
     }
 
@@ -49,6 +102,7 @@ export default function PushNotificationForm({ events }: { events: EventProps[] 
           body: bodyHtml,
           targetType,
           targetEventId,
+          targetUserId: targetType === 'user' ? selectedUser?.id : undefined,
           url
         }),
       });
@@ -60,12 +114,15 @@ export default function PushNotificationForm({ events }: { events: EventProps[] 
       }
 
       setSuccess({ sent: data.sent || 0, failed: data.failed || 0 });
-      
+
       // Resetta il form
       setTitle('');
       setBodyHtml('');
       setUrl('');
-      
+      setSelectedUser(null);
+      setUserSearchQuery('');
+      setUserSearchResults([]);
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -130,8 +187,77 @@ export default function PushNotificationForm({ events }: { events: EventProps[] 
             <option value="all">Tutti gli utenti con App Installata</option>
             <option value="staff">Solo membri dello Staff ed Admin</option>
             <option value="event">Utenti iscritti (confermati) ad un Evento</option>
+            <option value="user">Utente specifico</option>
           </select>
         </div>
+
+        {targetType === 'user' && (
+          <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 mb-4 animate-in fade-in zoom-in-95 duration-200">
+            <label htmlFor="userSearch" className="block text-sm font-medium text-blue-900 mb-1">
+              Cerca destinatario
+            </label>
+            <div className="relative">
+              <input
+                id="userSearch"
+                type="text"
+                value={selectedUser ? getFullName(selectedUser) : userSearchQuery}
+                onChange={(e) => {
+                  setUserSearchQuery(e.target.value);
+                  if (selectedUser) setSelectedUser(null);
+                }}
+                placeholder="Nome, cognome o email..."
+                className="w-full rounded-lg border-blue-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 pr-10 border bg-white text-gray-900"
+                disabled={!!selectedUser}
+              />
+              {selectedUser && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setUserSearchQuery('');
+                    setUserSearchResults([]);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-blue-600 hover:text-blue-800 rounded-full"
+                  aria-label="Rimuovi selezione"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              {isSearchingUsers && !selectedUser && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+            {!selectedUser && (
+              <p className="mt-1 text-xs text-blue-800/70">Digita almeno 2 caratteri per cercare.</p>
+            )}
+            {!selectedUser && userSearchResults.length > 0 && (
+              <ul className="mt-2 max-h-56 overflow-y-auto border border-blue-200 rounded-lg bg-white">
+                {userSearchResults.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedUser(p);
+                        setUserSearchResults([]);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-blue-50 border-b border-blue-100 last:border-b-0"
+                    >
+                      <div className="font-medium text-gray-900 text-sm">{getFullName(p)}</div>
+                      <div className="text-xs text-gray-500">
+                        {p.email}{p.scout_group ? ` - ${p.scout_group}` : ''}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!selectedUser && userSearchQuery.length >= 2 && !isSearchingUsers && userSearchResults.length === 0 && (
+              <p className="mt-2 text-xs text-gray-500">Nessun utente trovato per &quot;{userSearchQuery}&quot;.</p>
+            )}
+          </div>
+        )}
 
         {targetType === 'event' && (
           <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 mb-4 animate-in fade-in zoom-in-95 duration-200">
@@ -224,7 +350,7 @@ export default function PushNotificationForm({ events }: { events: EventProps[] 
             ) : (
               <Send className="w-4 h-4" />
             )}
-            Invia in Broadcast
+            {targetType === 'user' ? 'Invia all\'utente' : 'Invia in Broadcast'}
           </button>
         </div>
       </form>

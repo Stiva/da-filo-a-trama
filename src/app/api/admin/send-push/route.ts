@@ -25,10 +25,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, body: bodyHtml, targetType, targetEventId, url } = await request.json();
+    const { title, body: bodyHtml, targetType, targetEventId, targetUserId, url } = await request.json();
 
     if (!title || !bodyHtml || !targetType) {
       return NextResponse.json({ error: 'Title, body and targetType are required' }, { status: 400 });
+    }
+
+    if (!['all', 'staff', 'event', 'user'].includes(targetType)) {
+      return NextResponse.json({ error: 'targetType non valido' }, { status: 400 });
     }
 
     // Usa createServiceRoleClient per bypassare RLS nelle route di backend
@@ -65,6 +69,20 @@ export async function POST(request: Request) {
         .eq('event_id', targetEventId)
         .eq('status', 'confirmed');
       targetUserIds = eventParticipants?.map(p => p.user_id) || [];
+    } else if (targetType === 'user') {
+      if (!targetUserId) {
+        return NextResponse.json({ error: 'targetUserId richiesto per target "user"' }, { status: 400 });
+      }
+      // Verifica che il profilo esista (evita di scrivere FK rotte nello storico)
+      const { data: recipient } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', targetUserId)
+        .single();
+      if (!recipient) {
+        return NextResponse.json({ error: 'Utente destinatario non trovato' }, { status: 404 });
+      }
+      targetUserIds = [recipient.id];
     }
 
     // Selections per i push subscriptions
@@ -133,6 +151,7 @@ export async function POST(request: Request) {
       body_text: bodyText,
       target_type: targetType,
       target_event_id: targetType === 'event' ? targetEventId : null,
+      target_user_id: targetType === 'user' ? targetUserId : null,
       action_url: url || null,
       success_count: successCount,
       failure_count: failureCount,

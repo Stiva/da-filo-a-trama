@@ -8,11 +8,11 @@ self.addEventListener('activate', (event) => {
 });
 
 // Push notification handler
+// IMPORTANTE: con subscription `userVisibleOnly: true` la spec Web Push impone
+// di mostrare SEMPRE una notifica. Su Chrome Android, omettere showNotification
+// fa scattare il budget "silent push" che dopo poche violazioni invalida la
+// subscription. Nessun early-return su `Notification.permission`.
 self.addEventListener('push', (event) => {
-  if (!(self.Notification && self.Notification.permission === 'granted')) {
-    return;
-  }
-
   let data = {};
   if (event.data) {
     try {
@@ -25,8 +25,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Nuova notifica da Da Filo a Trama';
   const options = {
     body: data.body || 'Hai una nuova notifica',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png', // Optional, per Android
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     data: data.url ? { url: data.url } : {},
   };
 
