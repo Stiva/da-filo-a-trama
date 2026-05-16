@@ -42,7 +42,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
       category: eventPayload.category,
       tags: eventPayload.tags || [],
       location_poi_id: eventPayload.location_poi_id || null, // Optional in DB although required logically
-      secondary_location_poi_id: eventPayload.secondary_location_poi_id || null,
+      secondary_location_poi_id:
+        eventPayload.secondary_location_poi_id && eventPayload.secondary_location_poi_id !== eventPayload.location_poi_id
+          ? eventPayload.secondary_location_poi_id
+          : null,
       start_time: new Date(eventPayload.start_time).toISOString(),
       end_time: eventPayload.end_time ? new Date(eventPayload.end_time).toISOString() : null,
       max_posti: parseInt(eventPayload.max_posti, 10) || 50,
