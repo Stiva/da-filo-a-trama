@@ -104,7 +104,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
             category: body.category,
             tags: body.tags || [],
             location_poi_id: body.location_poi_id || null,
-            secondary_location_poi_id: body.secondary_location_poi_id || null,
+            secondary_location_poi_id:
+              body.secondary_location_poi_id && body.secondary_location_poi_id !== body.location_poi_id
+                ? body.secondary_location_poi_id
+                : null,
             start_time: eventStart.toISOString(),
             end_time: eventEnd ? eventEnd.toISOString() : null,
             max_posti: body.max_posti || 50,
