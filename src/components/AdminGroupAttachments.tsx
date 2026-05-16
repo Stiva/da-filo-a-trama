@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@clerk/nextjs';
 import { uploadFileResumable } from '@/lib/storage/uploadFile';
 import type { EventGroupAttachment } from '@/types/database';
 
@@ -21,7 +20,6 @@ export default function AdminGroupAttachments({
     initialAttachments = [],
     onChange,
 }: AdminGroupAttachmentsProps) {
-    const { getToken } = useAuth();
     const [attachments, setAttachments] = useState<EventGroupAttachment[]>(initialAttachments);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -67,7 +65,7 @@ export default function AdminGroupAttachments({
             if (!signRes.ok || !signJson.data) {
                 throw new Error(signJson.error || 'Errore durante la preparazione dell\'upload');
             }
-            const { path, file_url, file_name } = signJson.data;
+            const { path, file_url, file_name, upload_token } = signJson.data;
 
             setUploadProgress('Caricamento file... 0%');
 
@@ -75,8 +73,8 @@ export default function AdminGroupAttachments({
                 file: selectedFile,
                 bucket: 'assets',
                 path,
+                authToken: upload_token,
                 contentType: selectedFile.type,
-                getAuthToken: () => getToken({ template: 'supabase' }),
                 onProgress: (uploaded, total) => {
                     const pct = Math.floor((uploaded / total) * 100);
                     setUploadProgress(`Caricamento file... ${pct}%`);

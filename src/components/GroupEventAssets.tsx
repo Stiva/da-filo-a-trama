@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { uploadFileResumable } from '@/lib/storage/uploadFile';
 
 // For simplicity, we just reuse the basic attachment structure
@@ -25,7 +25,6 @@ const MAX_UPLOAD_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
 
 export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsProps) {
     const { user } = useUser();
-    const { getToken } = useAuth();
     const callerRole = (user?.publicMetadata as { role?: string } | undefined)?.role;
     const isCallerAdmin = callerRole === 'admin' || callerRole === 'staff';
 
@@ -93,7 +92,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                 throw new Error(signResult.error || 'Errore durante la preparazione dell\'upload');
             }
 
-            const { path, file_url, file_name } = signResult.data;
+            const { path, file_url, file_name, upload_token } = signResult.data;
 
             setUploadProgress('Caricamento file... 0%');
 
@@ -101,8 +100,8 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                 file: selectedFile,
                 bucket: 'assets',
                 path,
+                authToken: upload_token,
                 contentType: selectedFile.type,
-                getAuthToken: () => getToken({ template: 'supabase' }),
                 onProgress: (uploaded, total) => {
                     const pct = Math.floor((uploaded / total) * 100);
                     setUploadProgress(`Caricamento file... ${pct}%`);

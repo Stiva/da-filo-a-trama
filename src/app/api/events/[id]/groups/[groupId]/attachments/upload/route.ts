@@ -1,11 +1,13 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { signUploadToken } from '@/lib/storage/uploadToken';
 import type { ApiResponse } from '@/types/database';
 
 interface SignedUploadResult {
   signed_url: string;
   token: string;
+  upload_token: string;
   path: string;
   file_url: string;
   file_name: string;
@@ -127,10 +129,13 @@ export async function POST(
       .from('assets')
       .getPublicUrl(signedData.path);
 
+    const uploadToken = await signUploadToken(userId);
+
     return NextResponse.json({
       data: {
         signed_url: signedData.signedUrl,
         token: signedData.token,
+        upload_token: uploadToken,
         path: signedData.path,
         file_url: urlData.publicUrl,
         file_name: fileName,
