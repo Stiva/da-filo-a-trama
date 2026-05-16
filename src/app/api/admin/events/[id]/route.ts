@@ -234,7 +234,10 @@ export async function PUT(
       category: body.category,
       tags: body.tags || [],
       location_poi_id: body.location_poi_id || null,
-      secondary_location_poi_id: body.secondary_location_poi_id || null,
+      secondary_location_poi_id:
+        body.secondary_location_poi_id && body.secondary_location_poi_id !== body.location_poi_id
+          ? body.secondary_location_poi_id
+          : null,
       start_time: body.start_time,
       end_time: body.end_time || null,
       max_posti: body.max_posti || 50,
@@ -355,7 +358,7 @@ export async function PATCH(
 
     const { data: existingEvent, error: existingError } = await supabase
       .from('events')
-      .select('auto_enroll_all, max_posti, category')
+      .select('auto_enroll_all, max_posti, category, location_poi_id')
       .eq('id', id)
       .single();
 
@@ -379,7 +382,15 @@ export async function PATCH(
     if (body.category !== undefined) updateData.category = body.category;
     if (body.tags !== undefined) updateData.tags = body.tags;
     if (body.location_poi_id !== undefined) updateData.location_poi_id = body.location_poi_id;
-    if (body.secondary_location_poi_id !== undefined) updateData.secondary_location_poi_id = body.secondary_location_poi_id || null;
+    if (body.secondary_location_poi_id !== undefined) {
+      const effectivePrimary = body.location_poi_id !== undefined
+        ? body.location_poi_id
+        : existingEvent.location_poi_id;
+      updateData.secondary_location_poi_id =
+        body.secondary_location_poi_id && body.secondary_location_poi_id !== effectivePrimary
+          ? body.secondary_location_poi_id
+          : null;
+    }
     if (body.start_time !== undefined) updateData.start_time = body.start_time;
     if (body.end_time !== undefined) updateData.end_time = body.end_time;
     if (body.max_posti !== undefined) updateData.max_posti = body.max_posti;
