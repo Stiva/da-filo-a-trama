@@ -8,9 +8,10 @@ import * as tus from 'tus-js-client';
  * da 6 MB (richiesto da Supabase) inviati come richieste HTTP separate
  * con retry automatico sui chunk falliti.
  *
- * Auth: usa il JWT Clerk con template 'supabase'. Il token Clerk dura
- * ~60 secondi quindi viene rifatto prima di ogni richiesta via
- * onBeforeRequest, evitando 401 a metà upload.
+ * Auth: usa il JWT generato dal signing endpoint (firmato con
+ * SUPABASE_JWT_SECRET). I JWT Clerk vengono rigettati dal servizio
+ * Storage di Supabase con "signature verification failed" anche quando
+ * sono accettati da PostgREST tramite integrazione third-party.
  */
 
 const SUPABASE_CHUNK_SIZE = 6 * 1024 * 1024;
@@ -19,7 +20,7 @@ interface UploadFileOptions {
   file: File;
   bucket: string;
   path: string;
-  getAuthToken: () => Promise<string | null>;
+  authToken: string;
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
   contentType?: string;
 }
@@ -28,7 +29,7 @@ export async function uploadFileResumable({
   file,
   bucket,
   path,
-  getAuthToken,
+  authToken,
   onProgress,
   contentType,
 }: UploadFileOptions): Promise<void> {
@@ -37,11 +38,6 @@ export async function uploadFileResumable({
 
   if (!supabaseUrl || !anonKey) {
     throw new Error('Configurazione Supabase mancante');
-  }
-
-  const initialToken = await getAuthToken();
-  if (!initialToken) {
-    throw new Error('Sessione non valida. Effettua di nuovo il login.');
   }
 
   return new Promise((resolve, reject) => {
@@ -64,9 +60,8 @@ export async function uploadFileResumable({
         cacheControl: '3600',
       },
       chunkSize: SUPABASE_CHUNK_SIZE,
-      onBeforeRequest: async (req) => {
-        const fresh = (await getAuthToken()) || initialToken;
-        req.setHeader('authorization', `Bearer ${fresh}`);
+      onBeforeRequest: (req) => {
+        req.setHeader('authorization', `Bearer ${authToken}`);
       },
       onError: (error) => {
         reject(error instanceof Error ? error : new Error(String(error)));

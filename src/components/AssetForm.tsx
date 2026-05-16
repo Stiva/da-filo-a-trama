@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useId } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
 import { sanitizeFolderPath } from '@/lib/folderPath';
 import { uploadFileResumable } from '@/lib/storage/uploadFile';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
@@ -34,7 +33,6 @@ interface AssetFormProps {
 
 export default function AssetForm({ asset, isEditing = false }: AssetFormProps) {
   const router = useRouter();
-  const { getToken } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderListId = useId();
   const [isSaving, setIsSaving] = useState(false);
@@ -132,6 +130,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
       let signResult: {
         data?: {
           token: string;
+          upload_token: string;
           path: string;
           file_url: string;
           file_name: string;
@@ -155,7 +154,7 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         throw new Error(signResult.error || 'Errore durante la preparazione dell\'upload');
       }
 
-      const { path, file_url, file_name, file_size_bytes, mime_type, tipo } = signResult.data;
+      const { path, file_url, file_name, file_size_bytes, mime_type, tipo, upload_token } = signResult.data;
 
       setUploadProgress('Caricamento file... 0%');
 
@@ -163,8 +162,8 @@ export default function AssetForm({ asset, isEditing = false }: AssetFormProps) 
         file,
         bucket: 'assets',
         path,
+        authToken: upload_token,
         contentType: file.type,
-        getAuthToken: () => getToken({ template: 'supabase' }),
         onProgress: (uploaded, total) => {
           const pct = Math.floor((uploaded / total) * 100);
           setUploadProgress(`Caricamento file... ${pct}%`);
