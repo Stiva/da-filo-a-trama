@@ -191,7 +191,7 @@ export default function AdminAssetsPage() {
       {/* Header - Responsive */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Materiali Evento</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Documenti</h1>
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Gestisci file, documenti e media</p>
         </div>
         <Link

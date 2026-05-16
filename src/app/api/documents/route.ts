@@ -9,7 +9,7 @@ interface DocumentsResponse {
 
 /**
  * GET /api/documents
- * Lista flat di tutti gli asset visibili all'utente, NON associati a eventi.
+ * Lista flat di tutti gli asset visibili all'utente.
  * Il client costruisce l'albero gerarchico a partire da `folder_path`.
  */
 export async function GET(): Promise<NextResponse<ApiResponse<DocumentsResponse>>> {
@@ -20,7 +20,6 @@ export async function GET(): Promise<NextResponse<ApiResponse<DocumentsResponse>
     let query = supabase
       .from('assets')
       .select('*')
-      .is('event_id', null)
       .order('folder_path', { ascending: true })
       .order('sort_order', { ascending: true })
       .order('file_name', { ascending: true });
