@@ -49,6 +49,10 @@ import {
 import { $setBlocksType } from '@lexical/selection';
 import { $createHeadingNode, $isHeadingNode } from '@lexical/rich-text';
 import { $createImageNode, $isImageNode, ImageNode } from '@/components/editor/ImageNode';
+import { uploadFileResumable } from '@/lib/storage/uploadFile';
+
+const IMAGE_MAX_UPLOAD_SIZE = 250 * 1024 * 1024;
+const IMAGE_MAX_UPLOAD_SIZE_MB = 250;
 
 // ==========================================
 // ExtendedTextNode: preserves inline styles
@@ -378,32 +382,60 @@ const ToolbarPlugin = () => {
       event.target.value = '';
       return;
     }
+    if (file.size > IMAGE_MAX_UPLOAD_SIZE) {
+      window.alert(`File troppo grande. Massimo ${IMAGE_MAX_UPLOAD_SIZE_MB}MB.`);
+      event.target.value = '';
+      return;
+    }
 
     setIsUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/admin/assets/upload', {
+      const signResponse = await fetch('/api/admin/assets/upload', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        }),
       });
 
-      const payload = await response.json();
-
-      if (!response.ok) {
-        const message = payload?.error || 'Errore durante il caricamento dell\'immagine';
-        throw new Error(message);
+      const signText = await signResponse.text();
+      let signResult: {
+        data?: {
+          upload_token: string;
+          path: string;
+          file_url: string;
+        };
+        error?: string;
+      };
+      try {
+        signResult = JSON.parse(signText);
+      } catch {
+        throw new Error(
+          signResponse.status === 413
+            ? 'Richiesta troppo grande.'
+            : `Errore server (${signResponse.status})`,
+        );
       }
 
-      const imageUrl = payload?.data?.file_url as string | undefined;
-      if (!imageUrl) {
-        throw new Error('Upload completato ma URL immagine non disponibile');
+      if (!signResponse.ok || !signResult.data) {
+        throw new Error(signResult.error || 'Errore durante la preparazione dell\'upload');
       }
+
+      const { path, file_url, upload_token } = signResult.data;
+
+      await uploadFileResumable({
+        file,
+        bucket: 'assets',
+        path,
+        authToken: upload_token,
+        contentType: file.type,
+      });
 
       editor.update(() => {
         const imageNode = $createImageNode({
-          src: imageUrl,
+          src: file_url,
           altText: file.name,
         });
         const paragraph = $createParagraphNode();
