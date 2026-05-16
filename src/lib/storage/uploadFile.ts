@@ -48,8 +48,10 @@ export async function uploadFileResumable({
     const upload = new tus.Upload(file, {
       endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
       retryDelays: [0, 3000, 5000, 10000, 20000],
+      // authorization è settato solo in onBeforeRequest: XHR.setRequestHeader
+      // concatena valori per lo stesso header, quindi settarlo qui
+      // produrrebbe "Bearer X, Bearer Y" -> Invalid Compact JWS.
       headers: {
-        authorization: `Bearer ${initialToken}`,
         'x-upsert': 'false',
         apikey: anonKey,
       },
@@ -63,10 +65,8 @@ export async function uploadFileResumable({
       },
       chunkSize: SUPABASE_CHUNK_SIZE,
       onBeforeRequest: async (req) => {
-        const fresh = await getAuthToken();
-        if (fresh) {
-          req.setHeader('authorization', `Bearer ${fresh}`);
-        }
+        const fresh = (await getAuthToken()) || initialToken;
+        req.setHeader('authorization', `Bearer ${fresh}`);
       },
       onError: (error) => {
         reject(error instanceof Error ? error : new Error(String(error)));
