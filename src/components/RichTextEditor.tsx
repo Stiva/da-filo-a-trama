@@ -451,12 +451,12 @@ const ToolbarPlugin = () => {
   };
 
   return (
-    <div className="lexical-toolbar flex flex-wrap items-center gap-1 p-2 border-b-2 border-agesci-blue/20 bg-gray-50 rounded-t-lg">
+    <div className="lexical-toolbar flex flex-wrap items-center gap-1 p-2 border-b-2 border-agesci-blue/20 bg-gray-50 rounded-t-lg max-w-full">
       {/* Block type */}
       <select
         value={blockType}
         onChange={(e) => handleBlockType(e.target.value)}
-        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px]"
+        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px] max-w-[44vw] sm:max-w-none min-w-0 truncate"
         aria-label="Tipo blocco"
       >
         <option value="paragraph">Paragrafo</option>
@@ -466,13 +466,13 @@ const ToolbarPlugin = () => {
         <option value="ol">Elenco numerato</option>
       </select>
 
-      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <div className="w-px h-6 bg-gray-300 mx-1 flex-shrink-0" />
 
       {/* Font family */}
       <select
         value={fontFamily}
         onChange={(e) => handleFontFamily(e.target.value)}
-        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px]"
+        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px] max-w-[44vw] sm:max-w-none min-w-0 truncate"
         aria-label="Font"
       >
         {FONT_FAMILY_OPTIONS.map((opt) => (
@@ -485,7 +485,7 @@ const ToolbarPlugin = () => {
       <select
         value={fontSize}
         onChange={(e) => handleFontSize(e.target.value)}
-        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px]"
+        className="px-2 py-1.5 text-sm border border-gray-300 rounded bg-white min-h-[36px] max-w-[44vw] sm:max-w-none min-w-0 truncate"
         aria-label="Dimensione testo"
       >
         {FONT_SIZE_OPTIONS.map((opt) => (
@@ -495,13 +495,13 @@ const ToolbarPlugin = () => {
         ))}
       </select>
 
-      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <div className="w-px h-6 bg-gray-300 mx-1 flex-shrink-0" />
 
       {/* Text format */}
       <button
         type="button"
         onClick={handleFormatBold}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           isBold ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Grassetto"
@@ -515,7 +515,7 @@ const ToolbarPlugin = () => {
       <button
         type="button"
         onClick={handleFormatItalic}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           isItalic ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Corsivo"
@@ -529,7 +529,7 @@ const ToolbarPlugin = () => {
       <button
         type="button"
         onClick={handleFormatUnderline}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           isUnderline ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Sottolineato"
@@ -543,7 +543,7 @@ const ToolbarPlugin = () => {
       <button
         type="button"
         onClick={handleFormatStrikethrough}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           isStrikethrough ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Barrato"
@@ -554,12 +554,12 @@ const ToolbarPlugin = () => {
         </svg>
       </button>
 
-      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <div className="w-px h-6 bg-gray-300 mx-1 flex-shrink-0" />
 
       <button
         type="button"
         onClick={() => handleAlignment('left')}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           alignment === 'left' ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Allinea a sinistra"
@@ -573,7 +573,7 @@ const ToolbarPlugin = () => {
       <button
         type="button"
         onClick={() => handleAlignment('center')}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           alignment === 'center' ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Allinea al centro"
@@ -587,7 +587,7 @@ const ToolbarPlugin = () => {
       <button
         type="button"
         onClick={() => handleAlignment('right')}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           alignment === 'right' ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Allinea a destra"
@@ -598,12 +598,12 @@ const ToolbarPlugin = () => {
         </svg>
       </button>
 
-      <div className="w-px h-6 bg-gray-300 mx-1" />
+      <div className="w-px h-6 bg-gray-300 mx-1 flex-shrink-0" />
 
       <button
         type="button"
         onClick={handleToggleLink}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           isLink ? 'bg-agesci-blue text-white' : 'hover:bg-gray-200 text-gray-700'
         }`}
         aria-label="Aggiungi o rimuovi link"
@@ -618,7 +618,7 @@ const ToolbarPlugin = () => {
         type="button"
         onClick={handleOpenImagePicker}
         disabled={isUploadingImage}
-        className={`p-2 rounded min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors ${
+        className={`p-2 rounded min-w-[36px] min-h-[36px] flex-shrink-0 flex items-center justify-center transition-colors ${
           isUploadingImage
             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
             : 'hover:bg-gray-200 text-gray-700'

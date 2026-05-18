@@ -204,7 +204,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                                 key={asset.id}
                                 className={`flex items-center gap-3 p-3 rounded-lg border ${isAdminUpload ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'}`}
                             >
-                                <span className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded ${isAdminUpload ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                <span className={`w-8 h-8 flex-shrink-0 flex items-center justify-center text-xs font-bold rounded ${isAdminUpload ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
                                     F
                                 </span>
                                 <div className="flex-1 min-w-0">
@@ -218,8 +218,8 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                                     >
                                         {asset.file_name}
                                     </a>
-                                    <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-                                        <span>Caricato da {asset.profile?.name} {asset.profile?.surname}</span>
+                                    <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap break-words">
+                                        <span className="break-words">Caricato da {asset.profile?.name} {asset.profile?.surname}</span>
                                         {isAdminUpload && (
                                             <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider bg-amber-100 px-1.5 py-0.5 rounded">
                                                 Staff
@@ -230,7 +230,7 @@ export default function GroupEventAssets({ eventId, groupId }: GroupEventAssetsP
                                 {canDelete && (
                                     <button
                                         onClick={() => handleDelete(asset.id)}
-                                        className="p-2 text-red-500 hover:text-red-700 transition-colors flex items-center justify-center"
+                                        className="p-2 flex-shrink-0 text-red-500 hover:text-red-700 transition-colors flex items-center justify-center"
                                         title="Elimina"
                                         aria-label={`Elimina ${asset.file_name}`}
                                     >
