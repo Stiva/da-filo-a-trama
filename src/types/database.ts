@@ -179,6 +179,7 @@ export interface Event {
   auto_enroll_all: boolean;
   checkin_enabled: boolean;
   user_can_upload_assets: boolean;
+  wallboard_enabled: boolean;
   workshop_groups_count: number;
   group_creation_mode: EventGroupCreationMode;
   /** Sorgente utenti per la generazione gruppi: bc_list = lista CRM, event_registrants = iscritti all'evento */
@@ -449,6 +450,33 @@ export const LINK_TYPE_LABELS: Record<LinkType, string> = {
   web: 'Web',
   other: 'Altro',
 };
+
+// ============================================
+// EVENT WALLBOARD
+// ============================================
+export interface EventWallboardAttachment {
+  id: string;
+  message_id: string;
+  type: UserAssetType;
+  title: string;
+  url: string;
+  link_type: LinkType | null;
+  file_name: string | null;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  created_at: string;
+}
+
+export interface EventWallboardMessage {
+  id: string;
+  event_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  profile?: Pick<Profile, 'id' | 'name' | 'surname' | 'profile_image_url' | 'avatar_config'> | null;
+  attachments?: EventWallboardAttachment[];
+}
 
 // ============================================
 // PREFERENCE TAGS (costanti)

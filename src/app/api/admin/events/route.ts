@@ -117,6 +117,8 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<E
             publish_at: body.publish_at || null,
             auto_enroll_all: isPlaceholder ? false : (body.auto_enroll_all ?? false),
             checkin_enabled: body.checkin_enabled ?? false,
+            user_can_upload_assets: body.user_can_upload_assets ?? false,
+            wallboard_enabled: body.wallboard_enabled ?? false,
             visibility: body.visibility || 'public',
             workshop_groups_count: isPlaceholder ? 0 : (body.workshop_groups_count || 0),
             group_creation_mode: body.group_creation_mode || 'random',
