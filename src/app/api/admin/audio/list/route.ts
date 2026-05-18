@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/transcription/adminAuth';
 import { looksLikeAudioFile } from '@/lib/transcription/jobs';
+import { extractStoragePath } from '@/lib/transcription/storage';
 import type {
   ApiResponse,
   AudioJobStatus,
@@ -257,6 +258,12 @@ export async function GET(): Promise<
 
     items.sort((x, y) => y.created_at.localeCompare(x.created_at));
 
+    // Arricchimento dimensione file: per gli assets file_size_bytes puo'
+    // essere NULL (rows storici), per gli event_group_attachments la colonna
+    // non esiste proprio. Probe via Storage API con service role: bypassa
+    // RLS e CORS, e funziona anche su bucket privati.
+    await enrichWithFileSize(supabase, items);
+
     return NextResponse.json({ data: items });
   } catch (error) {
     console.error('Errore GET /api/admin/audio/list:', error);
@@ -265,4 +272,53 @@ export async function GET(): Promise<
       { status: 500 },
     );
   }
+}
+
+const STORAGE_BUCKET = 'assets';
+const SIZE_PROBE_CONCURRENCY = 10;
+
+/**
+ * Popola `file_size_bytes` per gli item che non l'hanno usando la Storage
+ * REST API con service-role (bypassa RLS, funziona anche su bucket privati,
+ * niente CORS). Best-effort: errori per singolo file vengono silenziati e
+ * l'item resta con size null.
+ */
+async function enrichWithFileSize(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  items: AudioSourceListItem[],
+): Promise<void> {
+  const targets = items.filter(
+    (it) => !it.file_size_bytes || it.file_size_bytes <= 0,
+  );
+  if (targets.length === 0) return;
+
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < targets.length) {
+      const item = targets[cursor++];
+      const path = extractStoragePath(item.file_url);
+      if (!path) continue;
+      try {
+        const { data, error } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .info(path);
+        if (error || !data) continue;
+        // storage-js v2 espone la size come `size` sull'oggetto FileObjectV2.
+        const size = (data as { size?: number }).size;
+        if (typeof size === 'number' && size > 0) {
+          item.file_size_bytes = size;
+        }
+      } catch {
+        // ignora: best-effort
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(SIZE_PROBE_CONCURRENCY, targets.length) },
+      () => worker(),
+    ),
+  );
 }

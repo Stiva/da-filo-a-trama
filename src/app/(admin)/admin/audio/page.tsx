@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   AssemblyAISpeechModel,
   AudioJobStatus,
@@ -113,96 +113,16 @@ function formatDuration(seconds: number | null): string {
   return `${s}s`;
 }
 
-interface ProbedMeta {
-  duration: number | null;
-  sizeBytes: number | null;
-}
-
-function resolveSize(
-  item: AudioSourceListItem,
-  probed: ProbedMeta | undefined,
-): number | null {
-  if (item.file_size_bytes && item.file_size_bytes > 0) return item.file_size_bytes;
-  if (probed?.sizeBytes && probed.sizeBytes > 0) return probed.sizeBytes;
-  return null;
-}
-
-function estimateSeconds(
-  item: AudioSourceListItem,
-  probed: ProbedMeta | undefined,
-): number | null {
-  if (probed?.duration != null) return probed.duration;
+function estimateSeconds(item: AudioSourceListItem): number | null {
+  // 1) Durata esatta da una trascrizione passata (AssemblyAI la riporta).
   if (item.known_duration_seconds != null) return item.known_duration_seconds;
-  const size = resolveSize(item, probed);
-  if (size != null) return size / ESTIMATED_BYTES_PER_SECOND;
+  // 2) Stima da dimensione file (~1MB / min per audio compressi tipici).
+  //    L'errore reale dipende dal bitrate effettivo del file, ma e'
+  //    sufficiente per la stima del costo nella action bar.
+  if (item.file_size_bytes && item.file_size_bytes > 0) {
+    return item.file_size_bytes / ESTIMATED_BYTES_PER_SECOND;
+  }
   return null;
-}
-
-/**
- * Probe parallelo di durata e dimensione di un audio remoto.
- *  - Durata: <audio preload="metadata"> carica solo i pochi KB di header
- *    del contenitore (M4A/MP3/...).
- *  - Dimensione: HEAD sul file URL, header Content-Length. E' una
- *    "CORS-safelisted response header" quindi non richiede expose-headers.
- * Entrambe le probe falliscono in modo silenzioso (CORS, 4xx, timeout):
- * in quel caso il rispettivo campo resta null e la UI mostra un placeholder.
- */
-function probeAudioMeta(url: string, timeoutMs = 15000): Promise<ProbedMeta> {
-  return new Promise((resolve) => {
-    let pending = 2;
-    let duration: number | null = null;
-    let sizeBytes: number | null = null;
-    let settled = false;
-
-    const audio = document.createElement('audio');
-
-    const finish = () => {
-      pending -= 1;
-      if (pending <= 0 && !settled) {
-        settled = true;
-        try {
-          audio.src = '';
-          audio.removeAttribute('src');
-        } catch {
-          // ignore
-        }
-        resolve({ duration, sizeBytes });
-      }
-    };
-
-    audio.preload = 'metadata';
-    audio.muted = true;
-    audio.addEventListener('loadedmetadata', () => {
-      duration = Number.isFinite(audio.duration) ? audio.duration : null;
-      finish();
-    });
-    audio.addEventListener('error', () => finish());
-    audio.src = url;
-
-    fetch(url, { method: 'HEAD' })
-      .then((r) => {
-        if (!r.ok) return;
-        const len = r.headers.get('content-length');
-        const parsed = len ? parseInt(len, 10) : NaN;
-        if (Number.isFinite(parsed) && parsed > 0) sizeBytes = parsed;
-      })
-      .catch(() => {
-        // ignore CORS/network errors
-      })
-      .finally(finish);
-
-    setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      try {
-        audio.src = '';
-        audio.removeAttribute('src');
-      } catch {
-        // ignore
-      }
-      resolve({ duration, sizeBytes });
-    }, timeoutMs);
-  });
 }
 
 export default function AdminAudioPage() {
@@ -219,11 +139,6 @@ export default function AdminAudioPage() {
 
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-
-  // Metadati probed (durata + dimensione) per ciascun item. Persiste in
-  // memoria per la sessione UI.
-  const [probedMeta, setProbedMeta] = useState<Map<string, ProbedMeta>>(new Map());
-  const probeInflightRef = useRef<Set<string>>(new Set());
 
   const keyOf = useCallback(
     (i: AudioSourceListItem) => `${i.source_type}:${i.source_id}`,
@@ -248,65 +163,6 @@ export default function AdminAudioPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-
-  // Probe durata+dimensione in parallelo con concorrenza limitata. Per ogni
-  // item proviamo a colmare i metadati che non abbiamo gia' dal server
-  // (known_duration_seconds dal transcript, file_size_bytes dalla riga
-  // assets). I gruppi-attachment non hanno mai size lato DB, quindi vanno
-  // sempre probed.
-  useEffect(() => {
-    let cancelled = false;
-
-    async function runProbes() {
-      const queue = items.filter((i) => {
-        const k = keyOf(i);
-        if (probedMeta.has(k) || probeInflightRef.current.has(k)) return false;
-        const needsDuration = i.known_duration_seconds == null;
-        const needsSize = !i.file_size_bytes || i.file_size_bytes <= 0;
-        return needsDuration || needsSize;
-      });
-
-      const CONCURRENCY = 4;
-      let idx = 0;
-
-      async function worker() {
-        while (!cancelled && idx < queue.length) {
-          const item = queue[idx++];
-          const k = keyOf(item);
-          probeInflightRef.current.add(k);
-          const meta = await probeAudioMeta(item.file_url);
-          probeInflightRef.current.delete(k);
-          if (cancelled) return;
-          setProbedMeta((prev) => {
-            const next = new Map(prev);
-            next.set(k, meta);
-            return next;
-          });
-        }
-      }
-
-      await Promise.all(
-        Array.from({ length: Math.min(CONCURRENCY, queue.length) }, () => worker()),
-      );
-    }
-
-    runProbes();
-    return () => {
-      cancelled = true;
-    };
-  }, [items, keyOf, probedMeta]);
-
-  // Auto-refresh while there are jobs in progress.
-  useEffect(() => {
-    const hasInProgress = items.some(
-      (i) =>
-        i.latest_job &&
-        (i.latest_job.status === 'pending' || i.latest_job.status === 'processing'),
-    );
-    if (!hasInProgress) return;
-    const t = setInterval(refresh, 15000);
-    return () => clearInterval(t);
-  }, [items, refresh]);
 
   const filteredItems = useMemo(() => {
     return items.filter((i) => {
@@ -357,14 +213,13 @@ export default function AdminAudioPage() {
     let unknownCount = 0;
 
     for (const it of selectedItems) {
-      const probed = probedMeta.get(keyOf(it));
-      const dur = estimateSeconds(it, probed);
+      const dur = estimateSeconds(it);
       if (dur == null) {
         unknownCount += 1;
         continue;
       }
       totalSeconds += dur;
-      if (probed?.duration != null || it.known_duration_seconds != null) {
+      if (it.known_duration_seconds != null) {
         exactCount += 1;
       } else {
         estimatedCount += 1;
@@ -384,7 +239,7 @@ export default function AdminAudioPage() {
       exactCount,
       unknownCount,
     };
-  }, [selectedItems, probedMeta, keyOf]);
+  }, [selectedItems]);
 
   const toggleAll = () => {
     if (allSelected) {
@@ -656,10 +511,8 @@ export default function AdminAudioPage() {
                   !i.latest_job ||
                   i.latest_job.status === 'failed' ||
                   i.latest_job.status === 'cancelled';
-                const probed = probedMeta.get(k);
-                const dur = estimateSeconds(i, probed);
-                const isExact = probed?.duration != null || i.known_duration_seconds != null;
-                const sizeBytes = resolveSize(i, probed);
+                const dur = estimateSeconds(i);
+                const isExact = i.known_duration_seconds != null;
                 return (
                   <tr key={k} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-3 py-2">
@@ -697,7 +550,7 @@ export default function AdminAudioPage() {
                         : '—'}
                     </td>
                     <td className="px-3 py-2 text-gray-700">
-                      {formatBytes(sizeBytes)}
+                      {formatBytes(i.file_size_bytes)}
                     </td>
                     <td className="px-3 py-2">
                       {i.latest_job ? (
