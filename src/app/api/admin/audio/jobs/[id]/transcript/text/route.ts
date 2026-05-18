@@ -23,36 +23,43 @@ export async function GET(
   const { id } = await context.params;
   const supabase = createServiceRoleClient();
 
-  const { data, error } = await supabase
+  // Job e transcript in due query separate: audio_transcripts.job_id ha
+  // UNIQUE constraint, quindi PostgREST tratta l'embedding come 1-to-1
+  // (oggetto, non array). Per evitare ambiguita' nella shape della
+  // risposta facciamo due query esplicite.
+  const { data: jobData, error: jobError } = await supabase
     .from('audio_transcription_jobs')
-    .select('id, metadata, audio_transcripts(text, segments)')
+    .select('id, metadata')
     .eq('id', id)
     .single();
 
-  if (error || !data) {
+  if (jobError || !jobData) {
     return new Response('Not found', { status: 404 });
   }
 
-  type Row = {
-    id: string;
-    metadata: AudioJobMetadata;
-    audio_transcripts:
-      | { text: string; segments: AudioTranscriptSegment[] | null }[]
-      | null;
-  };
-  const row = data as unknown as Row;
-  const transcript = row.audio_transcripts?.[0];
+  const job = jobData as unknown as { id: string; metadata: AudioJobMetadata };
+
+  const { data: transcriptData } = await supabase
+    .from('audio_transcripts')
+    .select('text, segments')
+    .eq('job_id', id)
+    .maybeSingle();
+
+  const transcript = transcriptData as
+    | { text: string; segments: AudioTranscriptSegment[] | null }
+    | null;
+
   if (!transcript) {
     return new Response('Transcript non disponibile', { status: 404 });
   }
 
-  const content = renderTranscriptTextFile(row.metadata, {
+  const content = renderTranscriptTextFile(job.metadata, {
     text: transcript.text,
     segments: transcript.segments,
   });
 
   const safeName =
-    (row.metadata.file?.name ?? `transcript-${row.id}`).replace(/\.[^.]+$/, '') +
+    (job.metadata.file?.name ?? `transcript-${job.id}`).replace(/\.[^.]+$/, '') +
     '.txt';
 
   return new Response(content, {
