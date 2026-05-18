@@ -5,16 +5,22 @@ import { Inter, Quicksand, Dancing_Script } from 'next/font/google';
 import localFont from 'next/font/local';
 import { Analytics } from '@vercel/analytics/next';
 import Script from 'next/script';
+import { getCmsBundle } from '@/lib/cms/server';
+import { buildCssVarsBlock } from '@/lib/cms/cssVars';
+import { buildFontFaceBlock } from '@/lib/cms/fonts';
+import CopyProvider from '@/lib/cms/CopyProvider';
+import BrandProvider from '@/lib/cms/BrandProvider';
+import { resolveBrandAssetUrl } from '@/lib/cms/brandAssets';
 import './globals.css';
 
-// Font per il corpo del testo
+// Font baseline (next/font Google + locale). Restano come fallback anche
+// quando l'admin carica font custom via CMS in Fase 4.
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
 });
 
-// Font per i titoli (arrotondato, giocoso)
 const quicksand = Quicksand({
   subsets: ['latin'],
   variable: '--font-quicksand',
@@ -22,7 +28,6 @@ const quicksand = Quicksand({
   display: 'swap',
 });
 
-// Font per il brand (handwritten)
 const dancingScript = Dancing_Script({
   subsets: ['latin'],
   variable: '--font-dancing-script',
@@ -30,52 +35,72 @@ const dancingScript = Dancing_Script({
   display: 'swap',
 });
 
-// Font custom "Love You" per titoli/display (sezione utente)
 const loveYou = localFont({
   src: '../../public/Love You.ttf',
   variable: '--font-loveyou',
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Da Filo a Trama - Convegno Nazionale sull\'Ambiente Fantastico - AGESCI Branca L/C 2026',
-  description: 'Piattaforma digitale per il convegno nazionale Branca L/C AGESCI 2026',
-  manifest: '/manifest.json',
-  keywords: ['scout', 'agesci', 'evento', '2026', 'lupetti', 'coccinelle'],
-  authors: [{ name: 'AGESCI' }],
-  icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
-    apple: '/apple-touch-icon.png',
-  },
-  appleWebApp: {
-    title: 'GomitoloApp',
-    statusBarStyle: 'default',
-    capable: true,
-  },
-  openGraph: {
-    title: 'Da Filo a Trama - Convegno Nazionale sull\'Ambiente Fantastico - AGESCI Branca L/C 2026',
-    description: 'Piattaforma digitale per il convegno nazionale Branca L/C AGESCI 2026',
-    images: ['/header-da-filo-a-trama_2-1.jpg'],
-    type: 'website',
-    locale: 'it_IT',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const bundle = await getCmsBundle();
+  const { app, og } = bundle.meta;
+  const { assets } = bundle.brand;
+  const favicon = resolveBrandAssetUrl(assets.favicon) || '/favicon.png';
+  const appleTouch = resolveBrandAssetUrl(assets.apple_touch) || '/apple-touch-icon.png';
+  const ogImage =
+    resolveBrandAssetUrl(assets.og_image) || '/header-da-filo-a-trama_2-1.jpg';
+  return {
+    title: app.title,
+    description: app.description,
+    manifest: '/manifest.webmanifest',
+    keywords: app.keywords,
+    authors: app.authors,
+    icons: {
+      icon: favicon,
+      shortcut: favicon,
+      apple: appleTouch,
+    },
+    appleWebApp: {
+      title: app.apple_web_app_title,
+      statusBarStyle: 'default',
+      capable: true,
+    },
+    openGraph: {
+      title: og.title,
+      description: og.description,
+      images: [ogImage],
+      type: og.type as 'website',
+      locale: app.locale,
+    },
+  };
+}
 
-export const viewport: Viewport = {
-  themeColor: '#4b2c7f', // Agesci Purple
-  width: 'device-width',
-  initialScale: 1,
-};
+export async function generateViewport(): Promise<Viewport> {
+  const bundle = await getCmsBundle();
+  return {
+    themeColor: bundle.meta.pwa.theme_color,
+    width: 'device-width',
+    initialScale: 1,
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const bundle = await getCmsBundle();
+  const cssVars = buildCssVarsBlock({
+    colors: bundle.brand.colors,
+    shadows: bundle.brand.shadows,
+  });
+  const fontFaces = buildFontFaceBlock(bundle.brand.fonts);
+
   return (
     <html lang="it" className={`${inter.variable} ${quicksand.variable} ${dancingScript.variable} ${loveYou.variable}`}>
       <head>
+        {cssVars && <style id="cms-theme" dangerouslySetInnerHTML={{ __html: cssVars }} />}
+        {fontFaces && <style id="cms-fonts" dangerouslySetInnerHTML={{ __html: fontFaces }} />}
         <Script
           id="Cookiebot"
           src="https://consent.cookiebot.com/uc.js"
@@ -86,7 +111,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-scout-cream font-sans antialiased">
         <ClerkProvider localization={itIT}>
-          {children}
+          <CopyProvider>
+            <BrandProvider>{children}</BrandProvider>
+          </CopyProvider>
           <Analytics />
         </ClerkProvider>
       </body>

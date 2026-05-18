@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import AdminSupportPendingBadge from '@/components/chat/AdminSupportPendingBadge';
 import UserDropdownMenu from '@/components/UserDropdownMenu';
+import { useCopy } from '@/lib/cms/CopyContext';
 
 // Per il ruolo "segreteria" mostriamo solo gli href della sezione admin light:
 // Lista Iscritti APP, Check-in Desk, Service Chat.
@@ -23,6 +24,7 @@ export default function AdminLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useUser();
+  const t = useCopy();
   const userRole = (user?.publicMetadata as { role?: string } | undefined)?.role;
   const isSegreteria = userRole === 'segreteria';
   const filterForSegreteria = <T extends { href: string }>(links: T[]): T[] =>
@@ -223,7 +225,7 @@ export default function AdminLayout({
               <Link href="/admin" className="font-bold text-xl text-green-400">
                 Admin Panel
               </Link>
-              <span className="hidden sm:block ml-2 text-gray-400 text-sm">Da Filo a Trama</span>
+              <span className="hidden sm:block ml-2 text-gray-400 text-sm">{t('admin.brand_name')}</span>
             </div>
 
             {/* Right side */}

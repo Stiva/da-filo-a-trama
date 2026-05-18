@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { getCopy, tSync } from '@/lib/cms/copy';
 
 // Force dynamic rendering (no static generation at build time)
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,8 @@ async function getStats() {
 
 export default async function AdminDashboardPage() {
   const stats = await getStats();
+  const copy = await getCopy();
+  const t = (key: string) => tSync(copy, key);
 
   const statCards = [
     {
@@ -106,7 +109,7 @@ export default async function AdminDashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Panoramica dell&apos;evento Da Filo a Trama</p>
+        <p className="text-gray-500 mt-1">{t('admin.dashboard.subtitle')}</p>
       </div>
 
       {/* Stats Grid */}
