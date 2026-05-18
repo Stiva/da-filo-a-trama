@@ -6,7 +6,11 @@ import type { Asset, AssetType, AssetVisibility, ApiResponse } from '@/types/dat
 
 /**
  * GET /api/admin/assets
- * Lista assets con filtri (admin only)
+ * Lista assets con filtri (admin only).
+ * Query params opzionali:
+ *  - tipo, event_id, visibilita: filtri base
+ *  - ids=id1,id2,...: limita ai soli ID indicati (max 500)
+ *  - enriched=1: includi info uploader, titolo evento e nome POI per export
  */
 export async function GET(
   request: Request
@@ -34,6 +38,8 @@ export async function GET(
     const tipo = searchParams.get('tipo') as AssetType | null;
     const eventId = searchParams.get('event_id');
     const visibilita = searchParams.get('visibilita') as AssetVisibility | null;
+    const enriched = searchParams.get('enriched') === '1';
+    const idsParam = searchParams.get('ids');
 
     let query = supabase
       .from('assets')
@@ -49,6 +55,17 @@ export async function GET(
     if (visibilita) {
       query = query.eq('visibilita', visibilita);
     }
+    if (idsParam) {
+      const ids = idsParam
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 500);
+      if (ids.length === 0) {
+        return NextResponse.json({ data: [] });
+      }
+      query = query.in('id', ids);
+    }
 
     const { data, error } = await query;
 
@@ -56,7 +73,85 @@ export async function GET(
       throw error;
     }
 
-    return NextResponse.json({ data: data as Asset[] });
+    const assets = (data ?? []) as Asset[];
+
+    if (!enriched || assets.length === 0) {
+      return NextResponse.json({ data: assets });
+    }
+
+    // Enrichment: resolve uploader profiles, event titles and POI names in batch
+    const uploaderIds = Array.from(
+      new Set(
+        assets
+          .map((a) => a.uploaded_by)
+          .filter((v): v is string => Boolean(v))
+      )
+    );
+    const eventIds = Array.from(
+      new Set(
+        assets
+          .map((a) => a.event_id)
+          .filter((v): v is string => Boolean(v))
+      )
+    );
+    const poiIds = Array.from(
+      new Set(
+        assets
+          .map((a) => a.poi_id)
+          .filter((v): v is string => Boolean(v))
+      )
+    );
+
+    const [profilesRes, eventsRes, poisRes] = await Promise.all([
+      uploaderIds.length
+        ? supabase
+            .from('profiles')
+            .select('id, name, surname, first_name, email')
+            .in('id', uploaderIds)
+        : Promise.resolve({ data: [], error: null }),
+      eventIds.length
+        ? supabase.from('events').select('id, title').in('id', eventIds)
+        : Promise.resolve({ data: [], error: null }),
+      poiIds.length
+        ? supabase.from('poi').select('id, nome').in('id', poiIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    type ProfileRow = { id: string; name: string | null; surname: string | null; first_name: string | null; email: string };
+    type EventRow = { id: string; title: string };
+    type PoiRow = { id: string; nome: string };
+
+    const profilesMap = new Map<string, ProfileRow>();
+    for (const p of (profilesRes.data ?? []) as ProfileRow[]) {
+      profilesMap.set(p.id, p);
+    }
+    const eventsMap = new Map<string, string>();
+    for (const e of (eventsRes.data ?? []) as EventRow[]) {
+      eventsMap.set(e.id, e.title);
+    }
+    const poisMap = new Map<string, string>();
+    for (const p of (poisRes.data ?? []) as PoiRow[]) {
+      poisMap.set(p.id, p.nome);
+    }
+
+    const enrichedAssets = assets.map((a) => {
+      const uploader = a.uploaded_by ? profilesMap.get(a.uploaded_by) : null;
+      const uploaderName = uploader
+        ? [uploader.first_name || uploader.name, uploader.surname]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || null
+        : null;
+      return {
+        ...a,
+        uploader_name: uploaderName,
+        uploader_email: uploader?.email ?? null,
+        event_title: a.event_id ? eventsMap.get(a.event_id) ?? null : null,
+        poi_name: a.poi_id ? poisMap.get(a.poi_id) ?? null : null,
+      };
+    });
+
+    return NextResponse.json({ data: enrichedAssets as Asset[] });
   } catch (error) {
     console.error('Errore GET /api/admin/assets:', error);
     return NextResponse.json(
