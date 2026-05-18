@@ -11,28 +11,44 @@
   --agesci-purple: #4b2c7f;
   --agesci-purple-light: #6b4c9f;
   --agesci-purple-dark: #3b1c6f;
+  /* RGB triplets (per opacity modifier Tailwind: rgb(var(--xxx) / <alpha>)) */
+  --agesci-purple-rgb: 75 44 127;
+  --agesci-purple-light-rgb: 107 76 159;
+  --agesci-purple-dark-rgb: 59 28 111;
 
   /* Giallo piu' caldo */
   --agesci-yellow: #f1b42f;
   --agesci-yellow-light: #f8cc6b;
   --agesci-yellow-dark: #d9a020;
+  --agesci-yellow-rgb: 241 180 47;
+  --agesci-yellow-light-rgb: 248 204 107;
+  --agesci-yellow-dark-rgb: 217 160 32;
 
   /* Colori accento */
   --brand-cyan: #29bbce;
   --brand-red: #e94e5a;
+  --brand-cyan-rgb: 41 187 206;
+  --brand-red-rgb: 233 78 90;
 
   /* Verde Branca L/C */
   --lc-green: #4eaf48;
   --lc-green-light: #6bc963;
   --lc-green-dark: #3a8f34;
+  --lc-green-rgb: 78 175 72;
+  --lc-green-light-rgb: 107 201 99;
+  --lc-green-dark-rgb: 58 143 52;
 
   /* Sfondo */
   --scout-cream: #fdfaf6;
+  --scout-cream-rgb: 253 250 246;
 
   /* Colori legacy (per compatibilita') */
   --agesci-blue: #4b2c7f; /* Mappato a purple per transizione */
   --agesci-blue-light: #6b4c9f;
   --agesci-blue-dark: #3b1c6f;
+  --agesci-blue-rgb: 75 44 127;
+  --agesci-blue-light-rgb: 107 76 159;
+  --agesci-blue-dark-rgb: 59 28 111;
   --scout-green: #2D5016;
   --scout-green-light: #4A7C23;
   --scout-azure: #1E6091;

@@ -8,6 +8,8 @@ import { useClerk, useUser } from '@clerk/nextjs';
 import AvatarPreview from '@/components/AvatarPreview';
 import UserDropdownMenu from '@/components/UserDropdownMenu';
 import type { AvatarConfig } from '@/types/database';
+import { useCopy } from '@/lib/cms/CopyContext';
+import { useBrandAsset } from '@/lib/cms/BrandContext';
 
 // Profilo removed — accessible via avatar dropdown
 const navLinks = [
@@ -34,6 +36,9 @@ export default function Navbar() {
   const { signOut } = useClerk();
   const router = useRouter();
   const avatarMenuRef = useRef<HTMLDivElement>(null);
+  const t = useCopy();
+  const logoFull = useBrandAsset('logo_full') ?? '/Logo completo.png';
+  const logoCompact = useBrandAsset('logo_compact') ?? '/Logo gomitolo.png';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -128,21 +133,23 @@ export default function Navbar() {
               <Link href="/dashboard" className="flex items-center group">
                 {/* Desktop: full logo */}
                 <Image
-                  src="/Logo completo.png"
-                  alt="Da Filo a Trama"
+                  src={logoFull}
+                  alt={t('app.brand_alt')}
                   width={180}
                   height={70}
                   className="hidden md:block h-11 w-auto group-hover:scale-105 transition-transform"
                   priority
+                  unoptimized={logoFull.startsWith('http')}
                 />
                 {/* Mobile: icon only */}
                 <Image
-                  src="/Logo gomitolo.png"
-                  alt="Da Filo a Trama"
+                  src={logoCompact}
+                  alt={t('app.brand_alt')}
                   width={44}
                   height={44}
                   className="md:hidden h-10 w-10 group-hover:scale-105 transition-transform"
                   priority
+                  unoptimized={logoCompact.startsWith('http')}
                 />
               </Link>
             </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { type AvatarConfig, DEFAULT_AVATAR_CONFIG } from '@/types/database';
+import { useCopy } from '@/lib/cms/CopyContext';
 
 type GuestStep = 'info' | 'complete';
 
@@ -18,6 +19,7 @@ const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 function GuestOnboardingInner() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const t = useCopy();
   const [currentStep, setCurrentStep] = useState<GuestStep>('info');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +131,7 @@ function GuestOnboardingInner() {
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-display font-bold text-agesci-blue">
-            Benvenuto ospite!
+            {t('onboarding.guest.welcome')}
           </h1>
           <p className="text-agesci-blue/60 mt-2">
             Registrazione rapida per gli ospiti dell'evento
@@ -198,7 +200,7 @@ function GuestOnboardingInner() {
 
                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                   <p className="text-sm text-agesci-blue/80">
-                    🎟️ Stai completando la registrazione come <strong>ospite dell'evento</strong>.
+                    🎟️ Stai completando la registrazione come <strong>{t('onboarding.guest.role')}</strong>.
                   </p>
                 </div>
               </div>

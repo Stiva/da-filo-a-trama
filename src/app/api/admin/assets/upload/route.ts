@@ -35,6 +35,11 @@ const ALLOWED_MIME_TYPES = new Set([
   // Audio
   'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a',
   'audio/aac', 'audio/ogg', 'audio/webm', 'audio/flac', 'audio/x-flac',
+  // Fonts (CMS branding)
+  'font/woff2', 'font/woff', 'font/ttf', 'font/otf',
+  'application/font-woff', 'application/font-woff2',
+  'application/x-font-woff', 'application/x-font-ttf', 'application/x-font-otf',
+  'application/octet-stream',
 ]);
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -42,6 +47,7 @@ const ALLOWED_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.heic', '.heif',
   '.mp4', '.webm', '.mov',
   '.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac',
+  '.woff2', '.woff', '.ttf', '.otf',
 ]);
 
 /**

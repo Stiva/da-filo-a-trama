@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { currentUser } from '@clerk/nextjs/server';
+import { revalidateForSettingKey } from '@/lib/cms/revalidate';
 
 export async function GET(request: Request) {
   try {
@@ -72,6 +73,8 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    revalidateForSettingKey(key);
 
     return NextResponse.json({ data });
   } catch (error: any) {
