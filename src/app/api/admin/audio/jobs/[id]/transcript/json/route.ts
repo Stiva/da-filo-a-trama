@@ -19,50 +19,56 @@ export async function GET(
   const { id } = await context.params;
   const supabase = createServiceRoleClient();
 
-  const { data, error } = await supabase
+  // Job e transcript in due query separate (vedi nota equivalente nel
+  // file text/route.ts): l'embedding 1-to-1 di PostgREST aveva shape
+  // ambigua, splittare e' piu' robusto.
+  const { data: jobData, error: jobError } = await supabase
     .from('audio_transcription_jobs')
-    .select(
-      'id, source_type, source_id, provider, language, metadata, audio_transcripts(text, segments, duration_seconds, confidence, language)',
-    )
+    .select('id, source_type, source_id, provider, language, metadata')
     .eq('id', id)
     .single();
 
-  if (error || !data) {
+  if (jobError || !jobData) {
     return new Response('Not found', { status: 404 });
   }
 
-  type Row = {
+  type JobRow = {
     id: string;
     source_type: string;
     source_id: string;
     provider: string;
     language: string;
     metadata: AudioJobMetadata;
-    audio_transcripts:
-      | {
-          text: string;
-          segments: AudioTranscriptSegment[] | null;
-          duration_seconds: number | null;
-          confidence: number | null;
-          language: string | null;
-        }[]
-      | null;
   };
+  const job = jobData as unknown as JobRow;
 
-  const row = data as unknown as Row;
-  const transcript = row.audio_transcripts?.[0];
+  const { data: transcriptData } = await supabase
+    .from('audio_transcripts')
+    .select('text, segments, duration_seconds, confidence, language')
+    .eq('job_id', id)
+    .maybeSingle();
+
+  type TranscriptRow = {
+    text: string;
+    segments: AudioTranscriptSegment[] | null;
+    duration_seconds: number | null;
+    confidence: number | null;
+    language: string | null;
+  };
+  const transcript = transcriptData as TranscriptRow | null;
+
   if (!transcript) {
     return new Response('Transcript non disponibile', { status: 404 });
   }
 
   const bundle = {
-    job_id: row.id,
-    source: { type: row.source_type, id: row.source_id },
-    provider: row.provider,
-    language: transcript.language ?? row.language,
+    job_id: job.id,
+    source: { type: job.source_type, id: job.source_id },
+    provider: job.provider,
+    language: transcript.language ?? job.language,
     duration_seconds: transcript.duration_seconds,
     confidence: transcript.confidence,
-    metadata: row.metadata,
+    metadata: job.metadata,
     transcript: {
       text: transcript.text,
       segments: transcript.segments,
@@ -70,7 +76,7 @@ export async function GET(
   };
 
   const safeName =
-    (row.metadata.file?.name ?? `transcript-${row.id}`).replace(/\.[^.]+$/, '') +
+    (job.metadata.file?.name ?? `transcript-${job.id}`).replace(/\.[^.]+$/, '') +
     '.json';
 
   return new Response(JSON.stringify(bundle, null, 2), {
