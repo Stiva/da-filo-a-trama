@@ -300,6 +300,38 @@ export default function AdminAudioPage() {
   };
 
   const [isProcessingNow, setIsProcessingNow] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const syncWithProvider = async () => {
+    setIsSyncing(true);
+    setSubmitMessage(null);
+    try {
+      const res = await fetch('/api/admin/audio/sync', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Errore sync');
+      const r = data.data as {
+        considered: number;
+        completed: number;
+        still_processing: number;
+        failed: number;
+        not_found: number;
+        errors: { jobId: string; error: string }[];
+      };
+      const parts: string[] = [`Verificati: ${r.considered}`];
+      if (r.completed > 0) parts.push(`completati: ${r.completed}`);
+      if (r.still_processing > 0) parts.push(`ancora in corso: ${r.still_processing}`);
+      if (r.failed > 0) parts.push(`falliti: ${r.failed}`);
+      if (r.not_found > 0) parts.push(`non trovati: ${r.not_found}`);
+      let msg = parts.join(' · ');
+      if (r.errors.length > 0) msg += ` — errore: ${r.errors[0].error}`;
+      setSubmitMessage(msg);
+      await refresh();
+    } catch (e) {
+      setSubmitMessage(e instanceof Error ? e.message : 'Errore sconosciuto');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const processPendingNow = async () => {
     setIsProcessingNow(true);
@@ -431,6 +463,14 @@ export default function AdminAudioPage() {
             title="Esegue subito il worker che invia i job 'in coda' ad AssemblyAI. Utile per non aspettare il prossimo tick del cron (ogni 5 min)."
           >
             {isProcessingNow ? 'Esecuzione…' : 'Esegui pending ora'}
+          </button>
+          <button
+            onClick={syncWithProvider}
+            disabled={isSyncing}
+            className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 disabled:opacity-50"
+            title="Interroga AssemblyAI per i job in elaborazione e applica i transcript completati. Utile se il webhook non e' arrivato (es. URL pubblico non configurato)."
+          >
+            {isSyncing ? 'Sync…' : 'Sincronizza con AssemblyAI'}
           </button>
           {submitMessage && (
             <span className="text-sm text-gray-700">{submitMessage}</span>
@@ -586,8 +626,12 @@ export default function AdminAudioPage() {
                         {i.latest_job && i.has_transcript && (
                           <button
                             onClick={() => setDetailJobId(i.latest_job!.id)}
-                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-100 text-emerald-800 rounded hover:bg-emerald-200 font-medium"
+                            title="Apri la trascrizione"
                           >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
                             Vedi trascrizione
                           </button>
                         )}
