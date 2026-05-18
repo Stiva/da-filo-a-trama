@@ -108,17 +108,10 @@ export async function GET(): Promise<
     >();
 
     if (sourceIds.length > 0) {
-      // Query separata su audio_transcription_jobs: l'embedding di
-      // audio_transcripts qui sotto era problematico perche' l'FK
-      // audio_transcripts.job_id ha UNIQUE constraint -> PostgREST tratta
-      // la relazione come 1-to-1 e ritorna un oggetto singolo (o null)
-      // invece di un array. Tutta la logica downstream assumeva array,
-      // quindi has_transcript risultava sempre false anche con
-      // transcript presenti. Facciamo due query e mergiamo a mano.
       const { data: jobsData, error: jobsError } = await supabase
         .from('audio_transcription_jobs')
         .select(
-          'id, source_type, source_id, status, created_at, completed_at, last_error',
+          'id, source_type, source_id, status, created_at, completed_at, last_error, audio_transcripts(id, duration_seconds)',
         )
         .in('source_id', sourceIds)
         .order('created_at', { ascending: false });
@@ -133,49 +126,24 @@ export async function GET(): Promise<
         created_at: string;
         completed_at: string | null;
         last_error: string | null;
+        audio_transcripts:
+          | { id: string; duration_seconds: number | null }[]
+          | null;
       };
 
-      const jobRows = (jobsData ?? []) as unknown as JobRow[];
-
-      // Transcript per i job recuperati: map job_id -> { id, duration }.
-      const jobIds = jobRows.map((j) => j.id);
-      const transcriptsByJobId = new Map<
-        string,
-        { id: string; duration_seconds: number | null }
-      >();
-      if (jobIds.length > 0) {
-        const { data: transcriptsData, error: transcriptsError } = await supabase
-          .from('audio_transcripts')
-          .select('id, job_id, duration_seconds')
-          .in('job_id', jobIds);
-        if (transcriptsError) throw transcriptsError;
-
-        type TranscriptRow = {
-          id: string;
-          job_id: string;
-          duration_seconds: number | null;
-        };
-        for (const t of (transcriptsData ?? []) as unknown as TranscriptRow[]) {
-          transcriptsByJobId.set(t.job_id, {
-            id: t.id,
-            duration_seconds: t.duration_seconds,
-          });
-        }
-      }
-
+      const rows = (jobsData ?? []) as unknown as JobRow[];
       jobsBySource = new Map();
-      for (const j of jobRows) {
+      for (const j of rows) {
         const key = `${j.source_type}:${j.source_id}`;
         if (!jobsBySource.has(key)) {
-          const transcript = transcriptsByJobId.get(j.id);
           jobsBySource.set(key, {
             id: j.id,
             status: j.status,
             created_at: j.created_at,
             completed_at: j.completed_at,
             last_error: j.last_error,
-            has_transcript: transcript != null,
-            duration_seconds: transcript?.duration_seconds ?? null,
+            has_transcript: (j.audio_transcripts?.length ?? 0) > 0,
+            duration_seconds: j.audio_transcripts?.[0]?.duration_seconds ?? null,
           });
         }
       }
