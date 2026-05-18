@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import type { EventWithEnrollment, EventCategory } from '@/types/database';
 import EventAssets from '@/components/EventAssets';
 import UserEventAssets from '@/components/UserEventAssets';
+import EventWallboard from '@/components/EventWallboard';
 import RichTextContent from '@/components/RichTextContent';
 
 const EventLocationMap = dynamic(() => import('@/components/EventLocationMap'), {
@@ -132,6 +133,7 @@ export default function EventDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userProfileId, setUserProfileId] = useState<string | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
   const [conflictingEvent, setConflictingEvent] = useState<{ id: string; title: string } | null>(null);
@@ -145,7 +147,10 @@ export default function EventDetailPage() {
     }
     fetch('/api/profiles')
       .then(r => r.json())
-      .then(r => { if (r.data?.role) setUserRole(r.data.role); })
+      .then(r => {
+        if (r.data?.role) setUserRole(r.data.role);
+        if (r.data?.id) setUserProfileId(r.data.id);
+      })
       .catch(() => {});
   }, [eventId]);
 
@@ -453,6 +458,16 @@ export default function EventDetailPage() {
               {/* User Uploaded Assets - solo dopo check-in */}
               {event.user_can_upload_assets && event.checked_in_at && (
                 <UserEventAssets eventId={eventId} />
+              )}
+
+              {/* Wallboard evento */}
+              {event.wallboard_enabled && (
+                <EventWallboard
+                  eventId={eventId}
+                  canPost={event.is_enrolled && event.enrollment_status === 'confirmed'}
+                  currentUserProfileId={userProfileId}
+                  isAdmin={userRole === 'admin' || userRole === 'staff'}
+                />
               )}
             </div>
 

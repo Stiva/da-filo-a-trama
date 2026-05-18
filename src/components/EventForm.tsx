@@ -52,6 +52,7 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
     auto_enroll_all: event?.auto_enroll_all || false,
     checkin_enabled: event?.checkin_enabled || false,
     user_can_upload_assets: event?.user_can_upload_assets || false,
+    wallboard_enabled: event?.wallboard_enabled || false,
     workshop_groups_count: event?.workshop_groups_count || 0,
     group_creation_mode: event?.group_creation_mode || 'random' as EventGroupCreationMode,
     group_user_source: event?.group_user_source || 'event_registrants' as EventGroupUserSource,
@@ -882,6 +883,25 @@ export default function EventForm({ event, isEditing = false }: EventFormProps) 
               type="checkbox"
               checked={formData.user_can_upload_assets}
               onChange={(e) => setFormData(prev => ({ ...prev, user_can_upload_assets: e.target.checked }))}
+              className="sr-only peer"
+            />
+            <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Wallboard Toggle */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold">Bacheca evento (wallboard)</h2>
+            <p className="text-sm text-gray-500">
+              Gli iscritti possono lasciare messaggi in rich-text con immagini, link e allegati. Visibili a tutti i visitatori dell&apos;evento.
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer p-2 -m-2">
+            <input
+              type="checkbox"
+              checked={formData.wallboard_enabled}
+              onChange={(e) => setFormData(prev => ({ ...prev, wallboard_enabled: e.target.checked }))}
               className="sr-only peer"
             />
             <div className="relative w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>

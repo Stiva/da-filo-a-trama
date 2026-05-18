@@ -248,6 +248,7 @@ export async function PUT(
       auto_enroll_all: body.auto_enroll_all ?? false,
       checkin_enabled: body.checkin_enabled ?? false,
       user_can_upload_assets: body.user_can_upload_assets ?? false,
+      wallboard_enabled: body.wallboard_enabled ?? false,
       visibility: body.visibility || 'public',
       workshop_groups_count: body.workshop_groups_count || 0,
       group_creation_mode: body.group_creation_mode || 'random',
@@ -400,6 +401,7 @@ export async function PATCH(
     if (body.auto_enroll_all !== undefined) updateData.auto_enroll_all = body.auto_enroll_all;
     if (body.checkin_enabled !== undefined) updateData.checkin_enabled = body.checkin_enabled;
     if (body.user_can_upload_assets !== undefined) updateData.user_can_upload_assets = body.user_can_upload_assets;
+    if (body.wallboard_enabled !== undefined) updateData.wallboard_enabled = body.wallboard_enabled;
     if (body.workshop_groups_count !== undefined) updateData.workshop_groups_count = body.workshop_groups_count;
     if (body.group_creation_mode !== undefined) updateData.group_creation_mode = body.group_creation_mode;
     if (body.group_user_source !== undefined) updateData.group_user_source = body.group_user_source;
