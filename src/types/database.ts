@@ -789,7 +789,10 @@ export interface AudioTranscript {
   confidence: number | null;
   provider: string;
   raw_response: unknown;
+  /** Per source_type='asset': .txt creato in `assets`, stesso folder_path. */
   derived_asset_id: string | null;
+  /** Per source_type='group_attachment': .txt creato in `event_group_attachments`, stesso group_id. */
+  derived_attachment_id: string | null;
   created_at: string;
 }
 
