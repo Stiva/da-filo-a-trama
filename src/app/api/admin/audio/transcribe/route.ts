@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/transcription/adminAuth';
 import { looksLikeAudioFile } from '@/lib/transcription/jobs';
 import type {
   ApiResponse,
+  AssemblyAISpeechModel,
   AudioJobMetadata,
   AudioJobSourceType,
   TranscriptionOptions,
@@ -14,30 +15,46 @@ interface TranscribeRequest {
   options?: TranscriptionOptions;
 }
 
-const MAX_WORD_BOOST_TERMS = 1000;
+const MAX_KEYTERMS = 1000;
 const MAX_TERM_LEN = 100;
 const MAX_CUSTOM_SPELLING_ROWS = 200;
 const MAX_CONTEXT_NOTES_LEN = 8000;
+const VALID_SPEECH_MODELS: AssemblyAISpeechModel[] = [
+  'universal-3-pro',
+  'universal-2',
+];
 
 function sanitizeOptions(input: unknown): TranscriptionOptions {
-  const raw = (input ?? {}) as Partial<TranscriptionOptions>;
+  const raw = (input ?? {}) as Partial<TranscriptionOptions> & {
+    // Backward-compat: client/UI versioni precedenti potrebbero ancora
+    // mandare word_boost. Lo trattiamo come keyterms_prompt.
+    word_boost?: unknown;
+  };
   const out: TranscriptionOptions = {};
 
-  if (Array.isArray(raw.word_boost)) {
-    const cleaned = raw.word_boost
+  if (Array.isArray(raw.speech_models)) {
+    const cleaned = raw.speech_models.filter(
+      (s): s is AssemblyAISpeechModel =>
+        typeof s === 'string' && VALID_SPEECH_MODELS.includes(s as AssemblyAISpeechModel),
+    );
+    if (cleaned.length > 0) {
+      // De-dup preservando l'ordine.
+      out.speech_models = Array.from(new Set(cleaned));
+    }
+  }
+
+  const keytermsSource = Array.isArray(raw.keyterms_prompt)
+    ? raw.keyterms_prompt
+    : Array.isArray(raw.word_boost)
+      ? (raw.word_boost as unknown[])
+      : null;
+  if (keytermsSource) {
+    const cleaned = keytermsSource
       .filter((s): s is string => typeof s === 'string')
       .map((s) => s.trim())
       .filter((s) => s.length > 0 && s.length <= MAX_TERM_LEN)
-      .slice(0, MAX_WORD_BOOST_TERMS);
-    if (cleaned.length > 0) out.word_boost = Array.from(new Set(cleaned));
-  }
-
-  if (
-    raw.boost_param === 'low' ||
-    raw.boost_param === 'default' ||
-    raw.boost_param === 'high'
-  ) {
-    out.boost_param = raw.boost_param;
+      .slice(0, MAX_KEYTERMS);
+    if (cleaned.length > 0) out.keyterms_prompt = Array.from(new Set(cleaned));
   }
 
   if (Array.isArray(raw.custom_spelling)) {
@@ -63,6 +80,11 @@ function sanitizeOptions(input: unknown): TranscriptionOptions {
 
   if (typeof raw.disfluencies === 'boolean') {
     out.disfluencies = raw.disfluencies;
+  }
+
+  if (typeof raw.prompt === 'string') {
+    const trimmed = raw.prompt.trim().slice(0, MAX_CONTEXT_NOTES_LEN);
+    if (trimmed) out.prompt = trimmed;
   }
 
   if (typeof raw.context_notes === 'string') {

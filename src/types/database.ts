@@ -706,22 +706,36 @@ export interface AudioJobMetadataFile {
 }
 
 /**
+ * Modello AssemblyAI per la trascrizione pre-recorded.
+ *   - universal-3-pro : multilingua, ultima generazione (consigliato)
+ *   - universal-2     : modello stabile precedente
+ *
+ * `speech_models` su AssemblyAI e' una ordered fallback list: il primo
+ * modello viene tentato, se non disponibile si passa al successivo.
+ */
+export type AssemblyAISpeechModel = 'universal-3-pro' | 'universal-2';
+
+/**
  * Knob di qualita' passati al provider in fase di submit.
- *   - word_boost / boost_param  -> bias del decoder verso un vocabolario
- *     (nomi propri, gergo, sigle: "AGESCI", "branca L/C", ...).
- *   - custom_spelling           -> sostituzioni deterministiche
+ *   - speech_models   -> ordered fallback list (obbligatoria; default
+ *     ['universal-3-pro', 'universal-2']).
+ *   - keyterms_prompt -> vocabolario di dominio (nomi propri, gergo,
+ *     sigle: "AGESCI", "branca L/C", ...). Sostituisce il vecchio
+ *     `word_boost` legacy. Max 1000 termini con U3 Pro / 200 con U2.
+ *   - custom_spelling -> sostituzioni deterministiche
  *     (es. la pronuncia "ajeshi" -> "AGESCI") applicate post-decoding.
- *   - disfluencies              -> includere/escludere "ehm", "uhm" ecc.
- *   - context_notes             -> testo libero. AssemblyAI non supporta
- *     un "prompt" stile Whisper: queste note vengono salvate nei metadati
- *     del transcript (visibili in app e in testa al .txt esportato), cosi'
- *     i tool AI downstream possono usarle come contesto.
+ *   - disfluencies    -> includere/escludere "ehm", "uhm" ecc.
+ *   - prompt          -> prompt contestuale di Universal-3 Pro.
+ *     Quando non valorizzato, il cron usa `context_notes` come fallback.
+ *   - context_notes   -> testo libero salvato nei metadati del transcript
+ *     (visibile in app e in testa al .txt esportato).
  */
 export interface TranscriptionOptions {
-  word_boost?: string[];
-  boost_param?: 'low' | 'default' | 'high';
+  speech_models?: AssemblyAISpeechModel[];
+  keyterms_prompt?: string[];
   custom_spelling?: { from: string[]; to: string }[];
   disfluencies?: boolean;
+  prompt?: string;
   context_notes?: string;
 }
 

@@ -2,12 +2,42 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  AssemblyAISpeechModel,
   AudioJobStatus,
   AudioSourceListItem,
   AudioTranscript,
   AudioTranscriptionJob,
   TranscriptionOptions,
 } from '@/types/database';
+
+type SpeechModelPreset = 'auto' | 'u3-pro' | 'u2';
+
+const SPEECH_MODEL_OPTIONS: {
+  value: SpeechModelPreset;
+  label: string;
+  description: string;
+  models: AssemblyAISpeechModel[];
+}[] = [
+  {
+    value: 'auto',
+    label: 'Universal-3 Pro → Universal-2 (consigliato)',
+    description:
+      'Tenta U3 Pro per primo (qualità e supporto multilingua migliori) e ripiega su U2 se non disponibile.',
+    models: ['universal-3-pro', 'universal-2'],
+  },
+  {
+    value: 'u3-pro',
+    label: 'Solo Universal-3 Pro',
+    description: 'Ultimo modello AssemblyAI. Migliore su parlato spontaneo e termini di dominio.',
+    models: ['universal-3-pro'],
+  },
+  {
+    value: 'u2',
+    label: 'Solo Universal-2',
+    description: 'Modello stabile precedente. Più collaudato.',
+    models: ['universal-2'],
+  },
+];
 
 const STATUS_LABEL: Record<AudioJobStatus, string> = {
   pending: 'In coda',
@@ -351,6 +381,41 @@ export default function AdminAudioPage() {
     }
   };
 
+  const [isProcessingNow, setIsProcessingNow] = useState(false);
+
+  const processPendingNow = async () => {
+    setIsProcessingNow(true);
+    setSubmitMessage(null);
+    try {
+      const res = await fetch('/api/admin/audio/process-pending', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Errore esecuzione');
+      const r = data.data as {
+        considered: number;
+        submitted: number;
+        failed: number;
+        errors: { jobId: string; error: string }[];
+      };
+      const parts = [
+        `Considerati: ${r.considered}`,
+        `inviati: ${r.submitted}`,
+      ];
+      if (r.failed > 0) parts.push(`falliti: ${r.failed}`);
+      let msg = parts.join(' · ');
+      if (r.errors.length > 0) {
+        msg += ` — primo errore: ${r.errors[0].error}`;
+      }
+      setSubmitMessage(msg);
+      await refresh();
+    } catch (e) {
+      setSubmitMessage(e instanceof Error ? e.message : 'Errore sconosciuto');
+    } finally {
+      setIsProcessingNow(false);
+    }
+  };
+
   const retryJob = async (jobId: string) => {
     const res = await fetch(`/api/admin/audio/jobs/${jobId}/retry`, { method: 'POST' });
     if (!res.ok) {
@@ -440,6 +505,14 @@ export default function AdminAudioPage() {
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
           >
             Configura e trascrivi ({selectedKeys.size})
+          </button>
+          <button
+            onClick={processPendingNow}
+            disabled={isProcessingNow}
+            className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 disabled:opacity-50"
+            title="Esegue subito il worker che invia i job 'in coda' ad AssemblyAI. Utile per non aspettare il prossimo tick del cron (ogni 5 min)."
+          >
+            {isProcessingNow ? 'Esecuzione…' : 'Esegui pending ora'}
           </button>
           {submitMessage && (
             <span className="text-sm text-gray-700">{submitMessage}</span>
@@ -671,12 +744,17 @@ function SubmitModal({
   onCancel: () => void;
   onSubmit: (options: TranscriptionOptions) => void;
 }) {
-  const [wordBoost, setWordBoost] = useState<string[]>([]);
-  const [boostInput, setBoostInput] = useState('');
-  const [boostParam, setBoostParam] = useState<'low' | 'default' | 'high'>('default');
+  const [modelPreset, setModelPreset] = useState<SpeechModelPreset>('auto');
+  const [keyterms, setKeyterms] = useState<string[]>([]);
+  const [keytermsInput, setKeytermsInput] = useState('');
   const [disfluencies, setDisfluencies] = useState(false);
   const [contextNotes, setContextNotes] = useState('');
   const [customSpelling, setCustomSpelling] = useState<{ from: string; to: string }[]>([]);
+  const [usePromptAsContext, setUsePromptAsContext] = useState(true);
+
+  const selectedModel = SPEECH_MODEL_OPTIONS.find((o) => o.value === modelPreset)!;
+  // U2 ha un limite di 200 keyterms; U3 Pro fino a 1000.
+  const maxKeyterms = selectedModel.models.includes('universal-3-pro') ? 1000 : 200;
 
   // Suggerimenti dal contesto degli item selezionati.
   const suggestions = useMemo(() => {
@@ -699,19 +777,19 @@ function SubmitModal({
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'));
   }, [selectedItems]);
 
-  const addBoostWord = (w: string) => {
+  const addKeyterm = (w: string) => {
     const clean = w.trim();
     if (!clean) return;
-    setWordBoost((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
-    setBoostInput('');
+    setKeyterms((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
+    setKeytermsInput('');
   };
 
-  const removeBoostWord = (w: string) => {
-    setWordBoost((prev) => prev.filter((x) => x !== w));
+  const removeKeyterm = (w: string) => {
+    setKeyterms((prev) => prev.filter((x) => x !== w));
   };
 
   const loadAgesciPreset = () => {
-    setWordBoost((prev) => {
+    setKeyterms((prev) => {
       const next = new Set(prev);
       for (const w of AGESCI_DEFAULT_WORDS) next.add(w);
       return Array.from(next);
@@ -719,7 +797,7 @@ function SubmitModal({
   };
 
   const loadFromSuggestions = () => {
-    setWordBoost((prev) => {
+    setKeyterms((prev) => {
       const next = new Set(prev);
       for (const w of suggestions) next.add(w);
       return Array.from(next);
@@ -739,13 +817,23 @@ function SubmitModal({
   };
 
   const handleSubmit = () => {
-    const options: TranscriptionOptions = {};
-    if (wordBoost.length > 0) {
-      options.word_boost = wordBoost;
-      options.boost_param = boostParam;
+    const options: TranscriptionOptions = {
+      speech_models: selectedModel.models,
+    };
+    if (keyterms.length > 0) {
+      options.keyterms_prompt = keyterms.slice(0, maxKeyterms);
     }
     if (disfluencies) options.disfluencies = true;
-    if (contextNotes.trim()) options.context_notes = contextNotes.trim();
+    if (contextNotes.trim()) {
+      options.context_notes = contextNotes.trim();
+      // Quando l'utente lo richiede, passiamo anche al provider come prompt
+      // (utile soprattutto su U3 Pro per il contesto multilingua / di
+      // dominio). Per default è attivo: l'utente puo' disattivarlo se vuole
+      // solo annotare per i tool downstream.
+      if (usePromptAsContext) {
+        options.prompt = contextNotes.trim();
+      }
+    }
     const spelling = customSpelling
       .map((r) => ({
         from: r.from
@@ -809,11 +897,49 @@ function SubmitModal({
             </p>
           </section>
 
-          {/* Word boost */}
+          {/* Modello */}
+          <section>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+              Modello AssemblyAI
+            </h3>
+            <div className="space-y-2">
+              {SPEECH_MODEL_OPTIONS.map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex gap-3 p-3 rounded border cursor-pointer ${
+                    modelPreset === opt.value
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="speech-model"
+                    checked={modelPreset === opt.value}
+                    onChange={() => setModelPreset(opt.value)}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">
+                      {opt.label}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-0.5">
+                      {opt.description}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1 font-mono">
+                      speech_models: [{opt.models.map((m) => `"${m}"`).join(', ')}]
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </section>
+
+          {/* Keyterms prompt */}
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-900">
-                Vocabolario da riconoscere (word boost)
+                Termini chiave (keyterms_prompt)
               </h3>
               <div className="flex gap-2">
                 {suggestions.length > 0 && (
@@ -838,14 +964,14 @@ function SubmitModal({
               L/C&quot;.
             </p>
             <div className="border border-gray-300 rounded p-2 min-h-[80px] flex flex-wrap gap-1.5">
-              {wordBoost.map((w) => (
+              {keyterms.map((w) => (
                 <span
                   key={w}
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs"
                 >
                   {w}
                   <button
-                    onClick={() => removeBoostWord(w)}
+                    onClick={() => removeKeyterm(w)}
                     className="hover:text-blue-900"
                     aria-label={`Rimuovi ${w}`}
                   >
@@ -855,40 +981,32 @@ function SubmitModal({
               ))}
               <input
                 type="text"
-                value={boostInput}
-                onChange={(e) => setBoostInput(e.target.value)}
+                value={keytermsInput}
+                onChange={(e) => setKeytermsInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {
                     e.preventDefault();
-                    addBoostWord(boostInput);
+                    addKeyterm(keytermsInput);
                   } else if (
                     e.key === 'Backspace' &&
-                    boostInput === '' &&
-                    wordBoost.length > 0
+                    keytermsInput === '' &&
+                    keyterms.length > 0
                   ) {
-                    removeBoostWord(wordBoost[wordBoost.length - 1]);
+                    removeKeyterm(keyterms[keyterms.length - 1]);
                   }
                 }}
-                placeholder={wordBoost.length === 0 ? 'Aggiungi termini (Invio)' : ''}
+                placeholder={keyterms.length === 0 ? 'Aggiungi termini (Invio)' : ''}
                 className="flex-1 min-w-[150px] outline-none text-sm"
               />
             </div>
-            {wordBoost.length > 0 && (
-              <div className="mt-2 flex items-center gap-3 text-xs">
-                <label className="text-gray-600">Intensità boost:</label>
-                {(['low', 'default', 'high'] as const).map((v) => (
-                  <label key={v} className="flex items-center gap-1">
-                    <input
-                      type="radio"
-                      checked={boostParam === v}
-                      onChange={() => setBoostParam(v)}
-                    />
-                    <span className="capitalize">{v}</span>
-                  </label>
-                ))}
-                <span className="text-gray-500">
-                  · {wordBoost.length}/1000 termini
-                </span>
+            {keyterms.length > 0 && (
+              <div className="mt-2 text-xs text-gray-500">
+                {keyterms.length}/{maxKeyterms} termini
+                {keyterms.length > maxKeyterms && (
+                  <span className="text-red-600 ml-2">
+                    I termini oltre il limite verranno scartati.
+                  </span>
+                )}
               </div>
             )}
           </section>
@@ -962,17 +1080,18 @@ function SubmitModal({
             </label>
           </section>
 
-          {/* Context notes */}
+          {/* Context notes / prompt */}
           <section>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
-              Note di contesto
+              Note di contesto / prompt
             </h3>
             <p className="text-xs text-gray-600 mb-2">
-              Testo libero che descrive l&apos;audio (argomento della discussione,
-              partecipanti, riferimenti…). <strong>Non</strong> viene passato ad
-              AssemblyAI per la trascrizione (il provider non supporta un &quot;prompt&quot;
-              stile Whisper), ma viene salvato nei metadati del transcript: i tool AI
-              downstream lo trovano in testa al file .txt e nel bundle JSON.
+              Testo libero che descrive l&apos;audio (argomento, partecipanti,
+              riferimenti…). Viene <strong>sempre</strong> salvato nei metadati del
+              transcript (in testa al .txt e nel bundle JSON, utile ai tool AI
+              downstream). Se attivi l&apos;opzione sotto, viene passato ad AssemblyAI
+              come parametro <code className="text-[10px]">prompt</code>: Universal-3
+              Pro lo usa per indirizzare lingua e contesto.
             </p>
             <textarea
               value={contextNotes}
@@ -981,6 +1100,18 @@ function SubmitModal({
               placeholder="Es: Workshop sulla narrazione fantastica. I partecipanti discutono di…"
               className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
             />
+            <label className="mt-2 flex items-center gap-2 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                checked={usePromptAsContext}
+                onChange={(e) => setUsePromptAsContext(e.target.checked)}
+                disabled={!contextNotes.trim()}
+              />
+              <span>
+                Passa anche ad AssemblyAI come <code>prompt</code> (consigliato con
+                Universal-3 Pro)
+              </span>
+            </label>
           </section>
         </div>
 
@@ -1091,12 +1222,19 @@ function TranscriptDrawer({
               {data.job.metadata?.options && (
                 <>
                   <div className="text-gray-500 mt-2">Opzioni di trascrizione</div>
-                  {data.job.metadata.options.word_boost &&
-                    data.job.metadata.options.word_boost.length > 0 && (
+                  {data.job.metadata.options.speech_models && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      <span className="font-medium">Modello:</span>{' '}
+                      {data.job.metadata.options.speech_models.join(' → ')}
+                    </div>
+                  )}
+                  {data.job.metadata.options.keyterms_prompt &&
+                    data.job.metadata.options.keyterms_prompt.length > 0 && (
                       <div className="text-xs text-gray-600 mt-1">
-                        <span className="font-medium">Word boost</span> (
-                        {data.job.metadata.options.boost_param ?? 'default'}):{' '}
-                        {data.job.metadata.options.word_boost.join(', ')}
+                        <span className="font-medium">
+                          Key terms ({data.job.metadata.options.keyterms_prompt.length}):
+                        </span>{' '}
+                        {data.job.metadata.options.keyterms_prompt.join(', ')}
                       </div>
                     )}
                   {data.job.metadata.options.custom_spelling &&
@@ -1108,12 +1246,20 @@ function TranscriptDrawer({
                           .join(' · ')}
                       </div>
                     )}
-                  {data.job.metadata.options.context_notes && (
+                  {data.job.metadata.options.prompt && (
                     <div className="text-xs text-gray-600 mt-1">
-                      <span className="font-medium">Note:</span>{' '}
-                      {data.job.metadata.options.context_notes}
+                      <span className="font-medium">Prompt:</span>{' '}
+                      {data.job.metadata.options.prompt}
                     </div>
                   )}
+                  {data.job.metadata.options.context_notes &&
+                    data.job.metadata.options.context_notes !==
+                      data.job.metadata.options.prompt && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        <span className="font-medium">Note:</span>{' '}
+                        {data.job.metadata.options.context_notes}
+                      </div>
+                    )}
                 </>
               )}
             </section>
