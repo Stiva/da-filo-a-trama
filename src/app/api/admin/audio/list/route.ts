@@ -34,7 +34,7 @@ export async function GET(): Promise<
     const { data: assetsData, error: assetsError } = await supabase
       .from('assets')
       .select(
-        'id, file_url, file_name, file_size_bytes, mime_type, tipo, folder_path, created_at, event_id, events(id, title)',
+        'id, file_url, file_name, file_size_bytes, mime_type, tipo, folder_path, created_at, event_id, events(id, title, description)',
       )
       .eq('tipo', 'audio')
       .order('created_at', { ascending: false });
@@ -45,7 +45,7 @@ export async function GET(): Promise<
     const { data: attachmentsData, error: attachmentsError } = await supabase
       .from('event_group_attachments')
       .select(
-        'id, file_name, file_url, created_at, group_id, event_groups(id, name, event_id, events(id, title))',
+        'id, file_name, file_url, created_at, group_id, event_groups(id, name, event_id, events(id, title, description))',
       )
       .order('created_at', { ascending: false });
 
@@ -61,7 +61,11 @@ export async function GET(): Promise<
       folder_path: string | null;
       created_at: string;
       event_id: string | null;
-      events: { id: string; title: string } | null;
+      events: {
+        id: string;
+        title: string;
+        description: string | null;
+      } | null;
     };
 
     type AttachmentRow = {
@@ -74,7 +78,7 @@ export async function GET(): Promise<
         id: string;
         name: string;
         event_id: string;
-        events: { id: string; title: string } | null;
+        events: { id: string; title: string; description: string | null } | null;
       } | null;
     };
 
@@ -98,6 +102,7 @@ export async function GET(): Promise<
         completed_at: string | null;
         last_error: string | null;
         has_transcript: boolean;
+        duration_seconds: number | null;
       }
     >();
 
@@ -105,7 +110,7 @@ export async function GET(): Promise<
       const { data: jobsData, error: jobsError } = await supabase
         .from('audio_transcription_jobs')
         .select(
-          'id, source_type, source_id, status, created_at, completed_at, last_error, audio_transcripts(id)',
+          'id, source_type, source_id, status, created_at, completed_at, last_error, audio_transcripts(id, duration_seconds)',
         )
         .in('source_id', sourceIds)
         .order('created_at', { ascending: false });
@@ -120,7 +125,9 @@ export async function GET(): Promise<
         created_at: string;
         completed_at: string | null;
         last_error: string | null;
-        audio_transcripts: { id: string }[] | null;
+        audio_transcripts:
+          | { id: string; duration_seconds: number | null }[]
+          | null;
       };
 
       const rows = (jobsData ?? []) as unknown as JobRow[];
@@ -135,8 +142,48 @@ export async function GET(): Promise<
             completed_at: j.completed_at,
             last_error: j.last_error,
             has_transcript: (j.audio_transcripts?.length ?? 0) > 0,
+            duration_seconds: j.audio_transcripts?.[0]?.duration_seconds ?? null,
           });
         }
+      }
+    }
+
+    // 4) Moderatori per ciascun group_id (per popolare suggerimenti vocabolario).
+    const groupIds = Array.from(
+      new Set(
+        attachments
+          .map((a) => a.event_groups?.id)
+          .filter((g): g is string => !!g),
+      ),
+    );
+    const moderatorsByGroup = new Map<
+      string,
+      { id: string; name: string | null; surname: string | null; email: string | null }[]
+    >();
+    if (groupIds.length > 0) {
+      const { data: modsData } = await supabase
+        .from('event_group_moderators')
+        .select('group_id, profiles(id, name, surname, email)')
+        .in('group_id', groupIds);
+      type ModRow = {
+        group_id: string;
+        profiles: {
+          id: string;
+          name: string | null;
+          surname: string | null;
+          email: string;
+        } | null;
+      };
+      for (const m of ((modsData ?? []) as unknown as ModRow[])) {
+        if (!m.profiles) continue;
+        const list = moderatorsByGroup.get(m.group_id) ?? [];
+        list.push({
+          id: m.profiles.id,
+          name: m.profiles.name,
+          surname: m.profiles.surname,
+          email: m.profiles.email,
+        });
+        moderatorsByGroup.set(m.group_id, list);
       }
     }
 
@@ -154,10 +201,13 @@ export async function GET(): Promise<
         mime_type: a.mime_type,
         event_id: a.event_id,
         event_title: a.events?.title ?? null,
+        event_description: a.events?.description ?? null,
         group_id: null,
         group_name: null,
+        moderators: [],
         folder_path: a.folder_path,
         created_at: a.created_at,
+        known_duration_seconds: job?.duration_seconds ?? null,
         latest_job: job
           ? {
               id: job.id,
@@ -183,10 +233,15 @@ export async function GET(): Promise<
         mime_type: null,
         event_id: a.event_groups?.event_id ?? null,
         event_title: a.event_groups?.events?.title ?? null,
+        event_description: a.event_groups?.events?.description ?? null,
         group_id: a.group_id,
         group_name: a.event_groups?.name ?? null,
+        moderators: a.event_groups
+          ? moderatorsByGroup.get(a.event_groups.id) ?? []
+          : [],
         folder_path: null,
         created_at: a.created_at,
+        known_duration_seconds: job?.duration_seconds ?? null,
         latest_job: job
           ? {
               id: job.id,

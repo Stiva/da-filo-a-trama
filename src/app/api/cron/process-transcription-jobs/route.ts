@@ -93,6 +93,8 @@ export async function GET(request: Request) {
 
       const signedUrl = await createSignedAudioUrl(fileUrl);
 
+      const options = job.metadata?.options;
+
       const providerJob = await submitTranscriptionJob({
         audioUrl: signedUrl,
         language: job.language,
@@ -100,6 +102,10 @@ export async function GET(request: Request) {
         webhookUrl,
         webhookAuthHeaderName: 'x-transcription-secret',
         webhookAuthHeaderValue: webhookSecret,
+        wordBoost: options?.word_boost,
+        boostParam: options?.boost_param,
+        customSpelling: options?.custom_spelling,
+        disfluencies: options?.disfluencies,
       });
 
       await supabase

@@ -16,6 +16,14 @@ export interface AssemblyAISubmitParams {
   webhookUrl: string;
   webhookAuthHeaderName?: string;
   webhookAuthHeaderValue?: string;
+  /** Vocabolario da boostare nel decoder (max 1000 termini). */
+  wordBoost?: string[];
+  /** Intensita' del boost. Default = 'default'. */
+  boostParam?: 'low' | 'default' | 'high';
+  /** Sostituzioni deterministiche pronuncia -> scrittura. */
+  customSpelling?: { from: string[]; to: string }[];
+  /** Se false (default), rimuove "ehm"/"uhm"/falsi inizi dal testo. */
+  disfluencies?: boolean;
 }
 
 export interface AssemblyAIJob {
@@ -73,11 +81,27 @@ export async function submitTranscriptionJob(
     punctuate: true,
     format_text: true,
     webhook_url: params.webhookUrl,
+    disfluencies: params.disfluencies ?? false,
   };
 
   if (params.webhookAuthHeaderName && params.webhookAuthHeaderValue) {
     body.webhook_auth_header_name = params.webhookAuthHeaderName;
     body.webhook_auth_header_value = params.webhookAuthHeaderValue;
+  }
+
+  if (params.wordBoost && params.wordBoost.length > 0) {
+    body.word_boost = params.wordBoost.slice(0, 1000);
+    body.boost_param = params.boostParam ?? 'default';
+  }
+
+  if (params.customSpelling && params.customSpelling.length > 0) {
+    body.custom_spelling = params.customSpelling
+      .filter((s) => s.to.trim() && s.from.length > 0)
+      .map((s) => ({
+        from: s.from.map((f) => f.trim()).filter(Boolean),
+        to: s.to.trim(),
+      }))
+      .filter((s) => s.from.length > 0);
   }
 
   const res = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript`, {

@@ -90,6 +90,13 @@ export function renderTranscriptTextFile(
   }
   lines.push('');
   lines.push(`File originale: ${metadata.file.name}`);
+
+  if (metadata.options?.context_notes) {
+    lines.push('');
+    lines.push('Note di contesto:');
+    lines.push(metadata.options.context_notes);
+  }
+
   lines.push('');
   lines.push('=== TRASCRIZIONE ===');
   lines.push('');

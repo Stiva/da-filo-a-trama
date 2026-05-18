@@ -6,10 +6,71 @@ import type {
   ApiResponse,
   AudioJobMetadata,
   AudioJobSourceType,
+  TranscriptionOptions,
 } from '@/types/database';
 
 interface TranscribeRequest {
   items: { source_type: AudioJobSourceType; source_id: string }[];
+  options?: TranscriptionOptions;
+}
+
+const MAX_WORD_BOOST_TERMS = 1000;
+const MAX_TERM_LEN = 100;
+const MAX_CUSTOM_SPELLING_ROWS = 200;
+const MAX_CONTEXT_NOTES_LEN = 8000;
+
+function sanitizeOptions(input: unknown): TranscriptionOptions {
+  const raw = (input ?? {}) as Partial<TranscriptionOptions>;
+  const out: TranscriptionOptions = {};
+
+  if (Array.isArray(raw.word_boost)) {
+    const cleaned = raw.word_boost
+      .filter((s): s is string => typeof s === 'string')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && s.length <= MAX_TERM_LEN)
+      .slice(0, MAX_WORD_BOOST_TERMS);
+    if (cleaned.length > 0) out.word_boost = Array.from(new Set(cleaned));
+  }
+
+  if (
+    raw.boost_param === 'low' ||
+    raw.boost_param === 'default' ||
+    raw.boost_param === 'high'
+  ) {
+    out.boost_param = raw.boost_param;
+  }
+
+  if (Array.isArray(raw.custom_spelling)) {
+    const rows = (raw.custom_spelling as unknown[])
+      .filter(
+        (r): r is { from?: unknown; to?: unknown } =>
+          typeof r === 'object' && r !== null,
+      )
+      .map((r) => {
+        const from = Array.isArray(r.from)
+          ? (r.from as unknown[])
+              .filter((f): f is string => typeof f === 'string')
+              .map((f) => f.trim())
+              .filter((f) => f.length > 0 && f.length <= MAX_TERM_LEN)
+          : [];
+        const to = typeof r.to === 'string' ? r.to.trim().slice(0, MAX_TERM_LEN) : '';
+        return { from, to };
+      })
+      .filter((r) => r.from.length > 0 && r.to.length > 0)
+      .slice(0, MAX_CUSTOM_SPELLING_ROWS);
+    if (rows.length > 0) out.custom_spelling = rows;
+  }
+
+  if (typeof raw.disfluencies === 'boolean') {
+    out.disfluencies = raw.disfluencies;
+  }
+
+  if (typeof raw.context_notes === 'string') {
+    const trimmed = raw.context_notes.trim().slice(0, MAX_CONTEXT_NOTES_LEN);
+    if (trimmed) out.context_notes = trimmed;
+  }
+
+  return out;
 }
 
 interface TranscribeResponseItem {
@@ -60,6 +121,8 @@ export async function POST(
     );
   }
 
+  const options = sanitizeOptions(body.options);
+
   const supabase = createServiceRoleClient();
 
   // Risolvi clerk_id -> profile_id per created_by
@@ -86,6 +149,13 @@ export async function POST(
           error: 'Sorgente audio non trovata',
         });
         continue;
+      }
+
+      // Allega le opzioni di trascrizione alla snapshot di metadati: cosi'
+      // il cron le ritrova al momento del submit al provider e restano
+      // tracciate nella riga del job per audit.
+      if (Object.keys(options).length > 0) {
+        metadata.options = options;
       }
 
       if (!looksLikeAudioFile(metadata.file.name, metadata.file.mime_type)) {

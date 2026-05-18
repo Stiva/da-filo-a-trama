@@ -705,11 +705,32 @@ export interface AudioJobMetadataFile {
   url: string;
 }
 
+/**
+ * Knob di qualita' passati al provider in fase di submit.
+ *   - word_boost / boost_param  -> bias del decoder verso un vocabolario
+ *     (nomi propri, gergo, sigle: "AGESCI", "branca L/C", ...).
+ *   - custom_spelling           -> sostituzioni deterministiche
+ *     (es. la pronuncia "ajeshi" -> "AGESCI") applicate post-decoding.
+ *   - disfluencies              -> includere/escludere "ehm", "uhm" ecc.
+ *   - context_notes             -> testo libero. AssemblyAI non supporta
+ *     un "prompt" stile Whisper: queste note vengono salvate nei metadati
+ *     del transcript (visibili in app e in testa al .txt esportato), cosi'
+ *     i tool AI downstream possono usarle come contesto.
+ */
+export interface TranscriptionOptions {
+  word_boost?: string[];
+  boost_param?: 'low' | 'default' | 'high';
+  custom_spelling?: { from: string[]; to: string }[];
+  disfluencies?: boolean;
+  context_notes?: string;
+}
+
 export interface AudioJobMetadata {
   event?: AudioJobMetadataEvent | null;
   group?: AudioJobMetadataGroup | null;
   moderators?: AudioJobMetadataModerator[];
   file: AudioJobMetadataFile;
+  options?: TranscriptionOptions;
 }
 
 export interface AudioTranscriptionJob {
@@ -768,10 +789,14 @@ export interface AudioSourceListItem {
   mime_type: string | null;
   event_id: string | null;
   event_title: string | null;
+  event_description: string | null;
   group_id: string | null;
   group_name: string | null;
+  moderators: AudioJobMetadataModerator[];
   folder_path: string | null;
   created_at: string;
+  /** Durata nota (s) se l'audio ha gia' una trascrizione completata. */
+  known_duration_seconds: number | null;
   latest_job: Pick<
     AudioTranscriptionJob,
     'id' | 'status' | 'created_at' | 'completed_at' | 'last_error'
