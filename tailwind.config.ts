@@ -8,38 +8,35 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Palette AGESCI - Da Filo a Trama 2026
+      // Palette brand — tutti i valori sono CSS variables con fallback hex.
+      // I default sono in src/app/globals.css (:root) e possono essere
+      // sovrascritti a runtime via <style> iniettato da getCmsBundle().
       colors: {
-        // Colore principale - Viola AGESCI
         'agesci-purple': {
-          DEFAULT: '#4b2c7f',
-          light: '#6b4c9f',
-          dark: '#3b1c6f',
+          DEFAULT: 'var(--agesci-purple, #4b2c7f)',
+          light: 'var(--agesci-purple-light, #6b4c9f)',
+          dark: 'var(--agesci-purple-dark, #3b1c6f)',
         },
-        // Giallo piu' caldo
         'agesci-yellow': {
-          DEFAULT: '#f1b42f',
-          light: '#f8cc6b',
-          dark: '#d9a020',
+          DEFAULT: 'var(--agesci-yellow, #f1b42f)',
+          light: 'var(--agesci-yellow-light, #f8cc6b)',
+          dark: 'var(--agesci-yellow-dark, #d9a020)',
         },
-        // Colori accento
-        'brand-cyan': '#29bbce',
-        'brand-red': '#e94e5a',
-        // Verde Branca L/C (Lupetti/Coccinelle)
+        'brand-cyan': 'var(--brand-cyan, #29bbce)',
+        'brand-red': 'var(--brand-red, #e94e5a)',
         'lc-green': {
-          DEFAULT: '#4eaf48',
-          light: '#6bc963',
-          dark: '#3a8f34',
+          DEFAULT: 'var(--lc-green, #4eaf48)',
+          light: 'var(--lc-green-light, #6bc963)',
+          dark: 'var(--lc-green-dark, #3a8f34)',
         },
-        // Sfondo
-        'scout-cream': '#fdfaf6',
-        // Alias per compatibilita' (blue -> purple)
+        'scout-cream': 'var(--scout-cream, #fdfaf6)',
+        // Alias legacy (blue mappato a purple per transizione)
         'agesci-blue': {
-          DEFAULT: '#4b2c7f',
-          light: '#6b4c9f',
-          dark: '#3b1c6f',
+          DEFAULT: 'var(--agesci-blue, #4b2c7f)',
+          light: 'var(--agesci-blue-light, #6b4c9f)',
+          dark: 'var(--agesci-blue-dark, #3b1c6f)',
         },
-        // Colori legacy
+        // Colori legacy (non gestiti via CMS, restano statici)
         'scout-green': '#2D5016',
         'scout-green-light': '#4A7C23',
         'scout-azure': '#1E6091',
@@ -47,31 +44,27 @@ const config: Config = {
         'scout-wood': '#8B4513',
         'scout-wood-light': '#A0522D',
       },
-      // Font families
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
         display: ['var(--font-loveyou)', 'var(--font-quicksand)', 'system-ui', 'sans-serif'],
         brand: ['var(--font-dancing-script)', 'cursive'],
       },
-      // Border radius arrotondati "playful"
       borderRadius: {
         '4xl': '2rem',
         '5xl': '2.5rem',
       },
-      // Bordi spessi per card
       borderWidth: {
         '3': '3px',
       },
-      // Ombre colorate "pop" - viola
+      // Box shadows — pilotabili via CSS vars override (--shadow-*).
       boxShadow: {
-        'playful': '4px 4px 0 0 #4b2c7f',
-        'playful-sm': '2px 2px 0 0 #4b2c7f',
-        'playful-lg': '6px 6px 0 0 #4b2c7f',
-        'yellow': '4px 4px 0 0 #f1b42f',
-        'yellow-sm': '2px 2px 0 0 #f1b42f',
-        'green': '4px 4px 0 0 #4eaf48',
+        'playful':    'var(--shadow-playful, 4px 4px 0 0 #4b2c7f)',
+        'playful-sm': 'var(--shadow-playful-sm, 2px 2px 0 0 #4b2c7f)',
+        'playful-lg': 'var(--shadow-playful-lg, 6px 6px 0 0 #4b2c7f)',
+        'yellow':     'var(--shadow-yellow, 4px 4px 0 0 #f1b42f)',
+        'yellow-sm':  'var(--shadow-yellow-sm, 2px 2px 0 0 #f1b42f)',
+        'green':      'var(--shadow-green, 4px 4px 0 0 #4eaf48)',
       },
-      // Animazioni fluide
       animation: {
         'slide-in': 'slideIn 0.3s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
@@ -96,7 +89,6 @@ const config: Config = {
           '50%': { transform: 'translateY(-5px)' },
         },
       },
-      // Transizioni
       transitionDuration: {
         '250': '250ms',
       },
