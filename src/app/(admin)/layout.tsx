@@ -125,6 +125,16 @@ export default function AdminLayout({
       ),
       badge: false,
     },
+    {
+      href: '/admin/audio',
+      label: 'Trascrizione Audio',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8m-4-7a3 3 0 01-3-3V5a3 3 0 016 0v6a3 3 0 01-3 3z" />
+        </svg>
+      ),
+      badge: false,
+    },
   ];
 
   const communicationsLinks = [
