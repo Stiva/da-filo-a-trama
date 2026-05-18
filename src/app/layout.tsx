@@ -66,6 +66,7 @@ export const viewport: Viewport = {
   themeColor: '#4b2c7f', // Agesci Purple
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
