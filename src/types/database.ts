@@ -667,6 +667,158 @@ export interface ParticipantCrmView extends Participant {
 }
 
 // ============================================
+// AUDIO TRANSCRIPTION
+// ============================================
+export type AudioJobSourceType = 'asset' | 'group_attachment';
+export type AudioJobStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export interface AudioJobMetadataEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+export interface AudioJobMetadataGroup {
+  id: string;
+  name: string;
+}
+
+export interface AudioJobMetadataModerator {
+  id: string;
+  name: string | null;
+  surname: string | null;
+  email: string | null;
+}
+
+export interface AudioJobMetadataFile {
+  name: string;
+  size_bytes: number | null;
+  mime_type: string | null;
+  url: string;
+}
+
+/**
+ * Modello AssemblyAI per la trascrizione pre-recorded.
+ *   - universal-3-pro : multilingua, ultima generazione (consigliato)
+ *   - universal-2     : modello stabile precedente
+ *
+ * `speech_models` su AssemblyAI e' una ordered fallback list: il primo
+ * modello viene tentato, se non disponibile si passa al successivo.
+ */
+export type AssemblyAISpeechModel = 'universal-3-pro' | 'universal-2';
+
+/**
+ * Knob di qualita' passati al provider in fase di submit.
+ *   - speech_models   -> ordered fallback list (obbligatoria; default
+ *     ['universal-3-pro', 'universal-2']).
+ *   - keyterms_prompt -> vocabolario di dominio (nomi propri, gergo,
+ *     sigle: "AGESCI", "branca L/C", ...). Sostituisce il vecchio
+ *     `word_boost` legacy. Max 1000 termini con U3 Pro / 200 con U2.
+ *   - custom_spelling -> sostituzioni deterministiche
+ *     (es. la pronuncia "ajeshi" -> "AGESCI") applicate post-decoding.
+ *   - disfluencies    -> includere/escludere "ehm", "uhm" ecc.
+ *   - prompt          -> prompt contestuale di Universal-3 Pro.
+ *     Quando non valorizzato, il cron usa `context_notes` come fallback.
+ *   - context_notes   -> testo libero salvato nei metadati del transcript
+ *     (visibile in app e in testa al .txt esportato).
+ */
+export interface TranscriptionOptions {
+  speech_models?: AssemblyAISpeechModel[];
+  keyterms_prompt?: string[];
+  custom_spelling?: { from: string[]; to: string }[];
+  disfluencies?: boolean;
+  prompt?: string;
+  context_notes?: string;
+}
+
+export interface AudioJobMetadata {
+  event?: AudioJobMetadataEvent | null;
+  group?: AudioJobMetadataGroup | null;
+  moderators?: AudioJobMetadataModerator[];
+  file: AudioJobMetadataFile;
+  options?: TranscriptionOptions;
+}
+
+export interface AudioTranscriptionJob {
+  id: string;
+  source_type: AudioJobSourceType;
+  source_id: string;
+  asset_id: string | null;
+  group_attachment_id: string | null;
+  event_id: string | null;
+  group_id: string | null;
+  provider: string;
+  provider_job_id: string | null;
+  status: AudioJobStatus;
+  language: string;
+  diarization: boolean;
+  metadata: AudioJobMetadata;
+  attempts: number;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+  submitted_at: string | null;
+  completed_at: string | null;
+  created_by: string | null;
+}
+
+export interface AudioTranscriptSegment {
+  start_ms: number;
+  end_ms: number;
+  text: string;
+  speaker?: string | null;
+  confidence?: number | null;
+}
+
+export interface AudioTranscript {
+  id: string;
+  job_id: string;
+  text: string;
+  segments: AudioTranscriptSegment[] | null;
+  language: string | null;
+  duration_seconds: number | null;
+  word_count: number | null;
+  confidence: number | null;
+  provider: string;
+  raw_response: unknown;
+  derived_asset_id: string | null;
+  created_at: string;
+}
+
+/** Vista aggregata per la UI: descrive un audio sorgente + ultimo job/transcript. */
+export interface AudioSourceListItem {
+  source_type: AudioJobSourceType;
+  source_id: string;
+  file_name: string;
+  file_url: string;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  event_id: string | null;
+  event_title: string | null;
+  event_description: string | null;
+  group_id: string | null;
+  group_name: string | null;
+  moderators: AudioJobMetadataModerator[];
+  folder_path: string | null;
+  created_at: string;
+  /** Durata nota (s) se l'audio ha gia' una trascrizione completata. */
+  known_duration_seconds: number | null;
+  latest_job: Pick<
+    AudioTranscriptionJob,
+    'id' | 'status' | 'created_at' | 'completed_at' | 'last_error'
+  > | null;
+  has_transcript: boolean;
+}
+
+// ============================================
 // API Response types
 // ============================================
 export interface ApiResponse<T> {
