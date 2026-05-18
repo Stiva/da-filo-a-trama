@@ -1,8 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { Asset, AssetType, AssetVisibility, Event } from '@/types/database';
+import {
+  buildAssetsZip,
+  triggerBlobDownload,
+  type BulkDownloadProgress,
+  type EnrichedAsset,
+} from '@/lib/storage/bulkDownload';
 
 const ASSET_TYPES: { value: AssetType | ''; label: string }[] = [
   { value: '', label: 'Tutti i tipi' },
@@ -31,6 +37,8 @@ export default function AdminAssetsPage() {
   const [filterEventId, setFilterEventId] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<BulkDownloadProgress | null>(null);
+  const downloadAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetchAssets();
@@ -186,6 +194,108 @@ export default function AdminAssetsPage() {
     }
   };
 
+  const buildAssetsQuery = (ids: string[] | null) => {
+    const params = new URLSearchParams();
+    params.set('enriched', '1');
+    if (ids && ids.length > 0) {
+      params.set('ids', ids.join(','));
+    } else {
+      if (filterType) params.set('tipo', filterType);
+      if (filterVisibility) params.set('visibilita', filterVisibility);
+      if (filterEventId) params.set('event_id', filterEventId);
+    }
+    return params.toString();
+  };
+
+  const runBulkDownload = async (
+    ids: string[] | null,
+    zipName: string,
+    confirmCount: number
+  ) => {
+    if (downloadProgress) return;
+
+    const totalBytes = (ids
+      ? assets.filter((a) => ids.includes(a.id))
+      : assets
+    ).reduce((sum, a) => sum + (a.file_size_bytes ?? 0), 0);
+    const totalMb = totalBytes / (1024 * 1024);
+    const sizeNote = totalMb >= 1024
+      ? ` Dimensione stimata: ~${(totalMb / 1024).toFixed(1)} GB.`
+      : totalMb > 0
+        ? ` Dimensione stimata: ~${totalMb.toFixed(0)} MB.`
+        : '';
+    const warn = totalMb >= 1024
+      ? '\n\nAttenzione: il pacchetto e\' molto grande e potrebbe richiedere parecchio tempo e memoria del browser.'
+      : '';
+
+    if (!confirm(`Scaricare ${confirmCount} asset in un unico archivio ZIP?${sizeNote}${warn}`)) {
+      return;
+    }
+
+    const controller = new AbortController();
+    downloadAbortRef.current = controller;
+    setDownloadProgress({ phase: 'fetching', done: 0, total: confirmCount });
+
+    try {
+      const response = await fetch(`/api/admin/assets?${buildAssetsQuery(ids)}`, {
+        signal: controller.signal,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Errore nel caricamento metadati');
+      }
+      const enriched: EnrichedAsset[] = result.data || [];
+      if (enriched.length === 0) {
+        alert('Nessun asset da scaricare.');
+        return;
+      }
+
+      const zipResult = await buildAssetsZip({
+        assets: enriched,
+        zipName,
+        signal: controller.signal,
+        onProgress: (p) => setDownloadProgress(p),
+      });
+
+      triggerBlobDownload(zipResult.blob, zipResult.filename);
+
+      if (zipResult.failures.length > 0) {
+        const sample = zipResult.failures
+          .slice(0, 5)
+          .map((f) => `- ${f.file_name}: ${f.reason}`)
+          .join('\n');
+        const more = zipResult.failures.length > 5
+          ? `\n...e altri ${zipResult.failures.length - 5}`
+          : '';
+        alert(
+          `Download completato con ${zipResult.successCount} su ${zipResult.totalCount} file.\n\nFile non scaricati (vedi manifest.csv per il dettaglio):\n${sample}${more}`
+        );
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      alert(err instanceof Error ? err.message : 'Errore durante il download massivo');
+    } finally {
+      downloadAbortRef.current = null;
+      setDownloadProgress(null);
+    }
+  };
+
+  const handleDownloadSelected = () => {
+    if (selectedIds.length === 0) return;
+    runBulkDownload(selectedIds, 'assets_selezionati', selectedIds.length);
+  };
+
+  const handleDownloadAll = () => {
+    if (assets.length === 0) return;
+    runBulkDownload(null, 'assets_tutti', assets.length);
+  };
+
+  const cancelDownload = () => {
+    downloadAbortRef.current?.abort();
+  };
+
   return (
     <div>
       {/* Header - Responsive */}
@@ -194,16 +304,62 @@ export default function AdminAssetsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Documenti</h1>
           <p className="text-gray-500 mt-1 text-sm sm:text-base">Gestisci file, documenti e media</p>
         </div>
-        <Link
-          href="/admin/assets/new"
-          className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light active:bg-agesci-blue-dark transition-colors min-h-[44px] w-full sm:w-auto"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuovo Materiale
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleDownloadAll}
+            disabled={assets.length === 0 || downloadProgress !== null || isLoading}
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white text-agesci-blue border border-agesci-blue rounded-lg hover:bg-agesci-blue/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[44px] w-full sm:w-auto"
+            title="Scarica tutti gli asset attualmente visibili in un archivio ZIP con manifest"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+            </svg>
+            Scarica tutti
+          </button>
+          <Link
+            href="/admin/assets/new"
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-agesci-blue text-white rounded-lg hover:bg-agesci-blue-light active:bg-agesci-blue-dark transition-colors min-h-[44px] w-full sm:w-auto"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuovo Materiale
+          </Link>
+        </div>
       </div>
+
+      {downloadProgress && (
+        <div className="bg-white border border-agesci-blue/30 rounded-lg shadow-md p-4 mb-6">
+          <div className="flex items-center justify-between mb-2 gap-3">
+            <div className="text-sm font-medium text-gray-800">
+              {downloadProgress.phase === 'zipping'
+                ? 'Creazione archivio ZIP...'
+                : downloadProgress.phase === 'done'
+                  ? 'Download avviato'
+                  : `Download in corso... ${downloadProgress.done}/${downloadProgress.total}`}
+            </div>
+            <button
+              onClick={cancelDownload}
+              className="text-sm text-red-600 hover:text-red-700 font-medium underline shrink-0"
+            >
+              Annulla
+            </button>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-agesci-blue h-2 transition-all"
+              style={{
+                width: `${downloadProgress.total > 0 ? Math.min(100, (downloadProgress.done / downloadProgress.total) * 100) : 0}%`,
+              }}
+            />
+          </div>
+          {downloadProgress.currentName && downloadProgress.phase === 'fetching' && (
+            <div className="text-xs text-gray-500 mt-2 truncate">
+              {downloadProgress.currentName}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filtri - Responsive */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -301,6 +457,13 @@ export default function AdminAssetsPage() {
               className="px-4 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex-1 sm:flex-none"
             >
               Annulla
+            </button>
+            <button
+              onClick={handleDownloadSelected}
+              disabled={downloadProgress !== null}
+              className="px-4 py-2 bg-white text-agesci-blue border border-agesci-blue rounded-lg hover:bg-agesci-blue/5 disabled:opacity-50 flex-1 sm:flex-none"
+            >
+              Scarica Selezionati
             </button>
             <button
               onClick={handleBulkDelete}
