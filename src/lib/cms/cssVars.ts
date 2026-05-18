@@ -22,6 +22,29 @@ function isColorScale(value: unknown): value is ColorScale {
   );
 }
 
+/**
+ * Converte un colore in stringa `r g b` (formato Tailwind alpha modifier).
+ * Supporta `#RGB`, `#RRGGBB`, `rgb(r,g,b)` e `rgb(r g b)`. Restituisce null
+ * se non riesce a parsare.
+ */
+function toRgbTriplet(input: string): string | null {
+  const value = input.trim();
+  if (value.startsWith('#')) {
+    let hex = value.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `${r} ${g} ${b}`;
+  }
+  const rgb = value.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  if (rgb) return `${rgb[1]} ${rgb[2]} ${rgb[3]}`;
+  return null;
+}
+
 function pushColorVars(
   declarations: string[],
   key: string,
@@ -30,15 +53,22 @@ function pushColorVars(
   const mapper = COLOR_VAR_MAP[key];
   if (!mapper) return;
 
+  const emit = (variant: 'DEFAULT' | 'light' | 'dark', color: string) => {
+    declarations.push(`${mapper(variant)}: ${color};`);
+    const triplet = toRgbTriplet(color);
+    if (triplet) {
+      declarations.push(`${mapper(variant)}-rgb: ${triplet};`);
+    }
+  };
+
   if (typeof value === 'string') {
-    declarations.push(`${mapper('DEFAULT')}: ${value};`);
+    emit('DEFAULT', value);
     return;
   }
-
   if (isColorScale(value)) {
-    declarations.push(`${mapper('DEFAULT')}: ${value.DEFAULT};`);
-    if (value.light) declarations.push(`${mapper('light')}: ${value.light};`);
-    if (value.dark) declarations.push(`${mapper('dark')}: ${value.dark};`);
+    emit('DEFAULT', value.DEFAULT);
+    if (value.light) emit('light', value.light);
+    if (value.dark) emit('dark', value.dark);
   }
 }
 

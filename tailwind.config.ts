@@ -8,33 +8,34 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Palette brand — tutti i valori sono CSS variables con fallback hex.
-      // I default sono in src/app/globals.css (:root) e possono essere
-      // sovrascritti a runtime via <style> iniettato da getCmsBundle().
+      // Palette brand — RGB triplet via CSS variables così Tailwind può
+      // applicare l'opacity modifier (es. bg-agesci-blue/10). I default
+      // (sia hex sia triplet) vivono in src/app/globals.css (:root) e
+      // vengono sovrascritti a runtime dallo <style> di getCmsBundle().
       colors: {
         'agesci-purple': {
-          DEFAULT: 'var(--agesci-purple, #4b2c7f)',
-          light: 'var(--agesci-purple-light, #6b4c9f)',
-          dark: 'var(--agesci-purple-dark, #3b1c6f)',
+          DEFAULT: 'rgb(var(--agesci-purple-rgb, 75 44 127) / <alpha-value>)',
+          light: 'rgb(var(--agesci-purple-light-rgb, 107 76 159) / <alpha-value>)',
+          dark: 'rgb(var(--agesci-purple-dark-rgb, 59 28 111) / <alpha-value>)',
         },
         'agesci-yellow': {
-          DEFAULT: 'var(--agesci-yellow, #f1b42f)',
-          light: 'var(--agesci-yellow-light, #f8cc6b)',
-          dark: 'var(--agesci-yellow-dark, #d9a020)',
+          DEFAULT: 'rgb(var(--agesci-yellow-rgb, 241 180 47) / <alpha-value>)',
+          light: 'rgb(var(--agesci-yellow-light-rgb, 248 204 107) / <alpha-value>)',
+          dark: 'rgb(var(--agesci-yellow-dark-rgb, 217 160 32) / <alpha-value>)',
         },
-        'brand-cyan': 'var(--brand-cyan, #29bbce)',
-        'brand-red': 'var(--brand-red, #e94e5a)',
+        'brand-cyan': 'rgb(var(--brand-cyan-rgb, 41 187 206) / <alpha-value>)',
+        'brand-red': 'rgb(var(--brand-red-rgb, 233 78 90) / <alpha-value>)',
         'lc-green': {
-          DEFAULT: 'var(--lc-green, #4eaf48)',
-          light: 'var(--lc-green-light, #6bc963)',
-          dark: 'var(--lc-green-dark, #3a8f34)',
+          DEFAULT: 'rgb(var(--lc-green-rgb, 78 175 72) / <alpha-value>)',
+          light: 'rgb(var(--lc-green-light-rgb, 107 201 99) / <alpha-value>)',
+          dark: 'rgb(var(--lc-green-dark-rgb, 58 143 52) / <alpha-value>)',
         },
-        'scout-cream': 'var(--scout-cream, #fdfaf6)',
+        'scout-cream': 'rgb(var(--scout-cream-rgb, 253 250 246) / <alpha-value>)',
         // Alias legacy (blue mappato a purple per transizione)
         'agesci-blue': {
-          DEFAULT: 'var(--agesci-blue, #4b2c7f)',
-          light: 'var(--agesci-blue-light, #6b4c9f)',
-          dark: 'var(--agesci-blue-dark, #3b1c6f)',
+          DEFAULT: 'rgb(var(--agesci-blue-rgb, 75 44 127) / <alpha-value>)',
+          light: 'rgb(var(--agesci-blue-light-rgb, 107 76 159) / <alpha-value>)',
+          dark: 'rgb(var(--agesci-blue-dark-rgb, 59 28 111) / <alpha-value>)',
         },
         // Colori legacy (non gestiti via CMS, restano statici)
         'scout-green': '#2D5016',
