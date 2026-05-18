@@ -113,39 +113,95 @@ function formatDuration(seconds: number | null): string {
   return `${s}s`;
 }
 
-function estimateSeconds(item: AudioSourceListItem, probed: number | null): number | null {
-  if (probed != null) return probed;
+interface ProbedMeta {
+  duration: number | null;
+  sizeBytes: number | null;
+}
+
+function resolveSize(
+  item: AudioSourceListItem,
+  probed: ProbedMeta | undefined,
+): number | null {
+  if (item.file_size_bytes && item.file_size_bytes > 0) return item.file_size_bytes;
+  if (probed?.sizeBytes && probed.sizeBytes > 0) return probed.sizeBytes;
+  return null;
+}
+
+function estimateSeconds(
+  item: AudioSourceListItem,
+  probed: ProbedMeta | undefined,
+): number | null {
+  if (probed?.duration != null) return probed.duration;
   if (item.known_duration_seconds != null) return item.known_duration_seconds;
-  if (item.file_size_bytes && item.file_size_bytes > 0) {
-    return item.file_size_bytes / ESTIMATED_BYTES_PER_SECOND;
-  }
+  const size = resolveSize(item, probed);
+  if (size != null) return size / ESTIMATED_BYTES_PER_SECOND;
   return null;
 }
 
 /**
- * Probe della durata di un audio remoto via <audio>. Il browser scarica
- * solo i metadata (qualche KB), non l'intero file. Restituisce null in
- * caso di errore/timeout/CORS.
+ * Probe parallelo di durata e dimensione di un audio remoto.
+ *  - Durata: <audio preload="metadata"> carica solo i pochi KB di header
+ *    del contenitore (M4A/MP3/...).
+ *  - Dimensione: HEAD sul file URL, header Content-Length. E' una
+ *    "CORS-safelisted response header" quindi non richiede expose-headers.
+ * Entrambe le probe falliscono in modo silenzioso (CORS, 4xx, timeout):
+ * in quel caso il rispettivo campo resta null e la UI mostra un placeholder.
  */
-function probeAudioDuration(url: string, timeoutMs = 15000): Promise<number | null> {
+function probeAudioMeta(url: string, timeoutMs = 15000): Promise<ProbedMeta> {
   return new Promise((resolve) => {
+    let pending = 2;
+    let duration: number | null = null;
+    let sizeBytes: number | null = null;
+    let settled = false;
+
     const audio = document.createElement('audio');
+
+    const finish = () => {
+      pending -= 1;
+      if (pending <= 0 && !settled) {
+        settled = true;
+        try {
+          audio.src = '';
+          audio.removeAttribute('src');
+        } catch {
+          // ignore
+        }
+        resolve({ duration, sizeBytes });
+      }
+    };
+
     audio.preload = 'metadata';
     audio.muted = true;
-    let settled = false;
-    const finish = (v: number | null) => {
+    audio.addEventListener('loadedmetadata', () => {
+      duration = Number.isFinite(audio.duration) ? audio.duration : null;
+      finish();
+    });
+    audio.addEventListener('error', () => finish());
+    audio.src = url;
+
+    fetch(url, { method: 'HEAD' })
+      .then((r) => {
+        if (!r.ok) return;
+        const len = r.headers.get('content-length');
+        const parsed = len ? parseInt(len, 10) : NaN;
+        if (Number.isFinite(parsed) && parsed > 0) sizeBytes = parsed;
+      })
+      .catch(() => {
+        // ignore CORS/network errors
+      })
+      .finally(finish);
+
+    setTimeout(() => {
       if (settled) return;
       settled = true;
-      audio.src = '';
-      audio.removeAttribute('src');
-      resolve(v);
-    };
-    audio.addEventListener('loadedmetadata', () => {
-      finish(Number.isFinite(audio.duration) ? audio.duration : null);
-    });
-    audio.addEventListener('error', () => finish(null));
-    setTimeout(() => finish(null), timeoutMs);
-    audio.src = url;
+      try {
+        audio.src = '';
+        audio.removeAttribute('src');
+      } catch {
+        // ignore
+      }
+      resolve({ duration, sizeBytes });
+    }, timeoutMs);
   });
 }
 
@@ -164,10 +220,9 @@ export default function AdminAudioPage() {
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-  // Durata probed per ciascun item. Persiste in memoria per la sessione UI.
-  const [probedDurations, setProbedDurations] = useState<Map<string, number | null>>(
-    new Map(),
-  );
+  // Metadati probed (durata + dimensione) per ciascun item. Persiste in
+  // memoria per la sessione UI.
+  const [probedMeta, setProbedMeta] = useState<Map<string, ProbedMeta>>(new Map());
   const probeInflightRef = useRef<Set<string>>(new Set());
 
   const keyOf = useCallback(
@@ -194,17 +249,22 @@ export default function AdminAudioPage() {
     refresh();
   }, [refresh]);
 
-  // Probe durata in parallelo con concorrenza limitata.
+  // Probe durata+dimensione in parallelo con concorrenza limitata. Per ogni
+  // item proviamo a colmare i metadati che non abbiamo gia' dal server
+  // (known_duration_seconds dal transcript, file_size_bytes dalla riga
+  // assets). I gruppi-attachment non hanno mai size lato DB, quindi vanno
+  // sempre probed.
   useEffect(() => {
     let cancelled = false;
 
     async function runProbes() {
-      const queue = items.filter(
-        (i) =>
-          i.known_duration_seconds == null &&
-          !probedDurations.has(keyOf(i)) &&
-          !probeInflightRef.current.has(keyOf(i)),
-      );
+      const queue = items.filter((i) => {
+        const k = keyOf(i);
+        if (probedMeta.has(k) || probeInflightRef.current.has(k)) return false;
+        const needsDuration = i.known_duration_seconds == null;
+        const needsSize = !i.file_size_bytes || i.file_size_bytes <= 0;
+        return needsDuration || needsSize;
+      });
 
       const CONCURRENCY = 4;
       let idx = 0;
@@ -214,12 +274,12 @@ export default function AdminAudioPage() {
           const item = queue[idx++];
           const k = keyOf(item);
           probeInflightRef.current.add(k);
-          const duration = await probeAudioDuration(item.file_url);
+          const meta = await probeAudioMeta(item.file_url);
           probeInflightRef.current.delete(k);
           if (cancelled) return;
-          setProbedDurations((prev) => {
+          setProbedMeta((prev) => {
             const next = new Map(prev);
-            next.set(k, duration);
+            next.set(k, meta);
             return next;
           });
         }
@@ -234,7 +294,7 @@ export default function AdminAudioPage() {
     return () => {
       cancelled = true;
     };
-  }, [items, keyOf, probedDurations]);
+  }, [items, keyOf, probedMeta]);
 
   // Auto-refresh while there are jobs in progress.
   useEffect(() => {
@@ -297,15 +357,18 @@ export default function AdminAudioPage() {
     let unknownCount = 0;
 
     for (const it of selectedItems) {
-      const probed = probedDurations.get(keyOf(it));
-      const dur = estimateSeconds(it, probed ?? null);
+      const probed = probedMeta.get(keyOf(it));
+      const dur = estimateSeconds(it, probed);
       if (dur == null) {
         unknownCount += 1;
         continue;
       }
       totalSeconds += dur;
-      if (probed != null || it.known_duration_seconds != null) exactCount += 1;
-      else estimatedCount += 1;
+      if (probed?.duration != null || it.known_duration_seconds != null) {
+        exactCount += 1;
+      } else {
+        estimatedCount += 1;
+      }
     }
 
     const totalHours = totalSeconds / 3600;
@@ -321,7 +384,7 @@ export default function AdminAudioPage() {
       exactCount,
       unknownCount,
     };
-  }, [selectedItems, probedDurations, keyOf]);
+  }, [selectedItems, probedMeta, keyOf]);
 
   const toggleAll = () => {
     if (allSelected) {
@@ -593,9 +656,10 @@ export default function AdminAudioPage() {
                   !i.latest_job ||
                   i.latest_job.status === 'failed' ||
                   i.latest_job.status === 'cancelled';
-                const probed = probedDurations.get(k);
-                const dur = estimateSeconds(i, probed ?? null);
-                const isExact = probed != null || i.known_duration_seconds != null;
+                const probed = probedMeta.get(k);
+                const dur = estimateSeconds(i, probed);
+                const isExact = probed?.duration != null || i.known_duration_seconds != null;
+                const sizeBytes = resolveSize(i, probed);
                 return (
                   <tr key={k} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-3 py-2">
@@ -633,7 +697,7 @@ export default function AdminAudioPage() {
                         : '—'}
                     </td>
                     <td className="px-3 py-2 text-gray-700">
-                      {formatBytes(i.file_size_bytes)}
+                      {formatBytes(sizeBytes)}
                     </td>
                     <td className="px-3 py-2">
                       {i.latest_job ? (
