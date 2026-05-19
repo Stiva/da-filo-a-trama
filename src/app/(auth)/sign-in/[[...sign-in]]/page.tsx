@@ -1,6 +1,10 @@
 import { SignIn } from '@clerk/nextjs';
+import { getCopy, tSync } from '@/lib/cms/copy';
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const copy = await getCopy();
+  const t = (key: string) => tSync(copy, key);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-scout-cream">
       {/* Decorative background */}
@@ -13,12 +17,14 @@ export default function SignInPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-agesci-blue rounded-2xl shadow-yellow mb-4">
-            <span className="text-white font-display font-bold text-2xl">DF</span>
+            <span className="text-white font-display font-bold text-2xl">
+              {t('auth.logo_initials')}
+            </span>
           </div>
           <h1 className="font-display font-bold text-2xl text-agesci-blue">
-            Da Filo a Trama
+            {t('auth.signin.title')}
           </h1>
-          <p className="text-agesci-blue/60 text-sm mt-1">Evento Scout 2026</p>
+          <p className="text-agesci-blue/60 text-sm mt-1">{t('auth.signin.subtitle')}</p>
         </div>
 
         <SignIn

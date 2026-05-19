@@ -13,6 +13,7 @@ import {
 import AvatarPreview from '@/components/AvatarPreview';
 import AvatarCustomizer from '@/components/AvatarCustomizer';
 import Autocomplete from '@/components/Autocomplete';
+import { useCopy } from '@/lib/cms/CopyContext';
 
 type OnboardingStep = 'info' | 'safety' | 'preferences' | 'avatar' | 'complete';
 
@@ -37,6 +38,7 @@ const generateRandomSeed = () => crypto.randomUUID().split('-')[0];
 function OnboardingInner() {
   const router = useRouter();
   const { user, isLoaded } = useUser();
+  const t = useCopy();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('info');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -289,10 +291,10 @@ function OnboardingInner() {
                   </div>
                   <div>
                     <label htmlFor="is_nazionale" className="font-semibold text-agesci-blue cursor-pointer select-none text-base">
-                      🎪 Gomitolo Team
+                      {t('onboarding.team_label')}
                     </label>
                     <p className="text-xs text-agesci-blue/70 mt-1">
-                      Seleziona se fai parte del Gomitolo Team e sei stato invitato come ospite o referente (non in elenco BC).
+                      {t('onboarding.team_hint')}
                     </p>
                   </div>
                 </div>
@@ -331,9 +333,8 @@ function OnboardingInner() {
                   />
                   <p className="text-xs text-agesci-blue/60 mt-1">
                     {formData.is_nazionale
-                      ? 'Facoltativo per il Gomitolo Team.'
-                      : 'Il tuo identificativo numerico AGESCI univoco.'
-                    }
+                      ? t('onboarding.codice_socio_optional')
+                      : t('onboarding.codice_socio_help')}
                   </p>
                 </div>
 

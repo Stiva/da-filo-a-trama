@@ -13,6 +13,7 @@ export default function SettingsTabs() {
     { href: '/admin/groups', label: 'Gruppi' },
     { href: '/admin/sponsors', label: 'Patrocinatori' },
     { href: '/admin/settings', label: 'Impostazioni App' },
+    { href: '/admin/cms', label: 'CMS' },
   ];
 
   return (
